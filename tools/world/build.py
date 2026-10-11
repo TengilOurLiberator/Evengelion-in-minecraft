@@ -14,10 +14,13 @@ Use the Python of the D:\\voice-assistant environment (numpy, pillow).
 
 Writes (all under D:\\angel-attack\\datapack\\angel, and a list of what it wrote in tools\\world\\build_manifest.json
 so that a later build can remove what is no longer made):
-    data/angel/function/world/   init, place_all, abort, and per set: place_<set>, clear_<set>, rebuild_<set>, enter_<set>,
-                                 and the chain <set>/p0.. and <set>/c0.. that those start
+    data/angel/function/world/   init, place_all, abort, and per set: place_<set>, clear_<set>, rebuild_<set>,
+                                 sky_<set> (time and weather only: the story calls this), enter_<set> (sky_<set> + teleport,
+                                 for testing), and the chain <set>/p0.. and <set>/c0.. that those start. The p chain ends
+                                 with the set's biome (fillbiome over box + margin) and a biome probe in the server log.
     data/angel/structure/<set>/  the tiles
-    data/angel/worldgen/biome/void.json, world_clock/day.json, timeline/sky.json, data/minecraft/dimension_type/overworld.json
+    data/angel/worldgen/biome/void.json and one biome per set, world_clock/day.json, timeline/sky.json,
+    data/minecraft/dimension_type/overworld.json
     pack.mcmeta                  only if there is none
 and tools\\world\\anchors.json.
 """
@@ -304,6 +307,7 @@ def shared_functions(compiled, anchors):
                           + [f"forceload remove {r[0]} {r[1]} {r[2]} {r[3]}" for cs in compiled for r in cs.rects]
                           + ["say [angel] placement stopped (forceload released)"])
     for cs in compiled:
+        fns[f"world/sky_{cs.name}"] = worldgen.sky_lines(cs.name)
         fns[f"world/enter_{cs.name}"] = worldgen.enter_lines(cs.name, anchors.get(f"{cs.name}.start"))
     return fns
 

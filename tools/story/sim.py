@@ -1,0 +1,371 @@
+"""Offline simulator and checker.
+
+    python build_story.py --check
+
+For every scene it walks the step graph with a clock and reports how long the scene takes (answers and unknown waits are given the
+estimated times stored in the steps), which line is said when, the timed effects that run beside the story, and the vehicle's position in
+its route.  It checks that:
+  * every script line of the scenes written so far is said exactly once, in script order (nags that repeat a line are listed apart);
+  * a wait that depends on a route frame can be reached with the limit the story has set (no deadlock), and that any other open-ended wait
+    has a timeout (nothing may soft-lock);
+  * every anchor used exists, every function that is called exists (cast / monster / world functions are the known external ones);
+  * every frame of every route is on a surface with room above it in the built voxel worlds, and the motion is comfortable (accelerations,
+    jerk, turn rates).
+"""
+import math
+import re
+import sys
+
+import numpy as np
+
+from core import CFG, TPS, T
+
+EXTERNAL = re.compile(r"^(cast|angel|fight|world)/")
+FN_RE = re.compile(r"(?:^|\s)function angel:([A-Za-z0-9_/.\-]+)")
+SCHED_RE = re.compile(r"schedule function angel:([A-Za-z0-9_/.\-]+)")
+
+
+class Clock:
+    def __init__(self):
+        self.route = None
+        self.n = 0.0
+        self.ref = 0.0
+        self.limit = 0
+        self.on = False
+
+    def advance(self, t):
+        if self.on:
+            self.n = min(self.limit, self.n + (t - self.ref) * TPS)
+        self.ref = t
+
+
+def walk_scene(ctx, scene, report, take=()):
+    """Simulate scene `scene`; returns (events, total_seconds, said_lines)."""
+    steps = scene.steps
+    t = 0.0
+    i = 0
+    clk = Clock()
+    routes_by_id = {r.id: r for r in ctx.routes.values()}
+    events = []
+    said = []
+    timers = []
+    guard = 0
+    while 0 <= i < len(steps):
+        guard += 1
+        if guard > 5000:
+            report.error(f"scene {scene.n}: the step graph loops")
+            break
+        st = steps[i]
+        k = st.kind
+        label = f"{st.note}" if st.note else ""
+        if k == "do" or k == "handover":
+            clk.advance(t)
+            pend = {}
+            for c in st.cmds:
+                m = re.search(r"scoreboard players set (#mv\.\w+) angel\.story (-?\d+)", c)
+                if m:
+                    pend[m.group(1)] = int(m.group(2))
+            if "#mv.route" in pend or "#mv.n" in pend:
+                if "#mv.route" in pend:
+                    clk.route = pend["#mv.route"]
+                clk.n = float(pend.get("#mv.n", clk.n))
+                clk.on = True
+            if "#mv.limit" in pend:
+                clk.limit = pend["#mv.limit"]
+            if pend.get("#mv.on") == 0:
+                clk.on = False
+            if "#mv.route" in pend:
+                r = routes_by_id.get(clk.route)
+                events.append((t, f"route {r.name if r else '?'} starts (limit frame {clk.limit} = {clk.limit / TPS:.1f}s)"))
+            elif "#mv.limit" in pend:
+                events.append((t, f"route limit raised to frame {clk.limit}"))
+            elif "#mv.n" in pend:
+                events.append((t, f"route jumps to frame {clk.n:.0f}"))
+            if k == "handover":
+                events.append((t, f"hand over to scene {st.to}"))
+                break
+            if label and any(w in label for w in ("beat", "present")):
+                events.append((t, label))
+            i += 1
+        elif k == "after":
+            timers.append((t + st.sec, st.note or "timed effect"))
+            i += 1
+        elif k == "goto":
+            i = scene.labels[st.label]
+        elif k == "branch":
+            i = scene.labels[st.label] if st.label in take else i + 1
+        elif k == "sleep":
+            t += st.sec
+            i += 1
+        elif k == "say":
+            ln = st.line
+            events.append((t, f"{ln.id} {ln.speaker.upper():8s} {ln.seconds:5.2f}s  {ln.text[:60]}"))
+            said.append(ln.id)
+            t += ln.ticks / TPS
+            i += 1
+        elif k == "wait":
+            nud = getattr(st, "nudges", None)
+            extra = " [+ consent-capable: ends on a non-yes answer]" if getattr(st, "answer_ends", False) else ""
+            events.append((t, f"WAIT{st.mode} for {st.speaker}: prompt \"Your turn - {st.prompt}\" (assumed {st.est:.1f}s){extra}"))
+            t0 = t
+            if nud is not None and nud.lines:
+                # the player agrees after the first pass of the nudges: each is said once
+                for kk, lid in enumerate(nud.lines):
+                    ln = ctx.lines[lid]
+                    tk = t0 + nud.first + kk * nud.repeat
+                    events.append((tk, f"   nudge {kk + 1}: {ln.id} {ln.speaker.upper():8s} {ln.seconds:5.2f}s  {ln.text[:50]}"))
+                    said.append(lid)
+                t = max(t0 + st.est, t0 + nud.first + (len(nud.lines) - 1) * nud.repeat + ctx.lines[nud.lines[-1]].seconds + 2.0)
+            else:
+                t += st.est
+            i += 1
+        elif k == "until":
+            # a route condition: reachable?  other conditions: their estimate
+            best = None
+            for c in st.conds:
+                if hasattr(c, "route"):
+                    clk.advance(t)
+                    if clk.route != c.route.id or not clk.on:
+                        report.error(f"scene {scene.n} step {i}: waits for route {c.route.name} frame {c.frame}, but that route is not playing")
+                        cand = None
+                    elif c.frame > clk.limit:
+                        report.error(f"scene {scene.n} step {i}: DEADLOCK: waits for route {c.route.name} frame {c.frame} but the limit is "
+                                     f"frame {clk.limit}")
+                        cand = None
+                    else:
+                        cand = max(0.0, (c.frame - clk.n) / TPS)
+                else:
+                    cand = c.est
+                if cand is not None and (best is None or cand < best):
+                    best = cand
+            if best is None:
+                best = st.timeout or 0.0
+            if st.timeout and best > st.timeout:
+                best = st.timeout
+            if not st.timeout and not any(hasattr(c, "route") for c in st.conds) and not any(
+                    (("flag" in c.desc) or ("mv" in c.desc)) for c in st.conds):
+                report.warn(f"scene {scene.n} step {i} ({label[:50]}): open-ended wait with no timeout (player-dependent)")
+            events.append((t, f"wait ~{best:.1f}s: {label[:80]}"))
+            t += best
+            clk.advance(t)
+            i += 1
+        else:
+            i += 1
+    events.sort(key=lambda e: e[0])
+    return events, t, said, timers
+
+
+class Report:
+    def __init__(self):
+        self.errors, self.warnings, self.notes = [], [], []
+
+    def error(self, m):
+        self.errors.append(m)
+
+    def warn(self, m):
+        self.warnings.append(m)
+
+    def note(self, m):
+        self.notes.append(m)
+
+
+def check_lines(ctx, scenes_said, report):
+    for scene, said in scenes_said.items():
+        if not said:
+            report.note(f"scene {scene}: no recorded lines yet (placeholder)")
+            continue
+        expect = [lid for lid in ctx.line_order if int(lid.split(".")[0]) == scene]
+        # lines that are said only by a nag (conditional) are not part of the main flow
+        nag_only = set()
+        s = next(s for s in ctx.scenes if s.n == scene)
+        for st in s.steps:
+            if st.kind == "until" and st.nag:
+                for c in st.nag[2]:
+                    m = re.search(r"say/(\d+_\d+)", c)
+                    if m:
+                        nag_only.add(m.group(1).replace("_", "."))
+        main_expected = [l for l in expect if l not in nag_only or l in said]
+        dup = sorted({l for l in said if said.count(l) > 1})
+        if dup:
+            report.error(f"scene {scene}: lines said more than once in the main flow: {dup}")
+        missing = [l for l in main_expected if l not in said]
+        if missing:
+            report.error(f"scene {scene}: script lines never said: {missing}")
+        if [l for l in said if l in main_expected] != [l for l in main_expected if l in said]:
+            report.error(f"scene {scene}: lines are not said in script order: {said}")
+        extra = [l for l in said if l not in expect]
+        if extra:
+            report.error(f"scene {scene}: lines said that do not belong to the scene: {extra}")
+        for l in sorted(nag_only):
+            if l in said:
+                report.note(f"scene {scene}: line {l} is repeated by a nag when the player is slow")
+            else:
+                report.note(f"scene {scene}: line {l} is conditional ({ctx.lines[l].section or 'nag'}); said only by a nag")
+        if not dup and not missing:
+            report.note(f"scene {scene}: all {len(main_expected)} script lines said once, in order"
+                        + (f" (+ conditional {sorted(nag_only)})" if nag_only else ""))
+
+
+def check_functions(out, ctx, report):
+    have = {k[len("data/angel/function/"):-len(".mcfunction")] for k in out.files if k.startswith("data/angel/function/")}
+    bad = set()
+    for rel, text in out.files.items():
+        if not rel.endswith(".mcfunction"):
+            continue
+        for line in text.splitlines():
+            if line.startswith("#"):
+                continue
+            for m in FN_RE.finditer(line):
+                f = m.group(1)
+                if "$(" in f or f.startswith("story/s$"):
+                    continue
+                if f not in have and not EXTERNAL.match(f):
+                    bad.add((rel.split("/")[-1], f))
+            for m in SCHED_RE.finditer(line):
+                f = m.group(1)
+                if f not in have:
+                    bad.add((rel.split("/")[-1], "schedule " + f))
+    for where, f in sorted(bad):
+        report.error(f"{where}: calls function {f}, which does not exist")
+    ext = set()
+    for rel, text in out.files.items():
+        if rel.endswith(".mcfunction"):
+            for m in re.finditer(r"function angel:((?:cast|angel|fight|world)/[a-z_/]+)", text):
+                ext.add(m.group(1))
+    report.note("external functions called: " + ", ".join(sorted(ext)))
+
+
+def check_commands(out, report):
+    """Every command line of every generated function against the game's own command tree (tools/world/cmdcheck.py, structural only)."""
+    try:
+        import cmdcheck
+    except Exception as e:                                  # noqa: BLE001
+        report.note(f"command syntax check not available ({e})")
+        return
+    checker = cmdcheck.Checker()
+    funcs = {rel.split("/function/", 1)[-1]: text.splitlines() for rel, text in out.files.items() if rel.endswith(".mcfunction")}
+    bad = cmdcheck.check_functions(funcs, checker)
+    n = sum(len(v) for v in funcs.values())
+    if not bad:
+        report.note(f"command syntax: all {n} lines of {len(funcs)} functions fit the game's command tree")
+    for path, ln, line, msg in bad[:30]:
+        report.warn(f"command syntax: {path}:{ln}: {msg}: {line[:110]}")
+    if len(bad) > 30:
+        report.warn(f"command syntax: ... and {len(bad) - 30} more")
+
+
+def comfort(route):
+    f = np.array(route.frames, float)
+    v = np.hypot(np.diff(f[:, 0]), np.diff(f[:, 2])) * TPS
+    v3 = np.linalg.norm(np.diff(f[:, :3], axis=0), axis=1) * TPS
+    v3 = np.convolve(np.pad(v3, 2, mode="edge"), np.ones(5) / 5, mode="valid")        # one frame of rounding must not read as a jolt
+    a = np.diff(v3) * TPS
+    j = np.diff(a) * TPS
+    yaw = np.degrees(np.unwrap(np.radians(f[:, 3])))
+    yr = np.abs(np.diff(yaw)) * TPS
+    pr = np.abs(np.diff(f[:, 4])) * TPS
+    return {"vmax": float(v3.max()), "amax": float(np.abs(a).max()), "jmax": float(np.abs(j).max()), "yaw_rate": float(yr.max()),
+            "pitch_rate": float(pr.max()), "pitch": float(np.abs(f[:, 4]).max()), "seconds": len(f) / TPS}
+
+
+def check_routes(ctx, report, step=2):
+    """Replay every frame against the voxel worlds."""
+    lines = []
+    for r in ctx.routes.values():
+        c = comfort(r)
+        lines.append(f"route {r.name:15s} {c['seconds']:6.1f}s  vmax {c['vmax']:5.2f} b/s  accel {c['amax']:5.2f}  jerk {c['jmax']:6.2f}  "
+                     f"yaw rate {c['yaw_rate']:6.1f} deg/s  pitch {c['pitch']:4.1f} deg (rate {c['pitch_rate']:5.1f})  stations {dict(r.stations)} marks {dict(r.marks)}")
+        if c["jmax"] > 40 and r.name != "slide_in":
+            report.warn(f"route {r.name}: jerk up to {c['jmax']:.0f} b/s^3 (a rider will feel the start or stop)")
+        if c["yaw_rate"] > 60 and r.name != "slide_in":
+            report.warn(f"route {r.name}: turns up to {c['yaw_rate']:.0f} deg/s")
+        # ground / headroom
+        rig = ctx.rigs[r.rig]
+        is_train = rig.name.startswith("cartrain")
+        probe = ctx.probe("geofront" if is_train else "outskirts")
+        worst_dy, worst_hit, hits_total, nfr, first_hit = 0.0, None, {}, 0, {}
+        surf = {}
+        for i in range(0, len(r.frames), step):
+            x, y, z, yaw, pitch = r.frames[i]
+            if is_train:
+                # the wagon bed (1 thick, 5 x 9) must sit on the deck; the box above must be free
+                gy = probe.ground_under(x, z, yaw, hw=2.2, hl=4.0, ref_y=y)
+                gy = [v for v in gy if v is not None]
+                dy = (y - 1.0) - sum(gy) / len(gy) if gy else 99
+                hits = probe.box_hits(x, y, z, yaw, hw=2.5, hl=4.5, h=2.4, y_from=0.95, pitch=pitch)
+            else:
+                gy = probe.ground_under(x, z, yaw, ref_y=y)
+                gy = [v for v in gy if v is not None]
+                dy = y - (sum(gy) / len(gy)) if gy else 99
+                hits = probe.box_hits(x, y, z, yaw, y_from=0.95, pitch=pitch)
+            sn = probe.surface_name(x, z, y if not is_train else y - 1.0)
+            sn = (sn or "none").replace("minecraft:", "").split("[")[0]
+            surf[sn] = surf.get(sn, 0) + 1
+            if abs(dy) > abs(worst_dy):
+                worst_dy, worst_at = dy, (round(x, 1), round(y, 1), round(z, 1), i)
+            for nm, n in hits.items():
+                hits_total[nm] = hits_total.get(nm, 0) + n
+                first_hit.setdefault(nm, (i, round(x, 1), round(y, 1), round(z, 1)))
+            nfr += 1
+        tot = sum(surf.values()) or 1
+        lines.append("      under the centre line: " + ", ".join(f"{k} {100 * v // tot}%" for k, v in sorted(surf.items(), key=lambda kv: -kv[1])[:5]))
+        lines.append(f"      ground: worst offset {worst_dy:+.2f} blocks" + (f" at {worst_at}" if abs(worst_dy) > 0.01 else "")
+                     + f"; blocks inside the car's box over {nfr} frames: {hits_total if hits_total else 'none'}")
+        if abs(worst_dy) > 0.75:
+            report.warn(f"route {r.name}: the model is up to {worst_dy:+.2f} blocks off the ground (at x,y,z,frame {worst_at})")
+        if hits_total:
+            report.warn(f"route {r.name}: solid blocks inside the car's box: {dict(sorted(hits_total.items(), key=lambda kv: -kv[1])[:6])}; "
+                        f"first at (frame, x, y, z) {dict(list(first_hit.items())[:6])}")
+    return lines
+
+
+def main_check(ctx, out):
+    report = Report()
+    scenes_said = {}
+    print("=" * 100)
+    total = 0.0
+    for scene in ctx.scenes:
+        events, secs, said, timers = walk_scene(ctx, scene, report)
+        scenes_said[scene.n] = said
+        total += secs
+        alt_report = []
+        for name, spec in scene.sim_paths.items():
+            ev2, secs2, said2, _ = walk_scene(ctx, scene, report, take=set(spec["take"]))
+            skip = spec.get("skip")
+            key = lambda l: tuple(int(v) for v in l.split("."))
+            expect = [l for l in said if not (skip and key(skip[0]) <= key(l) <= key(skip[1]))]
+            if said2 != expect:
+                report.error(f"scene {scene.n} path {name!r}: lines {said2} differ from the main path minus {skip}: {expect}")
+            else:
+                report.note(f"scene {scene.n} path {name!r}: {len(said2)} lines, in order, skipping exactly {skip[0]}-{skip[1]} ({secs2:.0f}s)" if skip
+                            else f"scene {scene.n} path {name!r}: {len(said2)} lines ({secs2:.0f}s)")
+            alt_report.append((name, secs2, ev2))
+        print(f"SCENE {scene.n}: {scene.title}   nominal duration {secs:5.1f}s ({secs / 60:.1f} min)  [{len(scene.steps)} steps, {len(said)} lines]")
+        for te, text in events:
+            print(f"   {te:6.1f}s  {text}")
+        for name, secs2, ev2 in alt_report:
+            print(f"   -- path {name!r}: nominal duration {secs2:5.1f}s; the lines it says: " + ", ".join(e[1].split()[0] for e in ev2 if re.match(r"^\d\.\d\d ", e[1])))
+        if timers:
+            print("   timed effects beside the story: " + "; ".join(f"{tt:.1f}s {n[:40]}" for tt, n in sorted(timers)[:14]) + (" ..." if len(timers) > 14 else ""))
+        print()
+    print(f"all scenes: {total:.0f}s ({total / 60:.1f} min) of story with answers assumed {CFG.answer_est:.0f}s")
+    check_lines(ctx, scenes_said, report)
+    check_functions(out, ctx, report)
+    check_commands(out, report)
+    for l in check_routes(ctx, report):
+        print(l)
+    print("anchors used:", ", ".join(sorted(ctx.used_anchors)))
+    missing = [a for a in ctx.used_anchors if a not in ctx.anchors]
+    if missing:
+        report.error(f"anchors that do not exist: {missing}")
+    else:
+        report.note(f"all {len(ctx.used_anchors)} anchors used exist in anchors.json")
+    print("=" * 100)
+    for n in report.notes:
+        print("note   ", n)
+    for w in report.warnings:
+        print("warning", w)
+    for e in report.errors:
+        print("ERROR  ", e)
+    print(f"{len(report.errors)} errors, {len(report.warnings)} warnings")
+    return 1 if report.errors else 0

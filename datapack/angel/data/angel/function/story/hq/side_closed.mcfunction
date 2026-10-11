@@ -1,0 +1,12 @@
+setblock 3062 54 79 minecraft:iron_block
+setblock 3062 54 80 minecraft:black_concrete
+setblock 3062 54 81 minecraft:iron_block
+setblock 3062 55 79 minecraft:iron_block
+setblock 3062 55 80 minecraft:black_concrete
+setblock 3062 55 81 minecraft:iron_block
+setblock 3062 56 79 minecraft:iron_block
+setblock 3062 56 80 minecraft:black_concrete
+setblock 3062 56 81 minecraft:iron_block
+setblock 3062 57 79 minecraft:iron_block
+setblock 3062 57 80 minecraft:black_concrete
+setblock 3062 57 81 minecraft:iron_block

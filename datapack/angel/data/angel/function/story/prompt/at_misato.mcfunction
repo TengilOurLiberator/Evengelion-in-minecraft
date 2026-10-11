@@ -1,0 +1,3 @@
+execute as @a[limit=1] at @s anchored eyes if entity @e[tag=angel.misato,tag=angel.char,distance=..3.3] facing entity @e[tag=angel.misato,tag=angel.char,limit=1] eyes positioned ^ ^-0.2 ^1.0 run function angel:story/prompt/put
+execute if score #placed angel.story matches 0 at @e[tag=angel.misato,tag=angel.char,limit=1] anchored eyes if entity @a[limit=1,distance=..26] facing entity @a[limit=1] eyes positioned ^ ^-0.3 ^2.5 run function angel:story/prompt/put
+execute if score #placed angel.story matches 0 as @a[limit=1] at @s anchored eyes facing entity @e[tag=angel.misato,tag=angel.char,limit=1] eyes positioned ^ ^-0.2 ^1.8 run function angel:story/prompt/put

@@ -137,36 +137,109 @@ def tree_round(c, x, y, z, rng, kind="oak", tall=(7, 12)):
                     c.put_free(x + dx, cy + dy, z + dz, leaf)
 
 
-def build_terrain(c):
-    w, rng = c.w, c.rng
+RIM_CREST = 21.0      # ridge line: blocks from the city plate (rounded-square metric), so about 11 blocks in from the box edge
+RIM_EDGE = 12.0       # the outer slope runs from the ridge to the box edge over this many blocks (Chebyshev inset)
+RIM_FOOT = 4          # height of the outer slope where it meets the box edge (every side and corner)
+SIDES = {             # (t along the side, q blocks out from the plate) -> (x, z)
+    "N": lambda t, q: (t, CITY[0] - 1 - q),
+    "S": lambda t, q: (t, CITY[1] + q),
+    "W": lambda t, q: (CITY[0] - 1 - q, t),
+    "E": lambda t, q: (CITY[1] + q, t),
+}
+# contour roads on the inner slopes: (side, t from, t to, road level).  The stretch behind the monster's avenue
+# (x 126..194 on the north side) is left dark so the silhouette reads.
+ROAD_SEGS = [("N", 56, 122, 50), ("N", 198, 262, 55), ("W", 58, 128, 47), ("W", 192, 262, 57),
+             ("E", 52, 126, 56), ("E", 186, 258, 45), ("S", 34, 46, 46), ("S", 278, 288, 50)]
+
+
+def rim_heights():
+    """Heights (blocks) of the ground round the city: a continuous ring of mountains whose crest is about 11 blocks in
+    from the box edge on all four sides and the corners, falling on the outside to RIM_FOOT at the box edge."""
     xs = np.arange(SX)[:, None] + 0.5
     zs = np.arange(SZ)[None, :] + 0.5
     dx = np.maximum(np.maximum(CITY[0] - xs, xs - CITY[1]), 0.0)
     dz = np.maximum(np.maximum(CITY[0] - zs, zs - CITY[1]), 0.0)
-    d = np.hypot(dx, dz)
+    dp = (dx ** 4 + dz ** 4) ** 0.25                     # rounded square distance from the plate
+    e = np.minimum(np.minimum(xs, SX - xs), np.minimum(zs, SZ - zs))          # inset from the box edge
     n1 = pink_noise((SX, SZ), 2.0, 101)
     n2 = pink_noise((SX, SZ), 1.5, 102)
-    prof = np.interp(d, [0, 4, 10, 18, 26, 34, 48, 80], [0, 3, 12, 34, 58, 78, 98, 112])
-    h = 32 + prof * (1 + 0.28 * n1) + 11 * n2 * np.clip(d / 16, 0, 1)
-    h = np.maximum(h, 32 + 0.82 * prof)
+    nr = pink_noise((SX, SZ), 2.6, 104)
+    mx = smoothstep(44, 66, xs) * smoothstep(276, 254, xs)
+    crest = np.maximum(108 + 20 * nr, 98)
+    crest = np.maximum(crest * (1 - 0.06 * mx * smoothstep(280, 296, zs)), 94)   # a little lower behind the lake
+    inner = 32 + (crest - 32) * smoothstep(0, RIM_CREST, dp)
+    outer = RIM_FOOT + (crest - RIM_FOOT) * smoothstep(0, RIM_EDGE, e)
+    ring = np.minimum(inner, outer)
+    te = smoothstep(0, 6, e)
+    amp = np.clip((ring - 32) / 40, 0, 1)
+    h = ring * (1 + 0.10 * n1 * te) + 6 * n2 * amp * te
+    h = np.where(dp < RIM_CREST, np.maximum(h, 32 + 0.85 * (ring - 32)), h)
+    h = np.where(e < 0.75, RIM_FOOT, h)                                      # the very edge is the same everywhere
     # the lake along the south edge
-    m = smoothstep(44, 66, xs) * smoothstep(276, 254, xs) * smoothstep(278, 287, zs)
-    hl = np.interp(zs + 2.5 * n1, [287, 288, 290, 296, 304, 310, 316, 320],
-                   [32, 30, 25, 24, 24, 54, 92, 116])
-    h = m * hl + (1 - m) * h
-    h = np.minimum(np.round(h), 150).astype(int)
+    lm = mx * smoothstep(278, 287, zs) * (1 - smoothstep(306, 312, zs))
+    hl = np.interp(zs + 2.5 * n1, [287, 288, 290, 296, 300, 304, 308], [32, 30, 25, 24, 24, 40, 58])
+    h = lm * np.minimum(hl, h) + (1 - lm) * h
+    h = np.clip(np.round(h), 1, 150).astype(int)
+    return h, dict(e=e, dp=dp, lm=lm)
+
+
+def plan_rim_roads(h):
+    """Flatten a 5-wide shelf along a contour of each ROAD_SEGS stretch (edits h); returns the road centres."""
+    roads = []
+    for (side, t0, t1, hr) in ROAD_SEGS:
+        f = SIDES[side]
+        ts = np.arange(t0, t1)
+        qs = []
+        for t in ts:
+            q = None
+            for qq in range(0, 24):
+                x, z = f(int(t), qq)
+                if h[x, z] >= hr:
+                    q = qq
+                    break
+            qs.append(q if q is not None else (qs[-1] if qs else 10))
+        qs = np.array(qs, float)
+        pad = np.pad(qs, 5, mode="edge")
+        qs = np.convolve(pad, np.ones(11) / 11.0, mode="valid")
+        cells = []
+        for t, qf in zip(ts, qs):
+            qc = int(round(qf))
+            for dq in range(-2, 3):
+                x, z = f(int(t), qc + dq)
+                h[x, z] = hr
+            cells.append((int(t), qc))
+        roads.append(dict(side=side, y=hr, cells=cells))
+    return roads
+
+
+def build_terrain(c):
+    w, rng = c.w, c.rng
+    h, aux = rim_heights()
+    c.rim_roads = plan_rim_roads(h)
+    c.rim_h = h
+    e, lm = aux["e"], aux["lm"]
+    roadmask = np.zeros((SX, SZ), bool)
+    for rd in c.rim_roads:
+        f = SIDES[rd["side"]]
+        for (t, qc) in rd["cells"]:
+            for dq in range(-3, 4):
+                x, z = f(t, qc + dq)
+                roadmask[x, z] = True
+    xs = np.arange(SX)[:, None] + 0.5
+    zs = np.arange(SZ)[None, :] + 0.5
 
     # surface material per column
     pad = np.pad(h, 1, mode="edge")
     nb = np.stack([pad[:-2, 1:-1], pad[2:, 1:-1], pad[1:-1, :-2], pad[1:-1, 2:]])
-    lo = np.maximum(16, np.minimum(h, nb.min(axis=0)) - 3)
+    lo = np.maximum(0, np.minimum(h, nb.min(axis=0)) - 3)
     slope = np.max(np.abs(nb - h[None]), axis=0)
     rr = np.random.default_rng(7).random((SX, SZ))
-    rock = ["stone", "deepslate", "tuff", "andesite", "stone", "polished_deepslate"]
+    rock = ["deepslate", "stone", "tuff", "deepslate", "cobbled_deepslate", "blackstone", "andesite", "deepslate"]
     n3 = pink_noise((SX, SZ), 1.3, 103)
     rk = np.clip(((n3 * 0.5 + 0.5) * len(rock) + (rr - 0.5) * 1.2).astype(int), 0, len(rock) - 1)
     outside = np.ones((SX, SZ), bool)
     outside[CITY[0]:CITY[1], CITY[0]:CITY[1]] = False
+    lake = (lm > 0.03) & (zs >= 288) & (zs < 312)
     trees = []
     for i in range(SX):
         for j in range(SZ):
@@ -176,34 +249,35 @@ def build_terrain(c):
             if hh < 1:
                 continue
             sl = int(slope[i, j])
-            if hh <= 30:                      # lake bed
+            if lake[i, j] and hh <= 30:       # lake bed
                 top, sub = "sand", "sand"
                 if rr[i, j] < 0.25:
                     top = "gravel"
-            elif hh >= 98 or sl >= 4:
+            elif e[i, j] < RIM_EDGE + 1 or hh >= 98 or sl >= 4:
                 top = sub = rock[rk[i, j]]
             elif hh >= 80 and sl >= 2:
                 top = rock[rk[i, j]]
                 sub = "stone"
-            elif hh <= 33 and j > 288 and 40 < i < 280:
+            elif hh <= 33 and 288 < j < 300 and 40 < i < 280:
                 top, sub = "sand", "sand"
             else:
                 top = "podzol" if rr[i, j] < 0.18 else "grass_block"
                 sub = "dirt"
-                if sl <= 2 and hh < 84 and rr[i, j] > 0.985 and hh > 33:
+                if (sl <= 2 and hh < 84 and rr[i, j] > 0.975 and hh > 33 and not roadmask[i, j]
+                        and e[i, j] > RIM_EDGE + 3):
                     trees.append((i, hh, j))
             core = "deepslate" if hh > 70 else "stone"
             if top in ("sand", "gravel"):
                 # sand and gravel fall if nothing holds them: lay them as a skin on a floor of stone that reaches
                 # below the skin, so the lake bed and the beach stay where they are and the lake stays sealed
-                c.box(i, min(l, hh - 5), j, i + 1, hh - 4, j + 1, "stone")
+                c.box(i, min(max(l, 16), hh - 5), j, i + 1, hh - 4, j + 1, "stone")
                 c.box(i, hh - 4, j, i + 1, hh - 1, j + 1, sub)
             else:
                 if hh - 4 > l:
                     c.box(i, l, j, i + 1, hh - 4, j + 1, core)
                 c.box(i, max(l, hh - 4), j, i + 1, hh - 1, j + 1, sub)
             c.put(i, hh - 1, j, top)
-            if hh <= 29:
+            if lake[i, j] and hh <= 29:
                 c.box(i, hh, j, i + 1, 30, j + 1, "water")
     # city plate (the roads and lots are painted on y = ST-1 later)
     c.box(CITY[0], 28, CITY[0], CITY[1], ST - 1, CITY[1], "stone")
@@ -211,7 +285,105 @@ def build_terrain(c):
     c.box(CITY[0] + 24, 24, CITY[1] - 1, CITY[1] - 24, ST - 1, CITY[1], "stone_bricks")
     for (i, hh, j) in trees:
         tree_spruce(c, i, hh, j, rng)
+    rim_life(c, h, e)
     return h
+
+
+def rim_life(c, h, e):
+    """Distant lights on the slopes: contour roads with lamps, a few cabins with lit windows on the inner foot of the
+    hills, and lit windows scattered on the outer flanks, so the city sits in a landscape."""
+    rng = Random(SEED + 77)
+    lamp_heads = ("ochre_froglight", "glowstone", "ochre_froglight", "sea_lantern")
+    # roads
+    for rd in c.rim_roads:
+        f = SIDES[rd["side"]]
+        y = rd["y"] - 1
+        for k, (t, qc) in enumerate(rd["cells"]):
+            for dq in (-2, 2):
+                x, z = f(t, qc + dq)
+                c.put(x, y, z, "stone_bricks")
+            for dq in (-1, 0, 1):
+                x, z = f(t, qc + dq)
+                nm = "black_concrete" if (k * 7 + dq * 3) % 11 == 0 else "gray_concrete"
+                if dq == 0 and (k % 6) < 3:
+                    nm = "yellow_concrete"
+                c.put(x, y, z, nm)
+            if k % 9 == 4:
+                x, z = f(t, qc + 2)
+                head = lamp_heads[(k // 9) % len(lamp_heads)]
+                c.put(x, y + 1, z, "iron_chain[axis=y]")
+                c.put(x, y + 2, z, "iron_chain[axis=y]")
+                c.put(x, y + 3, z, head)
+
+    # cabins
+    used = np.zeros((SX, SZ), bool)
+    for rd in c.rim_roads:
+        f = SIDES[rd["side"]]
+        for (t, qc) in rd["cells"]:
+            for dq in range(-3, 4):
+                x, z = f(t, qc + dq)
+                used[x, z] = True
+    placed = 0
+    for _ in range(400):
+        if placed >= 16:
+            break
+        side = rng.choice("NNWWEESS")
+        t = rng.randint(40, 280)
+        if side == "N" and 124 <= t <= 196:
+            continue
+        if side == "S" and 40 <= t <= 280:
+            continue
+        q = rng.randint(2, 15)
+        horiz = side in "NS"
+        w_, d_ = (6, 5) if horiz else (5, 6)
+        x0, z0 = SIDES[side](t, q)
+        x1, z1 = x0 + w_, z0 + d_
+        if x0 < 2 or z0 < 2 or x1 > SX - 2 or z1 > SZ - 2:
+            continue
+        if CITY[0] - 2 < x0 < CITY[1] and CITY[0] - 2 < z0 < CITY[1]:
+            continue
+        sub = h[x0:x1, z0:z1]
+        if sub.max() - sub.min() > 5 or sub.min() < 33 or used[x0 - 1:x1 + 1, z0 - 1:z1 + 1].any():
+            continue
+        if (e[x0:x1, z0:z1] < RIM_EDGE + 3).any():
+            continue
+        used[x0 - 1:x1 + 1, z0 - 1:z1 + 1] = True
+        base = int(sub.max())
+        wall = rng.choice(("dark_oak_planks", "spruce_planks", "stone_bricks"))
+        for x in range(x0, x1):
+            for z in range(z0, z1):
+                hh = int(h[x, z])
+                c.box(x, hh - 1, z, x + 1, base, z + 1, "stone_bricks")
+        # the plate's centre is where the windows look
+        for x in range(x0, x1):
+            for z in range(z0, z1):
+                edge = x in (x0, x1 - 1) or z in (z0, z1 - 1)
+                for dy in range(0, 3):
+                    if edge:
+                        win = dy == 1 and (x + z) % 2 == 1 and rng.random() < 0.7
+                        c.put(x, base + dy, z, rng.choice(("ochre_froglight", "ochre_froglight", "glowstone"))
+                              if win else wall)
+                    else:
+                        c.put(x, base + dy, z, "air")
+                c.put(x, base + 3, z, "deepslate_tile_slab[type=bottom]")
+        placed += 1
+    # lit windows on the outer flanks (seen from outside the box and from the air)
+    n = 0
+    for _ in range(2000):
+        if n >= 46:
+            break
+        x, z = rng.randint(2, SX - 3), rng.randint(2, SZ - 3)
+        ee = min(x, SX - 1 - x, z, SZ - 1 - z)
+        if ee < 2 or ee > 9:
+            continue
+        hh = int(h[x, z])
+        if hh < 14:
+            continue
+        nm = rng.choice(("ochre_froglight", "ochre_froglight", "glowstone", "sea_lantern", "ochre_froglight"))
+        c.put(x, hh - 1, z, nm)
+
+        n += 1
+
 
 
 # ------------------------------------------------------------------ ground, roads, plaza
@@ -1585,7 +1757,9 @@ def _color_table(w):
             "calcite": (225, 225, 220), "dirt_path": (140, 120, 70), "daylight_detector": (40, 45, 70),
             "iron_trapdoor": (180, 182, 186), "iron_bars": (120, 122, 126), "lightning_rod": (180, 100, 70),
             "iron_chain": (60, 60, 66), "stone_brick_wall": (110, 110, 110), "iron_door": (190, 190, 190),
-            "deepslate_tile": (45, 45, 52), "polished_blackstone_brick": (40, 38, 45), "stone_brick": (115, 115, 115)}
+            "deepslate_tile": (45, 45, 52), "blackstone": (36, 33, 40), "cobbled_deepslate": (62, 62, 68),
+            "dark_oak_planks": (62, 46, 28), "spruce_planks": (110, 80, 50), "red_stained_glass": (200, 40, 40),
+            "copper_bulb": (255, 190, 120), "lantern": (255, 200, 100), "polished_blackstone_slab": (35, 32, 38), "polished_blackstone_brick": (40, 38, 45), "stone_brick": (115, 115, 115)}
     rgb = np.zeros((len(w.palette), 3), np.float32)
     em = np.zeros(len(w.palette), bool)
     skip = np.zeros(len(w.palette), bool)

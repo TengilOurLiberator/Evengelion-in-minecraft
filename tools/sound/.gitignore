@@ -1,0 +1,4 @@
+# regenerable: previews and bytecode
+preview/
+__pycache__/
+

@@ -922,6 +922,20 @@
    }
   ]
  },
+ "line.ritsuko.7_17": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/7_17"
+   }
+  ]
+ },
+ "line.gendo.7_18": {
+  "sounds": [
+   {
+    "name": "angel:line/gendo/7_18"
+   }
+  ]
+ },
  "line.base.7_19": {
   "sounds": [
    {
@@ -933,6 +947,782 @@
   "sounds": [
    {
     "name": "angel:line/misato/7_20"
+   }
+  ]
+ },
+ "amb.cage": {
+  "sounds": [
+   {
+    "name": "angel:amb/cage",
+    "stream": true
+   }
+  ]
+ },
+ "amb.car_interior": {
+  "sounds": [
+   {
+    "name": "angel:amb/car_interior",
+    "stream": true
+   }
+  ]
+ },
+ "amb.cicadas": {
+  "sounds": [
+   {
+    "name": "angel:amb/cicadas",
+    "stream": true
+   }
+  ]
+ },
+ "amb.city_night": {
+  "sounds": [
+   {
+    "name": "angel:amb/city_night",
+    "stream": true
+   }
+  ]
+ },
+ "amb.geofront": {
+  "sounds": [
+   {
+    "name": "angel:amb/geofront",
+    "stream": true
+   }
+  ]
+ },
+ "amb.hq": {
+  "sounds": [
+   {
+    "name": "angel:amb/hq",
+    "stream": true
+   }
+  ]
+ },
+ "amb.lake": {
+  "sounds": [
+   {
+    "name": "angel:amb/lake",
+    "stream": true
+   }
+  ]
+ },
+ "amb.plug": {
+  "sounds": [
+   {
+    "name": "angel:amb/plug",
+    "stream": true
+   }
+  ]
+ },
+ "amb.plug_flooded": {
+  "sounds": [
+   {
+    "name": "angel:amb/plug_flooded",
+    "stream": true
+   }
+  ]
+ },
+ "amb.town_empty": {
+  "sounds": [
+   {
+    "name": "angel:amb/town_empty",
+    "stream": true
+   }
+  ]
+ },
+ "amb.tunnel": {
+  "sounds": [
+   {
+    "name": "angel:amb/tunnel",
+    "stream": true
+   }
+  ]
+ },
+ "music.cage": {
+  "sounds": [
+   {
+    "name": "angel:music/cage",
+    "stream": true
+   }
+  ]
+ },
+ "music.decision": {
+  "sounds": [
+   {
+    "name": "angel:music/decision",
+    "stream": true
+   }
+  ]
+ },
+ "music.decision_loop": {
+  "sounds": [
+   {
+    "name": "angel:music/decision_loop",
+    "stream": true
+   }
+  ]
+ },
+ "music.defeat": {
+  "sounds": [
+   {
+    "name": "angel:music/defeat",
+    "stream": true
+   }
+  ]
+ },
+ "music.descent": {
+  "sounds": [
+   {
+    "name": "angel:music/descent",
+    "stream": true
+   }
+  ]
+ },
+ "music.dread": {
+  "sounds": [
+   {
+    "name": "angel:music/dread",
+    "stream": true
+   }
+  ]
+ },
+ "music.father": {
+  "sounds": [
+   {
+    "name": "angel:music/father",
+    "stream": true
+   }
+  ]
+ },
+ "music.fight": {
+  "sounds": [
+   {
+    "name": "angel:music/fight",
+    "stream": true
+   }
+  ]
+ },
+ "music.fight_final": {
+  "sounds": [
+   {
+    "name": "angel:music/fight_final",
+    "stream": true
+   }
+  ]
+ },
+ "music.launch": {
+  "sounds": [
+   {
+    "name": "angel:music/launch",
+    "stream": true
+   }
+  ]
+ },
+ "music.launch_loop": {
+  "sounds": [
+   {
+    "name": "angel:music/launch_loop",
+    "stream": true
+   }
+  ]
+ },
+ "music.resolve": {
+  "sounds": [
+   {
+    "name": "angel:music/resolve",
+    "stream": true
+   }
+  ]
+ },
+ "music.road": {
+  "sounds": [
+   {
+    "name": "angel:music/road",
+    "stream": true
+   }
+  ]
+ },
+ "music.victory": {
+  "sounds": [
+   {
+    "name": "angel:music/victory",
+    "stream": true
+   }
+  ]
+ },
+ "sfx.air_open": {
+  "sounds": [
+   {
+    "name": "angel:sfx/air_open",
+    "attenuation_distance": 48
+   }
+  ]
+ },
+ "sfx.alarm_cut": {
+  "sounds": [
+   {
+    "name": "angel:sfx/alarm_cut",
+    "attenuation_distance": 48
+   }
+  ]
+ },
+ "sfx.alarm_loop": {
+  "sounds": [
+   {
+    "name": "angel:sfx/alarm_loop",
+    "attenuation_distance": 48
+   }
+  ]
+ },
+ "sfx.barrier": {
+  "sounds": [
+   {
+    "name": "angel:sfx/barrier",
+    "attenuation_distance": 48
+   }
+  ]
+ },
+ "sfx.beam_charge": {
+  "sounds": [
+   {
+    "name": "angel:sfx/beam_charge",
+    "attenuation_distance": 48
+   }
+  ]
+ },
+ "sfx.beam_fire": {
+  "sounds": [
+   {
+    "name": "angel:sfx/beam_fire",
+    "attenuation_distance": 96
+   }
+  ]
+ },
+ "sfx.birds_up": {
+  "sounds": [
+   {
+    "name": "angel:sfx/birds_up",
+    "attenuation_distance": 24
+   }
+  ]
+ },
+ "sfx.bolt_1": {
+  "sounds": [
+   {
+    "name": "angel:sfx/bolt_1",
+    "attenuation_distance": 64
+   }
+  ]
+ },
+ "sfx.bolt_2": {
+  "sounds": [
+   {
+    "name": "angel:sfx/bolt_2",
+    "attenuation_distance": 64
+   }
+  ]
+ },
+ "sfx.bolt_3": {
+  "sounds": [
+   {
+    "name": "angel:sfx/bolt_3",
+    "attenuation_distance": 64
+   }
+  ]
+ },
+ "sfx.booth_light": {
+  "sounds": [
+   {
+    "name": "angel:sfx/booth_light",
+    "attenuation_distance": 24
+   }
+  ]
+ },
+ "sfx.breaker": {
+  "sounds": [
+   {
+    "name": "angel:sfx/breaker",
+    "attenuation_distance": 40
+   }
+  ]
+ },
+ "sfx.breaker_1": {
+  "sounds": [
+   {
+    "name": "angel:sfx/breaker_1",
+    "attenuation_distance": 40
+   }
+  ]
+ },
+ "sfx.breaker_2": {
+  "sounds": [
+   {
+    "name": "angel:sfx/breaker_2",
+    "attenuation_distance": 40
+   }
+  ]
+ },
+ "sfx.breaker_3": {
+  "sounds": [
+   {
+    "name": "angel:sfx/breaker_3",
+    "attenuation_distance": 40
+   }
+  ]
+ },
+ "sfx.breathing": {
+  "sounds": [
+   {
+    "name": "angel:sfx/breathing",
+    "attenuation_distance": 8
+   }
+  ]
+ },
+ "sfx.bridge_slide": {
+  "sounds": [
+   {
+    "name": "angel:sfx/bridge_slide",
+    "attenuation_distance": 64
+   }
+  ]
+ },
+ "sfx.car_alarms_far": {
+  "sounds": [
+   {
+    "name": "angel:sfx/car_alarms_far",
+    "attenuation_distance": 96
+   }
+  ]
+ },
+ "sfx.car_arrive": {
+  "sounds": [
+   {
+    "name": "angel:sfx/car_arrive",
+    "attenuation_distance": 48
+   }
+  ]
+ },
+ "sfx.car_door": {
+  "sounds": [
+   {
+    "name": "angel:sfx/car_door",
+    "attenuation_distance": 24
+   }
+  ]
+ },
+ "sfx.car_drop": {
+  "sounds": [
+   {
+    "name": "angel:sfx/car_drop",
+    "attenuation_distance": 48
+   }
+  ]
+ },
+ "sfx.car_roll": {
+  "sounds": [
+   {
+    "name": "angel:sfx/car_roll",
+    "attenuation_distance": 64
+   }
+  ]
+ },
+ "sfx.car_start": {
+  "sounds": [
+   {
+    "name": "angel:sfx/car_start",
+    "attenuation_distance": 24
+   }
+  ]
+ },
+ "sfx.card": {
+  "sounds": [
+   {
+    "name": "angel:sfx/card",
+    "attenuation_distance": 32
+   }
+  ]
+ },
+ "sfx.chains": {
+  "sounds": [
+   {
+    "name": "angel:sfx/chains",
+    "attenuation_distance": 48
+   }
+  ]
+ },
+ "sfx.contact": {
+  "sounds": [
+   {
+    "name": "angel:sfx/contact",
+    "attenuation_distance": 24
+   }
+  ]
+ },
+ "sfx.core_crack": {
+  "sounds": [
+   {
+    "name": "angel:sfx/core_crack",
+    "attenuation_distance": 48
+   }
+  ]
+ },
+ "sfx.crash": {
+  "sounds": [
+   {
+    "name": "angel:sfx/crash",
+    "attenuation_distance": 96
+   }
+  ]
+ },
+ "sfx.cross": {
+  "sounds": [
+   {
+    "name": "angel:sfx/cross",
+    "stream": true,
+    "attenuation_distance": 96
+   }
+  ]
+ },
+ "sfx.door_boom": {
+  "sounds": [
+   {
+    "name": "angel:sfx/door_boom",
+    "attenuation_distance": 64
+   }
+  ]
+ },
+ "sfx.door_heavy": {
+  "sounds": [
+   {
+    "name": "angel:sfx/door_heavy",
+    "attenuation_distance": 40
+   }
+  ]
+ },
+ "sfx.dust_fall": {
+  "sounds": [
+   {
+    "name": "angel:sfx/dust_fall",
+    "attenuation_distance": 24
+   }
+  ]
+ },
+ "sfx.ears_ringing": {
+  "sounds": [
+   {
+    "name": "angel:sfx/ears_ringing",
+    "attenuation_distance": 32
+   }
+  ]
+ },
+ "sfx.elevator_arrive": {
+  "sounds": [
+   {
+    "name": "angel:sfx/elevator_arrive",
+    "attenuation_distance": 32
+   }
+  ]
+ },
+ "sfx.elevator_doors": {
+  "sounds": [
+   {
+    "name": "angel:sfx/elevator_doors",
+    "attenuation_distance": 32
+   }
+  ]
+ },
+ "sfx.explosion_far": {
+  "sounds": [
+   {
+    "name": "angel:sfx/explosion_far",
+    "attenuation_distance": 128
+   }
+  ]
+ },
+ "sfx.explosion_near": {
+  "sounds": [
+   {
+    "name": "angel:sfx/explosion_near",
+    "attenuation_distance": 96
+   }
+  ]
+ },
+ "sfx.eyes_on": {
+  "sounds": [
+   {
+    "name": "angel:sfx/eyes_on",
+    "attenuation_distance": 48
+   }
+  ]
+ },
+ "sfx.fluid_fill": {
+  "sounds": [
+   {
+    "name": "angel:sfx/fluid_fill",
+    "attenuation_distance": 24
+   }
+  ]
+ },
+ "sfx.footfall_giant": {
+  "sounds": [
+   {
+    "name": "angel:sfx/footfall_giant",
+    "attenuation_distance": 96
+   }
+  ]
+ },
+ "sfx.gate_close": {
+  "sounds": [
+   {
+    "name": "angel:sfx/gate_close",
+    "attenuation_distance": 64
+   }
+  ]
+ },
+ "sfx.giant_hit": {
+  "sounds": [
+   {
+    "name": "angel:sfx/giant_hit",
+    "attenuation_distance": 64
+   }
+  ]
+ },
+ "sfx.giant_punch": {
+  "sounds": [
+   {
+    "name": "angel:sfx/giant_punch",
+    "attenuation_distance": 64
+   }
+  ]
+ },
+ "sfx.gunfire_far": {
+  "sounds": [
+   {
+    "name": "angel:sfx/gunfire_far",
+    "attenuation_distance": 96
+   }
+  ]
+ },
+ "sfx.gurney": {
+  "sounds": [
+   {
+    "name": "angel:sfx/gurney",
+    "attenuation_distance": 24
+   }
+  ]
+ },
+ "sfx.hand_rise": {
+  "sounds": [
+   {
+    "name": "angel:sfx/hand_rise",
+    "attenuation_distance": 64
+   }
+  ]
+ },
+ "sfx.hatch_close": {
+  "sounds": [
+   {
+    "name": "angel:sfx/hatch_close",
+    "attenuation_distance": 24
+   }
+  ]
+ },
+ "sfx.heartbeat": {
+  "sounds": [
+   {
+    "name": "angel:sfx/heartbeat"
+   }
+  ]
+ },
+ "sfx.impact_above": {
+  "sounds": [
+   {
+    "name": "angel:sfx/impact_above",
+    "attenuation_distance": 64
+   }
+  ]
+ },
+ "sfx.impact_above_hard": {
+  "sounds": [
+   {
+    "name": "angel:sfx/impact_above_hard",
+    "attenuation_distance": 64
+   }
+  ]
+ },
+ "sfx.jet_pass": {
+  "sounds": [
+   {
+    "name": "angel:sfx/jet_pass",
+    "attenuation_distance": 96
+   }
+  ]
+ },
+ "sfx.jolt": {
+  "sounds": [
+   {
+    "name": "angel:sfx/jolt",
+    "attenuation_distance": 48
+   }
+  ]
+ },
+ "sfx.klaxon": {
+  "sounds": [
+   {
+    "name": "angel:sfx/klaxon",
+    "attenuation_distance": 48
+   }
+  ]
+ },
+ "sfx.lake_ring": {
+  "sounds": [
+   {
+    "name": "angel:sfx/lake_ring",
+    "attenuation_distance": 48
+   }
+  ]
+ },
+ "sfx.launch": {
+  "sounds": [
+   {
+    "name": "angel:sfx/launch",
+    "attenuation_distance": 64
+   }
+  ]
+ },
+ "sfx.launch_arrive": {
+  "sounds": [
+   {
+    "name": "angel:sfx/launch_arrive",
+    "attenuation_distance": 64
+   }
+  ]
+ },
+ "sfx.launch_charge": {
+  "sounds": [
+   {
+    "name": "angel:sfx/launch_charge",
+    "attenuation_distance": 32
+   }
+  ]
+ },
+ "sfx.launch_roar": {
+  "sounds": [
+   {
+    "name": "angel:sfx/launch_roar",
+    "attenuation_distance": 48
+   }
+  ]
+ },
+ "sfx.lights_flicker": {
+  "sounds": [
+   {
+    "name": "angel:sfx/lights_flicker",
+    "attenuation_distance": 40
+   }
+  ]
+ },
+ "sfx.mine": {
+  "sounds": [
+   {
+    "name": "angel:sfx/mine",
+    "attenuation_distance": 128
+   }
+  ]
+ },
+ "sfx.pa_chime": {
+  "sounds": [
+   {
+    "name": "angel:sfx/pa_chime",
+    "attenuation_distance": 40
+   }
+  ]
+ },
+ "sfx.phone_hangup": {
+  "sounds": [
+   {
+    "name": "angel:sfx/phone_hangup",
+    "attenuation_distance": 12
+   }
+  ]
+ },
+ "sfx.phone_pickup": {
+  "sounds": [
+   {
+    "name": "angel:sfx/phone_pickup",
+    "attenuation_distance": 12
+   }
+  ]
+ },
+ "sfx.rig_crash": {
+  "sounds": [
+   {
+    "name": "angel:sfx/rig_crash",
+    "attenuation_distance": 64
+   }
+  ]
+ },
+ "sfx.rig_tear": {
+  "sounds": [
+   {
+    "name": "angel:sfx/rig_tear",
+    "attenuation_distance": 64
+   }
+  ]
+ },
+ "sfx.siren": {
+  "sounds": [
+   {
+    "name": "angel:sfx/siren",
+    "stream": true,
+    "attenuation_distance": 64
+   }
+  ]
+ },
+ "sfx.speak_chime": {
+  "sounds": [
+   {
+    "name": "angel:sfx/speak_chime"
+   }
+  ]
+ },
+ "sfx.sync_rise": {
+  "sounds": [
+   {
+    "name": "angel:sfx/sync_rise",
+    "attenuation_distance": 24
+   }
+  ]
+ },
+ "sfx.train_start": {
+  "sounds": [
+   {
+    "name": "angel:sfx/train_start",
+    "attenuation_distance": 48
+   }
+  ]
+ },
+ "sfx.train_stop": {
+  "sounds": [
+   {
+    "name": "angel:sfx/train_stop",
+    "attenuation_distance": 48
+   }
+  ]
+ },
+ "sfx.bolt": {
+  "sounds": [
+   {
+    "name": "angel:sfx/bolt_1",
+    "attenuation_distance": 64
+   },
+   {
+    "name": "angel:sfx/bolt_2",
+    "attenuation_distance": 64
+   },
+   {
+    "name": "angel:sfx/bolt_3",
+    "attenuation_distance": 64
    }
   ]
  }

@@ -1,0 +1,15 @@
+execute if score #mv.n angel.story matches 160 positioned 191.488 77.0 15.747 rotated -177.44 0.0 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 161 positioned 191.49 77.0 15.714 rotated -177.44 0.0 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 162 positioned 191.491 77.0 15.685 rotated -177.43 0.0 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 163 positioned 191.492 77.0 15.658 rotated -177.43 0.0 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 164 positioned 191.494 77.0 15.635 rotated -177.43 0.0 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 165 positioned 191.495 77.0 15.614 rotated -177.43 0.0 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 166 positioned 191.495 77.0 15.595 rotated -177.43 0.0 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 167 positioned 191.496 77.0 15.578 rotated -177.43 0.0 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 168 positioned 191.497 77.0 15.563 rotated -177.43 0.0 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 169 positioned 191.498 77.0 15.55 rotated -177.43 0.0 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 170 positioned 191.498 77.0 15.539 rotated -177.43 0.0 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 171 positioned 191.499 77.0 15.529 rotated -177.43 0.0 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 172 positioned 191.499 77.0 15.519 rotated -177.43 0.0 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 173 positioned 191.5 77.0 15.51 rotated -177.43 0.0 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 174 positioned 191.5 77.0 15.5 rotated -177.43 0.0 run function angel:story/rig/car/follow

@@ -1,0 +1,10 @@
+setblock 3096 54 140 minecraft:air
+setblock 3096 54 141 minecraft:air
+setblock 3096 55 140 minecraft:air
+setblock 3096 55 141 minecraft:air
+setblock 3096 56 140 minecraft:air
+setblock 3096 56 141 minecraft:air
+setblock 3096 57 140 minecraft:air
+setblock 3096 57 141 minecraft:air
+setblock 3096 58 140 minecraft:air
+setblock 3096 58 141 minecraft:air

@@ -1,0 +1,9 @@
+setblock 3007 107 159 minecraft:iron_block
+setblock 3007 107 160 minecraft:iron_block
+setblock 3007 107 161 minecraft:iron_block
+setblock 3007 108 159 minecraft:iron_block
+setblock 3007 108 160 minecraft:iron_block
+setblock 3007 108 161 minecraft:iron_block
+setblock 3007 109 159 minecraft:iron_block
+setblock 3007 109 160 minecraft:iron_block
+setblock 3007 109 161 minecraft:iron_block

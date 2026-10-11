@@ -1,0 +1,34 @@
+kill @e[tag=angel.cast]
+scoreboard players set #on_misato angel.cast 0
+scoreboard players set #walk_misato angel.cast 0
+scoreboard players set #look_misato angel.cast 0
+scoreboard players set #arrived_misato angel.cast 0
+scoreboard players set #on_ritsuko angel.cast 0
+scoreboard players set #walk_ritsuko angel.cast 0
+scoreboard players set #look_ritsuko angel.cast 0
+scoreboard players set #arrived_ritsuko angel.cast 0
+scoreboard players set #on_gendo angel.cast 0
+scoreboard players set #walk_gendo angel.cast 0
+scoreboard players set #look_gendo angel.cast 0
+scoreboard players set #arrived_gendo angel.cast 0
+scoreboard players set #on_rei angel.cast 0
+scoreboard players set #walk_rei angel.cast 0
+scoreboard players set #look_rei angel.cast 0
+scoreboard players set #arrived_rei angel.cast 0
+scoreboard players set #on_rei_uniform angel.cast 0
+scoreboard players set #walk_rei_uniform angel.cast 0
+scoreboard players set #look_rei_uniform angel.cast 0
+scoreboard players set #arrived_rei_uniform angel.cast 0
+scoreboard players set #on_medic1 angel.cast 0
+scoreboard players set #walk_medic1 angel.cast 0
+scoreboard players set #look_medic1 angel.cast 0
+scoreboard players set #arrived_medic1 angel.cast 0
+scoreboard players set #on_medic2 angel.cast 0
+scoreboard players set #walk_medic2 angel.cast 0
+scoreboard players set #look_medic2 angel.cast 0
+scoreboard players set #arrived_medic2 angel.cast 0
+scoreboard players set #arrived_gurney angel.cast 0
+scoreboard players set #gmove angel.cast 0
+scoreboard players set #active angel.cast 0
+data remove storage angel:cast walk
+data remove storage angel:cast gm

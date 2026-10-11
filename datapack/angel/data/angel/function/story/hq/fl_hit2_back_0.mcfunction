@@ -1,0 +1,10 @@
+function angel:story/hq/bank_on_0
+function angel:story/hq/bank_on_1
+function angel:story/hq/bank_on_2
+function angel:story/hq/bank_on_3
+function angel:story/hq/bank_on_4
+function angel:story/hq/bank_on_5
+function angel:story/hq/bank_on_6
+function angel:story/hq/bank_on_7
+function angel:story/hq/booth_on
+function angel:story/hq/vest_on

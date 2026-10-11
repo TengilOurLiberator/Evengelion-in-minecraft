@@ -1,0 +1,11 @@
+execute if score #mv.n angel.story matches 420 positioned 190.492 76.0 31.64 rotated -169.3 0.0 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 421 positioned 190.493 76.0 31.619 rotated -169.45 0.0 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 422 positioned 190.494 76.0 31.601 rotated -169.59 0.0 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 423 positioned 190.495 76.0 31.584 rotated -169.72 0.0 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 424 positioned 190.496 76.0 31.569 rotated -169.84 0.0 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 425 positioned 190.497 76.0 31.555 rotated -169.95 0.0 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 426 positioned 190.498 76.0 31.543 rotated -170.05 0.0 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 427 positioned 190.498 76.0 31.532 rotated -170.13 0.0 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 428 positioned 190.499 76.0 31.521 rotated -170.2 0.0 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 429 positioned 190.499 76.0 31.511 rotated -170.26 0.0 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 430 positioned 190.5 76.0 31.5 rotated -170.31 0.0 run function angel:story/rig/car/follow

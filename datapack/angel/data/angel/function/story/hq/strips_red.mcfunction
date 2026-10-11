@@ -1,0 +1,7 @@
+fill 3004 110 160 3006 110 160 minecraft:magma_block
+setblock 3010 114 156 minecraft:magma_block
+setblock 3012 114 156 minecraft:magma_block
+fill 3009 114 160 3010 114 160 minecraft:magma_block
+fill 3013 114 160 3014 114 160 minecraft:magma_block
+setblock 3010 114 164 minecraft:magma_block
+setblock 3012 114 164 minecraft:magma_block

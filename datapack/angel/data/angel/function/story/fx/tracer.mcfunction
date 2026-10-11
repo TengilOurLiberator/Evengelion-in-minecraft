@@ -1,0 +1,21 @@
+particle minecraft:end_rod ^ ^ ^5 0 0 0 0 1 force
+particle minecraft:end_rod ^ ^ ^8 0 0 0 0 1 force
+particle minecraft:end_rod ^ ^ ^11 0 0 0 0 1 force
+particle minecraft:end_rod ^ ^ ^14 0 0 0 0 1 force
+particle minecraft:end_rod ^ ^ ^17 0 0 0 0 1 force
+particle minecraft:end_rod ^ ^ ^20 0 0 0 0 1 force
+particle minecraft:end_rod ^ ^ ^23 0 0 0 0 1 force
+particle minecraft:end_rod ^ ^ ^26 0 0 0 0 1 force
+particle minecraft:end_rod ^ ^ ^29 0 0 0 0 1 force
+particle minecraft:end_rod ^ ^ ^32 0 0 0 0 1 force
+particle minecraft:end_rod ^ ^ ^35 0 0 0 0 1 force
+particle minecraft:end_rod ^ ^ ^38 0 0 0 0 1 force
+particle minecraft:end_rod ^ ^ ^41 0 0 0 0 1 force
+particle minecraft:end_rod ^ ^ ^44 0 0 0 0 1 force
+particle minecraft:end_rod ^ ^ ^47 0 0 0 0 1 force
+particle minecraft:end_rod ^ ^ ^50 0 0 0 0 1 force
+particle minecraft:end_rod ^ ^ ^53 0 0 0 0 1 force
+particle minecraft:end_rod ^ ^ ^56 0 0 0 0 1 force
+particle minecraft:end_rod ^ ^ ^59 0 0 0 0 1 force
+particle minecraft:flame ^ ^-0.5 ^3 0.2 0.2 0.2 0.02 4 force
+playsound minecraft:entity.firework_rocket.launch ambient @a ~ ~ ~ 4 0.85 0.3

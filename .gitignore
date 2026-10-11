@@ -20,3 +20,6 @@ __pycache__/
 /recording/*.wav
 *.aup4
 
+
+# visual test output, scratch game folder (tools/visual_test.py)
+/work/

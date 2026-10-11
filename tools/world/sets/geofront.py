@@ -58,8 +58,16 @@ LK = (150.0, 225.0, 55.0, 34.0)  # lake centre x, z and semi-axes
 TOWER_Y = 130                   # first (top) layer of every tower
 PLATE_Y = 131                   # lowest layer of the city plate
 
+# the dome: meridian ribs, ring beams and the warm rock palette (dark to light along the families)
+N_RIB = 24                      # major ribs up the wall (a meridian every 15 degrees; they converge on the plate's ring beam)
+RING_Y = (40, 76, 112)          # ring beams; the middle one carries the floodlights
+RIB_DEPTH = 5.0                 # blocks a major rib stands out of the wall
+FAMILIES = [("brown_terracotta", "dripstone_block"), ("terracotta", "packed_mud"), ("orange_terracotta", "terracotta"),
+            ("red_sandstone", "orange_terracotta"), ("yellow_terracotta", "red_sandstone"), ("sandstone", "yellow_terracotta"),
+            ("smooth_sandstone", "cut_sandstone"), ("white_terracotta", "smooth_sandstone")]
+
 YAW = {"south": 0.0, "west": 90.0, "north": 180.0, "east": -90.0}
-DIRV = {"north": (0, -1), "south": (0, 1), "east": (1, 0), "west": (-1, 0)}
+DIRV ={"north": (0, -1), "south": (0, 1), "east": (1, 0), "west": (-1, 0)}
 
 
 # ------------------------------------------------------------------------------------------------ maths helpers
@@ -87,6 +95,21 @@ def fbm(rng, shape, cell, octaves=3):
         amp *= 0.5
         cell = max(2.0, cell / 2.0)
     return out / tot * 1.6
+
+
+def smooth3(rng, shape, cell):
+    """Low-frequency 3D value noise in [-1, 1] over a whole canvas (float32): random lattice every `cell` blocks, eased
+    interpolation done one axis at a time (cheap even for 320 x 144 x 320)."""
+    gs = [int(math.ceil(s / cell)) + 2 for s in shape]
+    g = rng.uniform(-1, 1, gs).astype(np.float32)
+    for ax, n in enumerate(shape):
+        t = np.arange(n) / cell
+        i0 = t.astype(int)
+        f = ss(t - i0).astype(np.float32)
+        sh = [1, 1, 1]
+        sh[ax] = n
+        g = np.take(g, i0, axis=ax) * (1 - f).reshape(sh) + np.take(g, i0 + 1, axis=ax) * f.reshape(sh)
+    return g
 
 
 def hash3(x, y, z):
@@ -244,39 +267,134 @@ class Geo:
         return d
 
     # ------------------------------------------------------------------ 2. the shell, floor and surface
+    def gallery_zone(self):
+        """Per column: horizontal distance to the open gallery and the deck height there (the dome's ribs and noise are
+        kept out of a band round the open gallery so the view from the cars stays free)."""
+        from scipy import ndimage
+        P = self.P
+        n_t = P["n_t"]
+        mark = np.zeros((SX, SZ), dtype=bool)
+        gy = np.zeros((SX, SZ), dtype=np.float32)
+        for i in range(n_t - int(OPEN_BACK / DS), len(P["x"])):
+            cx, cz = int(math.floor(P["x"][i])), int(math.floor(P["z"][i]))
+            if 0 <= cx < SX and 0 <= cz < SZ:
+                mark[cx, cz] = True
+                gy[cx, cz] = P["hq"][i]
+        d, (ix, iz) = ndimage.distance_transform_edt(~mark, return_indices=True)
+        self.gal_d = d.astype(np.float32)
+        self.gal_y = gy[ix, iz]
+
     def carve(self):
         a, w = self.a, self.w
         Yc = np.arange(SY) + 0.5
         Zc = np.arange(SZ) + 0.5
-        rock_names = ["stone", "andesite", "stone", "tuff", "stone", "granite", "stone", "dripstone_block",
-                      "andesite", "stone", "brown_terracotta", "stone", "tuff", "stone"]
-        rock = np.array([self.id(n) for n in rock_names], dtype=np.uint16)
-        # (not gravel: a gravel speck in a ceiling or an overhang has nothing under it and falls; diorite is the same grey)
-        speck = np.array([self.id(n) for n in ["cobblestone", "diorite", "andesite", "tuff"]], dtype=np.uint16)
+        fam_a = np.array([self.id(f[0]) for f in FAMILIES], dtype=np.uint16)
+        fam_b = np.array([self.id(f[1]) for f in FAMILIES], dtype=np.uint16)
+        rib_id, crest_id = self.id("cut_sandstone"), self.id("smooth_sandstone")
+        ring_id = self.id("smooth_red_sandstone")
         plate_id = self.id("deepslate")
-        n2 = fbm(self.rng, (SX, SZ), 30, 2)
         self.plate_bot_2d = np.where(self.rr < 76, PLATE_Y + np.maximum(self.rr - 62, 0) * 0.55, 9999)
+        self.gallery_zone()
+        nr = np.random.default_rng(5150)
+        # large-scale displacement of the wall in blocks (+ = recess, - = bulge): three octaves of 3D noise, recesses halved
+        # so the rock shell stays closed; this is what breaks up the concentric stepping of a smooth ellipsoid
+        Dn = 4.2 * smooth3(nr, (SX, SY, SZ), 70) + 2.4 * smooth3(nr, (SX, SY, SZ), 31) + 1.0 * smooth3(nr, (SX, SY, SZ), 13)
+        np.multiply(Dn, 0.5, out=Dn, where=Dn > 0)
+        # material fields: broad patches (cells of 38 and 15 blocks) and a finer one that only picks the variant
+        F1 = smooth3(nr, (SX, SY, SZ), 38)
+        F2 = smooth3(nr, (SX, SY, SZ), 15)
+        F3 = smooth3(nr, (SX, SY, SZ), 6)
+        self.crest = np.zeros((SX, SY, SZ), dtype=bool)
+        self.ringm = np.zeros((SX, SY, SZ), dtype=bool)
+        # ribs: depth along height, individual jitter
+        dmaj = (2.2 + (RIB_DEPTH - 2.2) * ss((Yc - 18) / 26)) * (1 - 0.35 * ss((Yc - 95) / 35))
+        dmin = 2.2 * ss((Yc - 18) / 20)
+        ring = np.zeros(SY)
+        for yk in RING_Y:
+            ring = np.maximum(ring, np.clip((1 - np.abs(Yc - yk) / 2.3) * 2.0, 0, 1))
+        cuts = np.array([-0.95, -0.55, -0.2, 0.15, 0.5, 0.85, 1.2])
         for i in range(SX):
             dx = i + 0.5 - CX
             rr = np.hypot(dx, Zc - CZ)
             th = np.arctan2(Zc - CZ, dx)
-            wob = wobble(th, Yc)
-            Ae = A_AIR * (1 + 0.012 * wob)
-            Be = B_AIR * (1 + 0.006 * wob)
+            rcol = rr[None, :]
             dyv = np.maximum(Yc - Y0, 0)[:, None]
-            g = (rr[None, :] / Ae) ** 3 + (dyv / Be) ** 3
-            hull = (rr[None, :] / A_HULL) ** 3 + (dyv / B_HULL) ** 3 < 1
+            g = (rcol / A_AIR) ** 3 + (dyv / B_AIR) ** 3
+            gn = 3.0 * np.sqrt((rcol ** 2 / A_AIR ** 3) ** 2 + (dyv ** 2 / B_AIR ** 3) ** 2)
+            sd = (g - 1.0) / np.maximum(gn, 1e-3)                    # ~ signed distance to the ellipsoid (+ in the rock)
+            # ribs: meridians (constant angle), so they run up the wall and converge on the plate
+            phi = (th + math.pi) / (2 * math.pi) * N_RIB
+            kk = np.round(phi)
+            f1 = phi - kk
+            jit = 0.72 + 0.56 * (((kk.astype(np.int64) % N_RIB) * 2654435761 % 1000) / 1000.0)
+            fade = ss((rr - 76) / 8)                                # nothing inside the plate's footprint
+            rib = np.clip((1 - np.abs(f1) / 0.095) * 3.0, 0, 1) * fade
+            ph2 = phi + 0.5
+            rib2 = np.clip((1 - np.abs(ph2 - np.round(ph2)) / 0.055) * 3.0, 0, 1) * fade
+            crest = (np.clip((1 - np.abs(f1) / 0.035) * 3.0, 0, 1) * fade) > 0.8
+            struct = np.maximum(np.maximum(rib[None, :] * jit[None, :] * dmaj[:, None], rib2[None, :] * dmin[:, None]),
+                                (ring[:, None] * 3.0) * fade[None, :])
+            D = -struct + Dn[i]
+            m = (1 - ss((self.gal_d[i] - 7) / 11))[None, :] * (1 - ss((np.abs(Yc[:, None] - (self.gal_y[i][None, :] + 3)) - 10) / 10))
+            D = D * (1 - m) + np.maximum(D, -2.0) * m                # no bulges in front of the open gallery
             floor_solid = Yc[:, None] <= self.Hh[i][None, :]
             plate = Yc[:, None] >= self.plate_bot_2d[i][None, :]
-            air = (g < 1) & ~floor_solid & ~plate
+            hull = (rcol / A_HULL) ** 3 + (dyv / B_HULL) ** 3 < 1
+            inner = (rcol / (A_AIR + 3.2)) ** 3 + (dyv / (B_AIR + 3.2)) ** 3 < 1
+            air = (sd < D) & inner & ~floor_solid & ~plate
             solid = hull & ~air
-            s = Yc[:, None] * 0.34 + 5.0 * n2[i][None, :] + 1.5 * wob
-            mat = rock[np.floor(s).astype(int) % len(rock)]
+            # ---- material: broad patches along a warm gradient, light up high, ribs and ring beams in sandstone
+            st = Yc[:, None] * 0.13 + 2.2 * F1[i]
+            v = 1.0 * F1[i] + 0.5 * F2[i] + 0.4 * np.sin(st) + 0.85 * ss((Yc[:, None] - 55) / 75)
             h = hash3(i, np.arange(SY)[:, None], np.arange(SZ)[None, :])
-            mat = np.where(h < 7, speck[h % 4], mat)
+            fam = np.digitize(v, cuts) + np.where(h < 5, 1, np.where(h < 10, -1, 0))
+            fam = np.clip(fam, 0, len(FAMILIES) - 1)
+            mat = np.where(F3[i] > 0.12, fam_b[fam], fam_a[fam])
+            ribf = np.maximum(rib, rib2)[None, :] * np.ones((SY, 1))
+            mat = np.where(ribf > 0.5, rib_id, mat)
+            mat = np.where((np.clip((1 - np.abs(f1) / 0.05) * 3.0, 0, 1) * fade)[None, :] > 0.8, crest_id, mat)
+            mat = np.where((ring[:, None] * fade[None, :]) > 0.5, ring_id, mat)
             mat = np.where(Yc[:, None] >= self.plate_bot_2d[i][None, :], plate_id, mat)
             a[i] = np.where(air, 1, np.where(solid, mat, 0)).astype(np.uint16)
-        self.n2 = n2
+            self.crest[i] = crest[None, :] & np.ones((SY, 1), dtype=bool)
+            self.ringm[i] = ((ring[:, None] * fade[None, :]) > 0.9)
+        del Dn, F1, F2, F3
+
+    def wall_features(self):
+        """Lit lines up the ribs, the floodlight ring under the middle ring beam, the lit ring beam where the ribs meet the plate."""
+        a = self.a
+        air = a == 1
+        solid = a > 1
+        nb = np.zeros_like(air)
+        nb[1:] |= air[:-1]
+        nb[:-1] |= air[1:]
+        nb[:, :, 1:] |= air[:, :, :-1]
+        nb[:, :, :-1] |= air[:, :, 1:]
+        nb[:, :-1] |= air[:, 1:]
+        nb[:, 1:] |= air[:, :-1]
+        surf = solid & nb
+        X, Y, Z = np.meshgrid(np.arange(SX), np.arange(SY), np.arange(SZ), indexing="ij", sparse=True)
+        rr = np.hypot(X + 0.5 - CX, Z + 0.5 - CZ)
+        th = np.arctan2(Z + 0.5 - CZ, X + 0.5 - CX)
+        froglight = self.id("ochre_froglight")
+        glow = self.id("glowstone")
+        below_air = np.zeros_like(air)
+        below_air[:, 1:] = air[:, :-1]
+        # rib crests: a lamp every fourth block along the rib
+        lamp = self.crest & surf & (Y > 20) & (((Y + np.rint(rr).astype(np.int32)) % 4) == 0)
+        n1 = int(lamp.sum())
+        a[lamp] = froglight
+        # floodlight ring under the middle ring beam: a lamp run of 1 in 3 blocks of arc
+        arc = np.floor(th * rr).astype(np.int64)
+        ringlamp = self.ringm & surf & below_air & (arc % 3 == 0)
+        n2 = int(ringlamp.sum())
+        a[ringlamp] = glow
+        # lit beam where the ribs meet the plate: a ring of lamps on the ceiling just outside the plate's footprint
+        beam = surf & below_air & (rr >= 77) & (rr < 80) & (Y > 120) & (arc % 2 == 0)
+        n3 = int(beam.sum())
+        a[beam] = froglight
+        self.n_rib_lamps, self.n_ring_lamps, self.n_beam_lamps = n1, n2, n3
+        del self.crest, self.ringm
 
     def surface(self):
         a = self.a
@@ -612,10 +730,23 @@ class Geo:
         lining = self.id("polished_deepslate")
         lining2 = self.id("deepslate_tiles")
         roof = self.id("gray_concrete")
-        pillar = self.id("light_gray_concrete")
-        glass = self.id("glass")
-        lant = self.id("sea_lantern")
+        pillar = self.id("cut_sandstone")
+        pillar_cap = self.id("chiseled_sandstone")
+        pillar_foot = self.id("polished_blackstone")
+        kerb_a = self.id("smooth_sandstone")
+        kerb_s = self.id("smooth_sandstone_slab[type=bottom]")
+        lamp_id = self.id("ochre_froglight")
+        skirt = self.id("polished_blackstone")
+        pilaster = self.id("cut_sandstone")
+        stripe = self.id("orange_terracotta")
+        beam = self.id("smooth_red_sandstone")
         yellow = self.id("yellow_concrete")
+        # terminal deck: a dark core line, light tiles, gold dashes beside it (full block / bottom slab versions)
+        t_dark = (self.id("polished_blackstone"), self.id("polished_blackstone_slab[type=bottom]"))
+        t_light = (self.id("smooth_sandstone"), self.id("smooth_sandstone_slab[type=bottom]"))
+        t_gold = (self.id("yellow_concrete"), self.id("yellow_concrete"))
+        t_stone = (self.id("smooth_stone"), self.id("smooth_stone_slab[type=bottom]"))
+        self.sign_cells = []
         for (cx, cz), (d2, i, q, mode, hq) in cols.items():
             full = abs(hq - round(hq)) < 1e-6
             yA = int(math.ceil(hq))
@@ -629,24 +760,56 @@ class Geo:
             else:
                 role = "back" if q < -HW else ("in" if q <= HW else "open")
             rail = abs(abs(q) - 1.5) < 0.01
+            bay = i % 24                                           # 12 blocks of line per bay: a pilaster, a lamp, a sign now and then
             if role in ("back", "side"):
                 a[cx, yc - 2:yA + 9, cz] = lining if ((i // 8) % 2 == 0 or role == "back") else lining2
+                if abs(q) <= HW + 1.0:                              # the face of the wall: skirting, stripe, pilasters, lamps
+                    a[cx, yA, cz] = skirt
+                    a[cx, yA + 4, cz] = stripe
+                    if bay in (0, 1, 2):
+                        a[cx, yA + 1:yA + 7, cz] = pilaster
+                        if bay == 1:
+                            a[cx, yA + 3, cz] = lamp_id
+                            a[cx, yA + 4, cz] = lamp_id
+                    elif bay in (3, 23):
+                        a[cx, yA + 1:yA + 7, cz] = skirt            # dark reveal either side of the pilaster
+                    if bay == 12 and abs(q) <= HW + 0.6:
+                        self.sign_cells.append((cx, cz, yA + 3, i, q))
                 continue
             # deck
-            if full:
+            if mode == 2 and not rail and role == "in":
+                pat = (cx + cz) % 2
+                if abs(q) <= 0.9:
+                    fam = t_dark
+                elif 1.0 <= abs(q) <= 1.2 and (i // 8) % 2 == 0:
+                    fam = t_gold
+                else:
+                    fam = t_light if pat else t_stone
+                a[cx, yc, cz] = fam[0] if full else fam[1]
+            elif full:
                 a[cx, yc, cz] = rail_a if rail else deck_a
             else:
                 a[cx, yc, cz] = rail_s if rail else deck_s
             a[cx, yc - 2:yc, cz] = girder
             a[cx, yA:yA + 7, cz] = 1
             a[cx, yA + 7:yA + 9, cz] = roof
+            if bay in (0, 1) and role in ("in", "open"):
+                a[cx, yA + 6, cz] = beam                            # a cross beam under the roof every bay
             if role == "open":
                 rel = i - open_from
                 pill = rel >= 26 and ((rel - 26) % 20) < 2
                 if pill:
                     a[cx, yA:yA + 7, cz] = pillar
+                    a[cx, yA, cz] = pillar_foot
+                    a[cx, yA + 6, cz] = pillar_cap
                 elif mode == 1:
-                    a[cx, yA, cz] = glass
+                    # low kerb on the open edge instead of a glass rail: half a block above the deck, with a lit tile now and then
+                    if (i % 24) in (6, 7):
+                        a[cx, yc, cz] = lamp_id
+                    elif full:
+                        a[cx, yA, cz] = kerb_s
+                    else:
+                        a[cx, yc, cz] = kerb_a
             if role == "in" and tunnel is False and not rail and mode == 2 and abs(q - HW) < 0.01:
                 a[cx, yc, cz] = yellow if full else a[cx, yc, cz]
         # lamps in the roof, hidden lights
@@ -658,14 +821,36 @@ class Geo:
                 pos = np.array([P["x"][i], P["z"][i]]) + np.array([P["nx"][i], P["nz"][i]]) * qq
                 cx, cz = int(math.floor(pos[0])), int(math.floor(pos[1]))
                 if P["mode"][i] >= 1:
-                    a[cx, yA + 7, cz] = lant
+                    a[cx, yA + 7, cz] = lamp_id
             if P["mode"][i] == 0 and i < open_from:
                 for qq in (-2.5, 2.5):
                     pos = np.array([P["x"][i], P["z"][i]]) + np.array([P["nx"][i], P["nz"][i]]) * qq
                     a[int(math.floor(pos[0])), yA + 5, int(math.floor(pos[1]))] = light(12)
+        # numbered section signs let into the wall: a one-block niche, the sign, a lamp over it
+        self.n_signs = 0
+        want = {}
+        for (cx, cz, y, i, q) in self.sign_cells:
+            want.setdefault(i // 24, (cx, cz, y, i, q))
+        for k, (cx, cz, y, i, q) in sorted(want.items()):
+            if k % 3 != 0 and i > self.open_from:
+                continue
+            Tr = np.array([P["nx"][i], P["nz"][i]]) * (1 if q < 0 else -1)              # from the wall toward the track
+            fx, fz = (int(np.sign(Tr[0])), 0) if abs(Tr[0]) >= abs(Tr[1]) else (0, int(np.sign(Tr[1])))
+            facing = {(1, 0): "east", (-1, 0): "west", (0, 1): "south", (0, -1): "north"}[(fx, fz)]
+            bx, bz = cx - fx, cz - fz                                                  # the block behind the sign
+            if a[bx, y, bz] <= 1:
+                continue
+            term = i >= len(P["x"]) - 120
+            lines = ["GEOFRONT LINE 1", "SECTION %02d" % (k + 1), "TO TERMINAL" if not term else "HQ TERMINAL", "NO ENTRY BEYOND" if i < self.open_from else "MIND THE EDGE"]
+            a[cx, y, cz] = self.id(f"birch_wall_sign[facing={facing}]")
+            a[cx, y + 1, cz] = lamp_id
+            ax, ay, az = self.w.abs(cx, y, cz)
+            msgs = ",".join('"%s"' % t for t in lines)
+            self.w.command('data merge block %d %d %d {front_text:{messages:[%s],color:"black"},is_waxed:1b}' % (ax, ay, az, msgs))
+            self.n_signs += 1
         # piers
-        pier = self.id("light_gray_concrete")
-        cap = self.id("gray_concrete")
+        pier = self.id("cut_sandstone")
+        cap = self.id("smooth_red_sandstone")
         for i in range(n_t + 12, n, 24):
             hq = P["hq"][i]
             full = abs(hq - round(hq)) < 1e-6
@@ -1103,7 +1288,7 @@ class Geo:
         # face the middle of the view: between the pyramid, the towers and the lake
         tx_, tz_ = (PX + 160 + LK[0]) / 3.0, (TZ + 160 + LK[1]) / 3.0
         ry = yaw_of(tx_ - x, tz_ - z)
-        w.anchor("reveal", x, y, z, ry, 4.0)
+        w.anchor("reveal", x, y, z, ry, 12.0)
         self.anchor_info["reveal"] = (x, y, z)
         self.reveal_yaw = ry
         x, y, z = pos(it)
@@ -1116,6 +1301,7 @@ class Geo:
     def run(self):
         self.fields()
         self.carve()
+        self.wall_features()
         self.surface()
         self.wall_lights()
         self.headquarters()
@@ -1466,7 +1652,15 @@ def check_rail(w, g):
 
 
 _RGB = [
-    ("sea_lantern", (255, 245, 215)), ("glowstone", (255, 214, 120)), ("shroomlight", (245, 160, 70)),
+    ("ochre_froglight", (250, 232, 140)), ("brown_terracotta", (77, 51, 36)), ("white_terracotta", (209, 178, 161)),
+    ("orange_terracotta", (161, 83, 37)), ("yellow_terracotta", (186, 133, 36)), ("red_terracotta", (143, 61, 46)),
+    ("smooth_red_sandstone", (181, 98, 32)), ("red_sandstone", (186, 99, 29)), ("smooth_sandstone", (222, 209, 164)),
+    ("cut_sandstone", (224, 214, 170)), ("sandstone", (216, 203, 155)), ("packed_mud", (143, 107, 80)),
+    ("mud_bricks", (137, 104, 79)), ("gold_block", (249, 236, 78)), ("honeycomb", (229, 148, 29)),
+    ("polished_blackstone", (53, 49, 57)), ("black_concrete", (20, 20, 24)), ("orange_concrete", (225, 97, 0)),
+    ("yellow_concrete", (240, 175, 21)), ("red_concrete", (142, 33, 33)), ("blue_concrete", (45, 47, 143)),
+    ("cyan_concrete", (21, 119, 136)), ("lime_concrete", (94, 168, 24)), ("light_blue_concrete", (36, 137, 199)),
+    ("copper", (192, 107, 79)), ("sea_lantern", (255, 245, 215)), ("glowstone", (255, 214, 120)), ("shroomlight", (245, 160, 70)),
     ("froglight", (255, 225, 150)), ("light[", (255, 0, 255)), ("lantern", (255, 220, 160)),
     ("water", (50, 100, 200)), ("lava", (240, 110, 20)), ("grass_block", (95, 160, 70)), ("moss", (85, 130, 60)),
     ("podzol", (110, 80, 40)), ("coarse_dirt", (120, 85, 60)), ("dirt", (130, 95, 65)), ("sand", (225, 210, 160)),

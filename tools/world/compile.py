@@ -25,6 +25,7 @@ import numpy as np
 
 import mcdata
 import nbt
+import worldgen
 
 NS = "angel"
 TILE = 48                 # the largest structure a structure block can save and load
@@ -334,10 +335,11 @@ def compile_set(w, method="template", air="drop", level=6, fixups=True):
 # ---------------------------------------------------------------- the chain of functions
 
 def _stage_rect(items):
-    x1 = min(i["lo"][0] for i in items) - MARGIN
-    z1 = min(i["lo"][2] for i in items) - MARGIN
-    x2 = max(i["hi"][0] for i in items) + MARGIN
-    z2 = max(i["hi"][2] for i in items) + MARGIN
+    m = max(i.get("margin", MARGIN) for i in items)          # biome items need no margin: fillbiome stays inside its chunks
+    x1 = min(i["lo"][0] for i in items) - m
+    z1 = min(i["lo"][2] for i in items) - m
+    x2 = max(i["hi"][0] for i in items) + m
+    z2 = max(i["hi"][2] for i in items) + m
     chunks = ((x2 >> 4) - (x1 >> 4) + 1) * ((z2 >> 4) - (z1 >> 4) + 1)
     if chunks > 256:
         raise ValueError(f"a stage of {chunks} chunks is more than forceload takes at once (256)")
@@ -350,7 +352,9 @@ def make_chain(set_name, prefix, items, y, before=(), fix=(), after=(), final_ta
     Returns ({'world/<set>/<prefix><n>': lines}, rects, steps, ticks, ms). Step 0 is the entry."""
     stages = {}
     for it in items:
-        stages.setdefault((it["ix"] // STAGE_TILES, it["iz"] // STAGE_TILES), []).append(it)
+        # an item may name its own stage ((1, i, j): the biome squares, which run after all tile stages (0, i, j))
+        key = it.get("stage") or (0, it["ix"] // STAGE_TILES, it["iz"] // STAGE_TILES)
+        stages.setdefault(key, []).append(it)
     steps, rects, ticks, ms = [], [], 0, 0.0
     ms += STAGE_MS * len(stages)
     for key in sorted(stages):
@@ -417,6 +421,10 @@ def finish_sets(compiled, anchors):
     order = [cs.name for cs in compiled]
     for k, cs in enumerate(compiled):
         items = [{"ix": t.ix, "iy": t.iy, "iz": t.iz, "lo": t.lo, "hi": t.hi, "ms": t.ms, "cmds": t.cmds} for t in cs.tiles]
+        # the set's biome (box + margin, full height), as extra stages after the tiles; probes check it before the forceload ends
+        items += worldgen.biome_items(cs.name, cs.origin, cs.size)
+        own_anchors = {n: a for n, a in anchors.items() if n.startswith(cs.name + ".")}
+        probes = worldgen.probe_lines(cs.name, cs.origin, cs.size, own_anchors)
         nxt = order[k + 1] if k + 1 < len(order) else None
         if nxt:
             go_on = [f"execute if score #all angel_world matches 1 run function {NS}:world/{nxt}/p0"]
@@ -425,7 +433,7 @@ def finish_sets(compiled, anchors):
         fns, rects, steps, ticks, ms = make_chain(
             cs.name, "p", items, cs.origin[1],
             before=["scoreboard objectives add angel_world dummy", "gamerule minecraft:max_block_modifications 10000000"],
-            fix=cs.fix_cmds, after=[wrap(c) for c in cs.post],
+            fix=cs.fix_cmds, after=probes + [wrap(c) for c in cs.post],
             final_tail=[f"say [angel] placed {cs.name}: {len(cs.tiles)} tiles, {cs.blocks} blocks"] + go_on)
         cs.functions.update(fns)
         cs.rects, cs.steps, cs.ticks_place, cs.ms_place = rects, steps, ticks, ms

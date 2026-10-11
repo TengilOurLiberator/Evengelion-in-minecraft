@@ -1,0 +1,5 @@
+{"name": "smoke", "shots": [
+ {"name": "smoke_outskirts_start", "steps": [{"enter": "outskirts"}, {"tp": "outskirts.start"}], "settle": 6},
+ {"name": "smoke_street_east", "steps": [{"tp": "outskirts.street", "yaw": -90}], "settle": 4},
+ {"name": "smoke_geofront_reveal", "steps": [{"enter": "geofront"}, {"tp": "geofront.reveal"}], "settle": 8}
+]}

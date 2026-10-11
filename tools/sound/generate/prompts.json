@@ -1,0 +1,743 @@
+{
+ "_about": "Prompts for the generated sounds. Music: ACE-Step 1.5 turbo (tags + bpm + key, lyrics fixed to [Instrumental]); effects and ambience: Stable Audio Open 1.0 (text + negative text). Same models, workflows and sampler settings as D:/genesis-vr/tools/make_audio.py. Plain acoustic/musical description only: no artist, composer, band, film, game or series is named, nothing asks for a style of anything, nothing quotes music. Instrumental only (checked afterwards with tools/voices/asr.py).",
+ "neg_clean": "music, melody, speech, voice, low quality, hiss, noise, distortion",
+ "neg_noisy": "music, melody, speech, voice, singing, humming, low quality, distortion",
+ "ace_tail": ", instrumental, no vocals, no lyrics, no choir, no singing",
+ "events": {
+  "music.dread": {
+   "recipe": "music_loop",
+   "pulse": false,
+   "bpm": 45,
+   "key": "D minor",
+   "xf": 6.0,
+   "tags": "dark ambient score, extremely sparse and slow, a deep sub-bass throb at long intervals, low sustained string cluster of clashing half-step intervals, faint thin metallic high overtones, cold empty space, creeping dread, quiet and spare, steady and unchanging, no drums, no melody",
+   "brief": "scene 1 under the cicadas and the empty street: cold, spare, a heartbeat-like sub every few seconds, no rhythm, no tune",
+   "expect": {
+    "onset_rate": [
+     0,
+     1.5
+    ],
+    "centroid_hz": [
+     0,
+     2500
+    ],
+    "dyn_db": [
+     0,
+     14
+    ]
+   },
+   "variants": [
+    {
+     "tags": "dark ambient soundscape, deep sustained low drone, slowly evolving dissonant string pad, long reverb tails, cold and vast, motionless, quiet, atmospheric underscore",
+     "bpm": 40
+    }
+   ]
+  },
+  "music.road": {
+   "recipe": "music_loop",
+   "pulse": true,
+   "bpm": 112,
+   "key": "D minor",
+   "xf_beats": 4,
+   "tags": "tense restrained driving groove, steady medium tempo, plucked low bass ostinato, muted marimba and mallet pattern in an uneven three-three-two rhythm, soft kick drum and ticking hi-hat, sustained low strings underneath, cold minor harmony, nervous forward momentum, sparse, steady and unchanging",
+   "brief": "scene 2, the drive: the first breath, momentum without panic; 3+3+2 mallet over plucked bass",
+   "expect": {
+    "onset_rate": [
+     1.5,
+     12
+    ],
+    "tempo_strength": [
+     0.05,
+     9
+    ]
+   }
+  },
+  "music.cage": {
+   "recipe": "music_loop",
+   "pulse": false,
+   "bpm": 50,
+   "key": "D minor",
+   "xf": 6.0,
+   "tags": "cold ambient pad, hollow open fifths, very slow, sparse glassy bell tones high above, one faint ninth hanging in the harmony, long reverberant hall, hushed, still, suspended, steady and unchanging, no drums, no melody",
+   "brief": "scene 5 in the dark hangar, from the first bank of lights: cold open-fifth pad, glass bells",
+   "expect": {
+    "onset_rate": [
+     0,
+     1.2
+    ],
+    "centroid_hz": [
+     0,
+     3000
+    ],
+    "dyn_db": [
+     0,
+     12
+    ]
+   },
+   "variants": [
+    {
+     "tags": "cold ambient pad, a sustained hollow open fifth chord, a few sparse high glassy bell tones with long reverb, very slow, minimal, spacious, hushed, motionless"
+    }
+   ]
+  },
+  "music.father": {
+   "recipe": "music_loop",
+   "pulse": false,
+   "bpm": 40,
+   "key": "D minor",
+   "xf": 6.0,
+   "tags": "almost silent, one very low sustained drone that swells and fades slowly like breathing, a thin high pure tone far above, nothing else, cold, still, ominous, steady and unchanging, no rhythm, no melody, no drums",
+   "brief": "scene 5.04: the man in the booth looking down, saying nothing: a single low note breathing",
+   "expect": {
+    "onset_rate": [
+     0,
+     0.8
+    ],
+    "centroid_hz": [
+     0,
+     1800
+    ],
+    "low_frac": [
+     0.3,
+     1.0
+    ]
+   },
+   "variants": [
+    {
+     "tags": "a single sustained very low drone note, soft slow swell and fade like breathing, a thin high pure overtone, hushed, motionless, minimal ambient soundscape",
+     "bpm": 40
+    }
+   ]
+  },
+  "music.decision": {
+   "recipe": "music_long_loop",
+   "outputs": [
+    "music.decision",
+    "music.decision_loop"
+   ],
+   "bpm": 104,
+   "key": "D minor",
+   "pulse": true,
+   "xf_beats": 2,
+   "tags": "mounting suspense, a low heartbeat-like pulse that drives steadily on, strings creeping upward by half steps, a growing dissonant cluster and rising airy noise, pressure building from quiet to tense, anxious, relentless, no melody",
+   "brief": "while the player decides: heartbeat tightening towards 104 bpm, creeping semitones, growing cluster; the last 13.85 s (24 beats at 104) are the loop cycle",
+   "expect": {
+    "onset_rate": [
+     0.8,
+     10
+    ],
+    "slope_db": [
+     0.5,
+     30
+    ]
+   }
+  },
+  "music.resolve": {
+   "recipe": "music_oneshot",
+   "bpm": 60,
+   "key": "D major",
+   "gen_seconds": 15.0,
+   "fin": 0.05,
+   "fout": 2.0,
+   "tags": "a tense dissonant cluster of strings slowly settling by half steps into a warm open D major chord with a bright added ninth, relief, soft and hushed, gentle shimmer, sustained, no drums, no percussion",
+   "brief": "5.42: everything stops, the alarm cuts, the cluster resolves into D major add9 (12 s)",
+   "expect": {
+    "onset_rate": [
+     0,
+     1.5
+    ],
+    "centroid_hz": [
+     0,
+     3500
+    ]
+   },
+   "variants": [
+    {
+     "tags": "slow warm string pad, a dissonant cluster gradually settling into a bright sustained D major chord with an added ninth, smooth legato, soft, hushed, long gentle fade"
+    }
+   ]
+  },
+  "music.launch": {
+   "recipe": "music_launch",
+   "outputs": [
+    "music.launch",
+    "music.launch_loop"
+   ],
+   "bpm": 144,
+   "key": "D minor",
+   "xf_beats": 4,
+   "parts": {
+    "build": {
+     "gen_seconds": 32.0,
+     "tags": "intense build-up, a low drone, drums entering and doubling in density, accelerating, a rising noise sweep, swelling low brass chords, rising tension, climbing to a huge climax and cutting off, no melody"
+    },
+    "drive": {
+     "gen_seconds": 72.0,
+     "tags": "relentless heavy driving rhythm, pounding war drums and kick on every beat, a powerful repeating low brass ostinato, low strings pulsing in sixteenth notes, dark heroic momentum, steady and unchanging, no melody"
+    }
+   },
+   "brief": "6.19: 20.0 s build whose last moment is the kick, then the 26.65 s drive cycle (16 bars at 144 bpm) twice; music.launch_loop is the cycle",
+   "expect": {
+    "onset_rate": [
+     2.0,
+     20
+    ],
+    "tempo_strength": [
+     0.05,
+     9
+    ]
+   }
+  },
+  "music.fight": {
+   "recipe": "music_loop",
+   "pulse": true,
+   "bpm": 152,
+   "key": "D minor",
+   "xf_beats": 4,
+   "tags": "ferocious fast battle music, heavy war drums and kick, hard cracking snare, a repeating chromatic low brass riff, dissonant string stabs, tremolo strings, relentless and dark, constant intensity, steady and unchanging",
+   "brief": "scene 7 night battle: 152 bpm, 40 bars, kick/taiko and cannon snare, chromatic low-brass ostinato, a break-down in the middle",
+   "expect": {
+    "onset_rate": [
+     3.0,
+     25
+    ],
+    "tempo_strength": [
+     0.05,
+     9
+    ],
+    "centroid_hz": [
+     300,
+     6000
+    ]
+   }
+  },
+  "music.fight_final": {
+   "recipe": "music_loop",
+   "pulse": true,
+   "bpm": 172,
+   "key": "D minor",
+   "xf_beats": 4,
+   "tags": "desperate frantic final battle, very fast double-time bass pulse, heavy drums, a high mallet pattern in repeating sixteenth notes, harsh dissonant brass stabs, a rising siren-like synth tone, maximum intensity, steady and unchanging",
+   "brief": "the last phase: 172 bpm, 48 bars, double-time bass, high mallet 16ths, tritone stabs, rising siren tone",
+   "expect": {
+    "onset_rate": [
+     3.5,
+     30
+    ],
+    "tempo_strength": [
+     0.05,
+     9
+    ],
+    "centroid_hz": [
+     400,
+     7000
+    ]
+   }
+  },
+  "music.victory": {
+   "recipe": "music_oneshot",
+   "bpm": 50,
+   "key": "D major",
+   "gen_seconds": 46.0,
+   "fin": 0.5,
+   "fout": 6.0,
+   "tags": "quiet awe, a still dawn, soft wind, slow single bell notes far apart, a warm open D major chord with an added ninth slowly blooming out of silence, high shimmering strings, gentle, hopeful but sad, thinning out towards the end, no drums, no percussion",
+   "brief": "7.15-7.18 dawn on the empty avenue: wind, slow bells, D add9 blooming from nothing, thinning by 27 s for the card",
+   "expect": {
+    "onset_rate": [
+     0,
+     1.5
+    ],
+    "centroid_hz": [
+     0,
+     4000
+    ],
+    "slope_db": [
+     -40,
+     3
+    ]
+   },
+   "variants": [
+    {
+     "tags": "slow warm string pad, soft wind, sparse slow bell tones, a sustained open D major chord with an added ninth gradually blooming, high shimmering strings, gentle, spacious, thinning towards the end"
+    }
+   ]
+  },
+  "music.defeat": {
+   "recipe": "music_oneshot",
+   "bpm": 60,
+   "key": "D minor",
+   "gen_seconds": 11.0,
+   "fin": 0.003,
+   "fout": 1.5,
+   "tags": "one huge heavy impact, then a dissonant cluster of low strings sliding downward and darkening into silence, ominous, collapse, no melody",
+   "brief": "the fight lost: a blow, then a detuned cluster falling as its filter closes (8 s)",
+   "expect": {
+    "onset_rate": [
+     0,
+     3
+    ]
+   }
+  },
+  "amb.cicadas": {
+   "recipe": "bed",
+   "pieces": 2,
+   "xf": 4.0,
+   "neg": "neg_noisy",
+   "prompt": "loud cicadas buzzing in the trees on a hot summer afternoon, dense continuous insect chorus swelling and fading in waves, outdoors, open air",
+   "brief": "scene 1 under the opening card and on the platform: heat, cicadas, nothing else",
+   "expect": {
+    "centroid_hz": [
+     2000,
+     9000
+    ],
+    "longest_silence_s": [
+     0,
+     0.3
+    ]
+   },
+   "hp": 200
+  },
+  "amb.town_empty": {
+   "recipe": "bed",
+   "pieces": 2,
+   "xf": 4.0,
+   "neg": "neg_noisy",
+   "prompt": "empty seaside town at noon, soft gusting wind through wires and empty streets, a faint metallic creak, very distant sea, a far-off railway crossing bell ringing slowly and stopping, quiet, lonely, no people",
+   "brief": "scene 1 on the platform and the street: gusting wind, a wire, a distant crossing bell that stops",
+   "expect": {
+    "centroid_hz": [
+     0,
+     4000
+    ],
+    "longest_silence_s": [
+     0,
+     0.3
+    ]
+   },
+   "hp": 60
+  },
+  "amb.geofront": {
+   "recipe": "bed",
+   "pieces": 2,
+   "xf": 4.0,
+   "neg": "neg_noisy",
+   "prompt": "vast underground cavern, soft airy room tone, a distant waterfall, faint water drips echoing far away, a few faint bird calls echoing in a huge open space, hollow, wide, calm",
+   "brief": "scene 3.08: the wall opens onto a cavern; airy noise, waterfall, a few far birds",
+   "expect": {
+    "centroid_hz": [
+     0,
+     4500
+    ],
+    "longest_silence_s": [
+     0,
+     0.3
+    ]
+   },
+   "hp": 35
+  },
+  "amb.cage": {
+   "recipe": "bed",
+   "pieces": 2,
+   "xf": 4.0,
+   "neg": "neg_noisy",
+   "prompt": "dark empty industrial hangar room tone, very low soft rumble, distant water dripping with long echoes, faint metallic ticks, a far-off bubbling liquid, enormous reverberant space, quiet and ominous",
+   "brief": "scene 5: the dark cage, sub room tone, far bubbles and metal ticks in a long hangar reverb",
+   "expect": {
+    "centroid_hz": [
+     0,
+     3000
+    ],
+    "longest_silence_s": [
+     0,
+     0.3
+    ]
+   },
+   "hp": 30
+  },
+  "amb.city_night": {
+   "recipe": "bed",
+   "pieces": 2,
+   "xf": 4.0,
+   "neg": "neg_noisy",
+   "prompt": "night wind moving between tall empty buildings, soft whistling gusts, a distant car alarm, a far-off emergency siren warbling, eerie empty city at night, one dull far thud, no people",
+   "brief": "scene 7 night battle ambience: wind in the canyons, far warble, a car alarm in a city echo",
+   "expect": {
+    "centroid_hz": [
+     0,
+     4000
+    ],
+    "longest_silence_s": [
+     0,
+     0.3
+    ]
+   },
+   "hp": 60
+  },
+  "sfx.birds_up": {
+   "recipe": "oneshot",
+   "gen_seconds": 8.0,
+   "fin": 0.02,
+   "fout": 1.2,
+   "neg": "neg_noisy",
+   "prompt": "a flock of birds suddenly startled and taking flight from trees, loud wing flapping and sharp alarm calls, panicked, outdoors",
+   "brief": "1: the girl at the end of the street; birds go up",
+   "expect": {
+    "centroid_hz": [
+     1000,
+     8000
+    ]
+   },
+   "hp": 250
+  },
+  "sfx.gunfire_far": {
+   "recipe": "oneshot",
+   "gen_seconds": 10.0,
+   "fin": 0.003,
+   "fout": 1.5,
+   "neg": "neg_clean",
+   "prompt": "distant gunfire across a valley, scattered rifle shots and short rapid bursts, heavy echo off hills, muffled by distance, far away",
+   "brief": "aircraft, fire: far-off shooting at the Angel",
+   "expect": {
+    "centroid_hz": [
+     0,
+     4500
+    ]
+   },
+   "hp": 40,
+   "onset_rel_db": -24
+  },
+  "sfx.jet_pass": {
+   "recipe": "oneshot",
+   "gen_seconds": 11.0,
+   "fin": 0.1,
+   "fout": 1.5,
+   "neg": "neg_clean",
+   "prompt": "a military jet fighter flying low overhead, loud roaring doppler fly-past from one side to the other, whine and rumble, fading into the distance",
+   "brief": "aircraft over the street before the crash",
+   "expect": {
+    "centroid_hz": [
+     0,
+     5000
+    ]
+   },
+   "hp": 40
+  },
+  "sfx.explosion_far": {
+   "recipe": "oneshot",
+   "gen_seconds": 13.0,
+   "fin": 0.004,
+   "fout": 2.0,
+   "neg": "neg_clean",
+   "prompt": "a large explosion far away, a delayed deep boom rolling across hills, long low rumbling echoes dying away",
+   "brief": "far blasts at the Angel",
+   "expect": {
+    "centroid_hz": [
+     0,
+     2500
+    ],
+    "low_frac": [
+     0.35,
+     1.0
+    ]
+   },
+   "hp": 25,
+   "onset_rel_db": -20
+  },
+  "sfx.explosion_near": {
+   "recipe": "oneshot",
+   "gen_seconds": 14.0,
+   "fin": 0.002,
+   "fout": 2.5,
+   "neg": "neg_clean",
+   "prompt": "a huge close explosion, sharp crack followed by an enormous boom, fireball roar, debris raining down, ringing rumbling tail",
+   "brief": "near blast during the aircraft attack",
+   "expect": {
+    "centroid_hz": [
+     0,
+     3500
+    ],
+    "low_frac": [
+     0.25,
+     1.0
+    ]
+   },
+   "hp": 25,
+   "onset_rel_db": -20
+  },
+  "sfx.crash": {
+   "recipe": "oneshot",
+   "gen_seconds": 12.0,
+   "fin": 0.003,
+   "fout": 2.0,
+   "neg": "neg_clean",
+   "prompt": "a large aircraft crashing into a city street, massive impact, metal tearing and scraping, glass shattering, rubble collapsing, then a fire whoosh and crackle",
+   "brief": "the aircraft crash at outskirts.crash",
+   "expect": {
+    "centroid_hz": [
+     0,
+     4500
+    ]
+   },
+   "hp": 40,
+   "onset_rel_db": -20
+  },
+  "sfx.car_roll": {
+   "recipe": "oneshot",
+   "gen_seconds": 9.0,
+   "fin": 0.003,
+   "fout": 1.0,
+   "neg": "neg_clean",
+   "prompt": "a car rolling over and tumbling several times, crunching metal, shattering glass, scraping on asphalt, ending with a heavy thud and a creak",
+   "brief": "the mine's blast: the car goes over",
+   "expect": {
+    "centroid_hz": [
+     0,
+     5000
+    ]
+   },
+   "hp": 40,
+   "onset_rel_db": -20,
+   "variants": [
+    {
+     "prompt": "a car crash rollover: several heavy metal crunches and bangs one after another, glass shattering, parts scraping and bouncing, then silence with a last creak",
+     "gen_seconds": 9.0
+    }
+   ]
+  },
+  "sfx.rig_tear": {
+   "recipe": "oneshot",
+   "gen_seconds": 8.0,
+   "fin": 0.01,
+   "fout": 0.8,
+   "neg": "neg_clean",
+   "prompt": "a heavy steel lighting rig tearing loose from a ceiling, screeching bending metal, bolts snapping, cables whipping and snapping, creaking",
+   "brief": "second hit: the rig tears loose at debris_2",
+   "expect": {
+    "centroid_hz": [
+     300,
+     7000
+    ]
+   },
+   "hp": 80,
+   "onset_rel_db": -22
+  },
+  "sfx.rig_crash": {
+   "recipe": "oneshot",
+   "gen_seconds": 9.0,
+   "fin": 0.003,
+   "fout": 1.2,
+   "neg": "neg_clean",
+   "prompt": "a heavy steel lighting truss crashing down onto a metal floor, huge clanging impact, bolts and debris scattering, glass breaking, ringing metal decay, in a large hangar",
+   "brief": "the rig breaks on the hand",
+   "expect": {
+    "centroid_hz": [
+     300,
+     7000
+    ]
+   },
+   "hp": 60,
+   "onset_rel_db": -20
+  },
+  "sfx.hand_rise": {
+   "recipe": "oneshot",
+   "gen_seconds": 14.0,
+   "fin": 0.15,
+   "fout": 2.0,
+   "neg": "neg_clean",
+   "prompt": "something enormous slowly rising out of thick liquid, a huge cascade of water pouring off it, deep creaking and straining, low rumbling, in a vast cavernous hall",
+   "brief": "second hit: the hand comes up out of the lake; water, deep creaks, a vast hall",
+   "expect": {
+    "centroid_hz": [
+     0,
+     3000
+    ],
+    "low_frac": [
+     0.25,
+     1.0
+    ]
+   },
+   "hp": 25
+  },
+  "sfx.giant_hit": {
+   "recipe": "oneshot",
+   "gen_seconds": 7.0,
+   "fin": 0.002,
+   "fout": 0.8,
+   "neg": "neg_clean",
+   "prompt": "a very heavy blow landing on a colossal armoured body, deep thud, wet slap, armour plate cracking, falling debris",
+   "brief": "the giant taking a blow in the fight",
+   "expect": {
+    "centroid_hz": [
+     0,
+     3500
+    ]
+   },
+   "hp": 25,
+   "onset_rel_db": -20
+  },
+  "sfx.giant_punch": {
+   "recipe": "oneshot",
+   "gen_seconds": 7.0,
+   "fin": 0.002,
+   "fout": 0.8,
+   "neg": "neg_clean",
+   "prompt": "a colossal punch landing, an enormous impact with a shockwave, armour cracking, deep boom, stone and metal debris",
+   "brief": "the giant punching the Angel",
+   "expect": {
+    "centroid_hz": [
+     0,
+     4000
+    ]
+   },
+   "hp": 25,
+   "onset_rel_db": -20
+  },
+  "sfx.impact_above": {
+   "recipe": "oneshot",
+   "gen_seconds": 11.0,
+   "fin": 0.003,
+   "fout": 1.8,
+   "neg": "neg_clean",
+   "prompt": "a deep heavy blow from above shaking a huge underground chamber, a deep boom, dust and small debris falling, metal creaking, long low reverberant rumble",
+   "brief": "5.21 first hit: a deep blow from above, dust falls, chains swing",
+   "expect": {
+    "centroid_hz": [
+     0,
+     2500
+    ],
+    "low_frac": [
+     0.3,
+     1.0
+    ]
+   },
+   "hp": 25,
+   "onset_rel_db": -20
+  },
+  "sfx.impact_above_hard": {
+   "recipe": "oneshot",
+   "gen_seconds": 13.0,
+   "fin": 0.003,
+   "fout": 2.0,
+   "neg": "neg_clean",
+   "prompt": "a much harder, closer blow from above slamming a huge underground chamber, an enormous deep boom, structure groaning, heavy debris crashing down, long low reverberant rumble",
+   "brief": "second hit, harder",
+   "expect": {
+    "centroid_hz": [
+     0,
+     3000
+    ],
+    "low_frac": [
+     0.3,
+     1.0
+    ]
+   },
+   "hp": 25,
+   "onset_rel_db": -20
+  },
+  "sfx.gate_close": {
+   "recipe": "oneshot",
+   "gen_seconds": 13.0,
+   "fin": 0.2,
+   "fout": 1.8,
+   "neg": "neg_clean",
+   "prompt": "an enormous blast door closing, a deep electric motor spooling up, a heavy slide with creaking rails, a final huge thud and metal bolts locking, in a tunnel with a long echo",
+   "brief": "3.01 the gate closes behind the car; daylight narrows to a line and is gone",
+   "expect": {
+    "centroid_hz": [
+     0,
+     4500
+    ]
+   },
+   "hp": 30,
+   "variants": [
+    {
+     "prompt": "an enormous steel blast door slowly sliding shut with a long low grinding motor sound and creaking rails, then at the very end one massive thud and bolts locking, in a tunnel"
+    }
+   ]
+  },
+  "sfx.door_boom": {
+   "recipe": "oneshot",
+   "gen_seconds": 12.0,
+   "fin": 0.002,
+   "fout": 2.0,
+   "neg": "neg_clean",
+   "prompt": "a huge steel door slamming shut in a vast dark hangar, a deafening metallic boom, ringing metal decay, bolts clunking, a very long echo",
+   "brief": "5.01 the cage door closes behind the player",
+   "expect": {
+    "centroid_hz": [
+     0,
+     4500
+    ]
+   },
+   "hp": 30,
+   "onset_rel_db": -20
+  },
+  "sfx.siren": {
+   "recipe": "bed",
+   "pieces": 1,
+   "xf": 2.0,
+   "neg": "neg_clean",
+   "prompt": "an air raid siren wailing slowly, a long rising and falling tone, echoing between buildings in an empty city",
+   "brief": "the city siren: two 10 s rise-and-fall cycles, echoing off the streets (loops, 20 s)",
+   "expect": {
+    "centroid_hz": [
+     200,
+     3000
+    ]
+   },
+   "hp": 150,
+   "tonal_ok": true,
+   "variants": [
+    {
+     "prompt": "a wailing air raid siren, one smooth continuous pitch sweeping slowly up and then down, a single clear tone, outdoors with a faint echo"
+    }
+   ]
+  },
+  "sfx.klaxon": {
+   "recipe": "oneshot",
+   "gen_seconds": 8.0,
+   "fin": 0.003,
+   "fout": 0.4,
+   "neg": "neg_clean",
+   "prompt": "an alert klaxon, three loud raspy blaring horn pulses in a metal corridor, harsh alarm, echo",
+   "brief": "4.12 first-stage alert: klaxon, three pulses (4 s); repeated every 11 s as an alarm layer",
+   "expect": {
+    "centroid_hz": [
+     200,
+     4000
+    ]
+   },
+   "hp": 150,
+   "tonal_ok": true,
+   "onset_rel_db": -24,
+   "variants": [
+    {
+     "prompt": "three loud harsh buzzing alarm blasts of a warning horn, each half a second long, separated by short silences, on one flat raspy tone"
+    }
+   ]
+  },
+  "sfx.cross": {
+   "recipe": "oneshot",
+   "gen_seconds": 19.0,
+   "fin": 0.5,
+   "fout": 3.5,
+   "neg": "neg_clean",
+   "prompt": "a pillar of light: a pure shimmering tone climbing in pitch for several octaves, then a huge airy swelling chord of glassy bowed tones, bright overtones, enormous cathedral reverb, radiant, awe",
+   "brief": "7.15 the cross of light rising from the avenue (instrumental pad; no voices)",
+   "expect": {
+    "centroid_hz": [
+     200,
+     5000
+    ]
+   },
+   "hp": 80,
+   "tonal_ok": true,
+   "variants": [
+    {
+     "prompt": "a very bright pure tone climbing steadily upward in pitch, then opening into a huge radiant sustained chord of glassy bowed tones with shimmering overtones, enormous reverberant hall, awe"
+    }
+   ]
+  }
+ }
+}

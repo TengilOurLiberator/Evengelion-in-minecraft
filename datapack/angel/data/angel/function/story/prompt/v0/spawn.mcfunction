@@ -1,0 +1,2 @@
+summon minecraft:text_display ~ ~ ~ {Tags:["angel.story","angel.prompt"],billboard:"center",background:1711276032,brightness:{sky:15,block:15},line_width:400,shadow:1b,see_through:0b,view_range:0.35f,teleport_duration:6,interpolation_duration:8,text:[{"text": "â— â— â—\n", "color": "gold", "bold": false}, {"text": "Your turn", "color": "white", "bold": true}, {"text": " - answer Misato", "color": "gray"}],transformation:{translation:[0f,0f,0f],left_rotation:[0f,0f,0f,1f],scale:[0.04f,0.04f,0.04f],right_rotation:[0f,0f,0f,1f]}}
+schedule function angel:story/prompt/pop 2t

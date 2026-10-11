@@ -1,0 +1,8 @@
+scoreboard players set #force angel.story 0
+data modify storage angel:story lead.misato set value {id:"misato",x:"3013.8",y:"107.0",z:"158.3",speed:"0.15"}
+scoreboard players set #f.lead_misato angel.story 1
+scoreboard players set #f.lp_misato angel.story 0
+function angel:cast/look {id:"misato",mode:"ahead"}
+function angel:cast/walk {id:"misato",x:3013.8,y:107.0,z:158.3,speed:0.15}
+scoreboard players set #step angel.story 80
+function angel:story/s4/e80

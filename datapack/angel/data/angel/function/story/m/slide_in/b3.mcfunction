@@ -1,0 +1,17 @@
+execute if score #mv.n angel.story matches 60 positioned 96.465 64.0 131.195 rotated -102.55 0.95 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 61 positioned 96.591 64.0 131.168 rotated -101.93 0.78 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 62 positioned 96.709 64.0 131.144 rotated -101.26 0.62 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 63 positioned 96.819 64.0 131.122 rotated -100.53 0.48 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 64 positioned 96.92 64.0 131.101 rotated -99.75 0.35 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 65 positioned 97.013 64.0 131.083 rotated -98.92 0.25 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 66 positioned 97.098 64.0 131.068 rotated -98.04 0.16 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 67 positioned 97.175 64.0 131.055 rotated -97.1 0.09 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 68 positioned 97.243 64.0 131.044 rotated -96.12 0.04 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 69 positioned 97.302 64.0 131.034 rotated -95.14 0.01 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 70 positioned 97.351 64.0 131.025 rotated -94.21 0.0 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 71 positioned 97.39 64.0 131.019 rotated -93.36 0.0 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 72 positioned 97.42 64.0 131.014 rotated -92.59 0.0 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 73 positioned 97.446 64.0 131.009 rotated -91.93 0.0 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 74 positioned 97.465 64.0 131.006 rotated -91.38 0.0 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 75 positioned 97.482 64.0 131.003 rotated -90.93 0.0 run function angel:story/rig/car/follow
+execute if score #mv.n angel.story matches 76 positioned 97.5 64.0 131.0 rotated -90.58 0.0 run function angel:story/rig/car/follow

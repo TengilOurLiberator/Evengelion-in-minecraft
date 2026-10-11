@@ -1,0 +1,20 @@
+execute if score #fx.fall angel.story matches 1 run function angel:story/fx/fall_tick
+execute if score #fx.smoke angel.story matches 1 at @e[tag=angel.rig_ac3,tag=angel.pt_fuselage,limit=1] run function angel:story/fx/smoke_tick
+execute if score #fx.air angel.story matches 1 run function angel:story/fx/air_tick
+execute if score #fx.wreck angel.story matches 1 run function angel:story/fx/wreck_tick
+execute if score #f.lead_misato angel.story matches 1 run function angel:story/lead/mon_misato
+execute if score #f.turn_1 angel.story matches 1.. run function angel:story/turn/t1
+execute if score #f.turn_2 angel.story matches 1.. run function angel:story/turn/t2
+execute if score #f.turn_3 angel.story matches 1.. run function angel:story/turn/t3
+execute if score #f.turn_4 angel.story matches 1.. run function angel:story/turn/t4
+execute if score #f.turn_5 angel.story matches 1.. run function angel:story/turn/t5
+execute if score #f.turn_6 angel.story matches 1.. run function angel:story/turn/t6
+execute if score #f.lead_ritsuko angel.story matches 1 run function angel:story/lead/mon_ritsuko
+execute if score #f.turn_7 angel.story matches 1.. run function angel:story/turn/t7
+execute if score #f.turn_8 angel.story matches 1.. run function angel:story/turn/t8
+execute if score #f.turn_9 angel.story matches 1.. run function angel:story/turn/t9
+execute if score #f.turn_10 angel.story matches 1.. run function angel:story/turn/t10
+execute if score #f.turn_11 angel.story matches 1.. run function angel:story/turn/t11
+execute if score #f.turn_12 angel.story matches 1.. run function angel:story/turn/t12
+execute if score #f.turn_13 angel.story matches 1.. run function angel:story/turn/t13
+execute if score #f.turn_14 angel.story matches 1.. run function angel:story/turn/t14

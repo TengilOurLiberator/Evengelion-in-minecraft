@@ -14,8 +14,10 @@ PLAN (x east ->, z south v)
     x  92..184  MAIN STREET along z = 128 (road z 123..133, pavements z 119..122 / 134..137), cross street x 112..120,
                 side street x 144..152 that becomes the hill road; promenade x 172..184 at the sea
     x 186..240  bay (sea surface y 31, floor ~19); beach on the west shore; far headland closes the bay at the east edge
-    z  <  60    northern hills; the hill road climbs the ridge hill to the lookout bench (188, 54) at y 51
-    z  <  40    hollow behind the ridge with the portal wall (z = 22): open striped blast gate, hall inside the hill
+    z  <  60    northern hills; the hill road climbs the ridge hill to the lookout bench (188, 54) at y 51 and leaves it by the
+                west end, falling at most a third of a block per block to the portal forecourt at y 44 (x 176, z 35)
+    z  <  40    hollow behind the ridge with the portal wall (z = 22): open striped blast gate, hall inside the hill; the
+                floor runs level (y 44) from the forecourt through the gate onto the rail platform
     z > 190     southern hills with pylon lines
 The angel corridor is the strip z ~ 100..158, x > 168 down to the water: only low things stand in it.
 
@@ -141,14 +143,20 @@ def hills(site):
 # The hill road: feet height of the road surface at each waypoint (x, z, y).  Anchors "ridge" etc. sit on it.
 HILL_ROAD = [
     (148, 128, 32.0), (148, 108, 32.0), (154, 94, 34.0), (168, 86, 38.0), (184, 80, 42.0), (198, 72, 45.5),
-    (204, 62, 49.5), (194, 56, 51.0), (186, 52, 51.0), (172, 46, 49.5), (170, 36, 47.5), (182, 32, 46.0),
-    (192, 32, 44.5), (192, 40, 44.5),
+    (204, 62, 49.5), (194, 56, 51.0), (186, 52, 51.0),
+    # the way down from the lookout to the portal forecourt: x, z are the waypoints the story drives (tools/story/paths.py
+    # ridge_to_gate_xz), so the carriageway is cut under the car; y stays level across the bench (51), then falls evenly to the
+    # forecourt level (44) at a third of a block per block at most, and runs level into the forecourt (the end heights sit a hair
+    # under 44 so that the smoothing in catmull() lands the road exactly flush with the forecourt paving where it enters, x 176)
+    (180.0, 50.8, 51.0), (176.5, 49.2, 51.0), (173.5, 48.9, 49.9), (171.3, 47.6, 48.7), (170.4, 45.0, 47.5), (170.2, 41.5, 46.2),
+    (170.6, 38.2, 44.8), (173.0, 36.4, 43.7), (177.0, 35.4, 43.7), (186.0, 36.0, 43.7),
 ]
 RIDGE = (194, 56)            # the car stops here (feet y 51.5 -> plateau at 52)
 RIDGE_Y = 51
 PLATEAU = (188, 54, 21, 11)  # cx, cz, rx, rz of the flat lookout bench
 HOLLOW = (188, 38, 22, 14)   # the flat floor in front of the tunnel portal (y 44.5)
 HOLLOW_Y = 44
+HOLLOW_PAVED = (176, 41)     # the portal forecourt: x from here east, z below this (the road ends on it, flush at feet 44)
 
 
 def catmull(points, ds=0.6):
@@ -179,6 +187,12 @@ def sculpt(site, Tf):
     R = hw + 1.3 + 15
     dist = np.full((N, N), 1e9)
     ry = np.zeros((N, N))
+    # the road height of a cell is that of the nearest path sample, but blended (Gaussian, sigma 2.5) with the samples around it:
+    # on the inside of a bend of a climbing road the two arms are at different heights and the nearest-sample height jumps
+    # by a block or more along the bisector; blended it is a ramp
+    sig, rr = 2.5, 10
+    num = np.zeros((N, N))
+    den = np.zeros((N, N))
     for px, pz, py in A:
         x0, x1 = max(0, int(px - R)), min(N, int(px + R) + 1)
         z0, z1 = max(0, int(pz - R)), min(N, int(pz + R) + 1)
@@ -187,10 +201,17 @@ def sculpt(site, Tf):
         m = d < dist[x0:x1, z0:z1]
         dist[x0:x1, z0:z1] = np.where(m, d, dist[x0:x1, z0:z1])
         ry[x0:x1, z0:z1] = np.where(m, py, ry[x0:x1, z0:z1])
+        a0, a1 = max(0, int(px - rr)), min(N, int(px + rr) + 1)
+        b0, b1 = max(0, int(pz - rr)), min(N, int(pz + rr) + 1)
+        hx, hz = np.meshgrid(np.arange(a0, a1), np.arange(b0, b1), indexing="ij")
+        wt = np.exp(-((hx - px) ** 2 + (hz - pz) ** 2) / (sig * sig))
+        num[a0:a1, b0:b1] += wt * py
+        den[a0:a1, b0:b1] += wt
+    ry = np.where(den > 1e-9, num / np.maximum(den, 1e-9), ry)
     wgt = 1 - ss((dist - (hw + 1.3)) / 15)
     wgt[dist > hw + 1.3 + 15] = 0
     Tf = Tf * (1 - wgt) + (ry - 1) * wgt
-    site.road_dist, site.road_y = dist, ry
+    site.road_dist, site.road_y, site.road_wgt = dist, ry, wgt
     return Tf
 
 
@@ -211,10 +232,13 @@ def terrain(site):
     dd = np.hypot((X - PLATEAU[0]) / PLATEAU[2], (Z - PLATEAU[1]) / PLATEAU[3])
     kk = 1 - ss((dd - 1) * min(PLATEAU[2], PLATEAU[3]) / 12)
     Tf = Tf * (1 - kk) + (RIDGE_Y - 1 - 0.16 * np.clip(Z - 56, 0, None)) * kk
+    # the road has the last word: the levelled bench and hollow must not leave a bank beside the road where it leaves them
+    Tf = Tf * (1 - site.road_wgt) + (site.road_y - 1) * site.road_wgt
     site.Tf = Tf
     T = np.rint(Tf).astype(int)
     # the road itself: half-block steps so the grade is walkable; slab_y marks the cells that carry a bottom slab
     on = site.road_dist <= 3.5
+    on[HOLLOW_PAVED[0]:, :HOLLOW_PAVED[1]] = False           # the portal forecourt is paved over the road's end (tunnel())
     S2 = np.rint(site.road_y * 2).astype(int)
     site.slab_y = np.full((N, N), -1, dtype=int)
     odd = on & (S2 % 2 == 1)
@@ -222,6 +246,7 @@ def terrain(site):
     site.slab_y = np.where(odd, (S2 - 1) // 2, -1)
     site.hill_road = on
     site.shoulder = (site.road_dist > 3.5) & (site.road_dist <= 4.8)
+    site.shoulder[HOLLOW_PAVED[0]:, :HOLLOW_PAVED[1]] = False
     site.T = T
     return T
 
@@ -779,8 +804,9 @@ def hill_road(S):
 
 
 def lookout(S):
-    """The ridge bench: gravel parking, low wall on the sea side, a viewing scope, a bench and a vending machine,
-    all kept to the north-west so the south-east view back to the sea gap stays open."""
+    """The ridge bench: gravel parking, low wall on the sea side, a viewing scope, a bench, a map board and a vending machine,
+    all kept to the north and west verges, clear of the carriageway across the bench and of the car's swept path, so the
+    south-east view back to the sea gap stays open."""
     w, T = S.w, S.T
     cx, cz, rx, rz = PLATEAU
     for x in range(cx - rx - 3, cx + rx + 4):
@@ -796,20 +822,22 @@ def lookout(S):
             if 0.88 <= d < 0.97 and z > cz + 2 and x > cx - 14 and not S.hill_road[x, z]:
                 if abs(x - RIDGE[0]) > 5 or abs(z - cz) < 3:
                     w.set(x, int(T[x, z]) + 1, z, "stone_brick_wall" if (x + z) % 2 else "stone_brick_wall")
-    # furniture at the western end
+    # furniture on the verge. The road leaves the bench at its west end (it runs on through x 186..172, z 52..48 and down the
+    # hill), so the bench and the map board stand on the north rim, z 45..46, well clear of the carriageway and of the car's
+    # swept path (the north rim is also away from the south-east view to the sea)
     y = RIDGE_Y
     for i in range(3):
-        slab(w, 172 + i, y, 48, "birch")
-        w.set(172 + i, y, 47, bs("birch_trapdoor", facing="south", half="bottom", open=True))
-    vending(w, 171, y, 58, "south", "blue_concrete")
+        slab(w, 184 + i, y, 46, "birch")
+        w.set(184 + i, y, 45, bs("birch_trapdoor", facing="south", half="bottom", open=True))
+    vending(w, 171, int(T[170:172, 58].max()) + 1, 58, "south", "blue_concrete")      # (on the ground there: the road cut dishes the bench's west end)
     # viewing scope on a post
     for yy in range(y, y + 2):
         w.set(180, yy, 62, "andesite_wall")
     w.set(180, y + 2, 62, "iron_block")
     w.set(181, y + 2, 62, "iron_bars")
     # map board
-    w.fill(176, y, 46, 178, y + 1, 46, "white_concrete")
-    place_wall_sign(w, 177, y + 1, 47, "south", [jp("展望台"), "LOOKOUT", "", ""], "birch")
+    w.fill(189, y, 45, 191, y + 1, 45, "white_concrete")
+    place_wall_sign(w, 190, y + 1, 46, "south", [jp("展望台"), "LOOKOUT", "", ""], "birch")
 
 
 def tunnel(S):
@@ -821,8 +849,9 @@ def tunnel(S):
     PX0, PX1, PZ = 176, 206, 22          # portal wall: x range, z of the wall face
     GX0, GX1 = 183, 197                  # the opening through the wall
     # --- level the forecourt in front of the portal (the natural hollow is only roughly flat) and pave it
+    # (to z 38: the car turns through here and its swept box reaches z 38.5)
     for x in range(PX0, PX1 + 1):
-        for z in range(PZ + 1, 38):
+        for z in range(PZ + 1, 39):
             w.fill(x, FY + 1, z, x, 90, z, "air")
             w.fill(x, FY - 3, z, x, FY - 1, z, "stone")
             w.set(x, FY, z, "light_gray_concrete" if z < 34 else "gray_concrete")
@@ -880,8 +909,9 @@ def tunnel(S):
     for x in (178, 202):
         w.fill(x - 3, FY + 6, 21, x + 3, FY + 8, 21, "blue_concrete")
         place_wall_sign(w, x, FY + 7, 20, "north", [jp("カートレイン"), "CAR TRAIN", "PLATFORM 1", ""], "birch")
-    # --- the passage through the wall into the hall, 15 wide x 10 high, with a white frame
-    w.fill(GX0, FY, 12, GX1, FY + 9, PZ, "air")
+    # --- the passage through the wall into the hall, 15 wide x 10 high, with a white frame. The floor (row FY) stays: it is the
+    # platform's own paving for z 12..20 and the wall's footing at z 21..22, so a car rolls from the forecourt onto the platform level
+    w.fill(GX0, FY + 1, 12, GX1, FY + 9, PZ, "air")
     w.fill(GX0 - 1, FY, 12, GX0 - 1, FY + 10, PZ, "white_concrete")
     w.fill(GX1 + 1, FY, 12, GX1 + 1, FY + 10, PZ, "white_concrete")
     w.fill(GX0 - 1, FY + 10, 12, GX1 + 1, FY + 10, PZ, "white_concrete")
@@ -1516,18 +1546,19 @@ def street_scene(S, with_car=False):
     # --- traffic signals at the two junctions
     signal(S, 124, 135, 125, "west")
     signal(S, 108, 121, 131, "east")
-    signal(S, 143, 121, 131, "west")
+    signal(S, 141, 121, 131, "west")                    # (not on the junction corner: the car turns into the hill street across it)
     signal(S, 156, 135, 125, "east")
     # --- parked cars along the kerbs (left-hand traffic: eastbound on the north side)
     cols = ["white", "silver", "black", "blue", "red", "yellow", "green", "gray", "lightblue", "orange", "white", "silver"]
     spots_n = [104, 124, 158, 164]
     spots_s = [106, 126, 145, 162]
+    # (tucked right against the kerbs: the story drives the middle of the street, a car 4 wide and 0.5 clear on each side)
     for x in spots_n:
         if x + 5 < 140 and x > 108 and x < 122:
             continue
-        parked_car(w, x, GY, ROAD_Z[0] + 1, "east", rng.choice(cols))
+        parked_car(w, x, GY, ROAD_Z[0], "east", rng.choice(cols))
     for x in spots_s:
-        parked_car(w, x, GY, ROAD_Z[1] - 2, "west", rng.choice(cols))
+        parked_car(w, x, GY, ROAD_Z[1] - 1, "west", rng.choice(cols))
     # a car left half onto the pavement on the cross street, one in the lane behind the shops
     parked_car(w, 114, GY, 150, "south", "silver")
     parked_car(w, 117, GY, 109, "north", "blue")
@@ -1537,7 +1568,7 @@ def street_scene(S, with_car=False):
     # --- bicycles at the station and along the shop fronts
     for z in (106, 108, 110, 112):
         bike(S, 56, z, "x")
-    for x in (96, 102, 129, 150):
+    for x in (96, 102, 129, 153):                                             # (153: on the pavement, not on the hill street)
         bike(S, x, 120, "x")
     for x in (98, 128, 166):
         bike(S, x, 136, "x")
@@ -1618,7 +1649,7 @@ def clutter(S):
     for x, z in ((97, 119), (133, 119), (163, 119), (98, 137), (137, 137), (170, 137)):
         w.set(x, GY, z, "cauldron")                                       # a grey bin
     for x in (95, 99):                                                    # bollards at the crossing, red and white
-        for z in (122, 134):
+        for z in (122, 135):                                              # (south pair one cell in from the kerb: the car slides in past it)
             w.set(x, GY, z, "red_concrete")
             w.set(x, GY + 1, z, "white_concrete")
     for x, z in ((111, 98), (121, 155)):                                  # curve mirrors at the lane corners

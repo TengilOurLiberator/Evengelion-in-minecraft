@@ -1,0 +1,10 @@
+fill 3094 54 140 3098 54 140 minecraft:air
+fill 3094 54 141 3098 54 141 minecraft:air
+fill 3094 55 140 3098 55 140 minecraft:air
+fill 3094 55 141 3098 55 141 minecraft:air
+fill 3094 56 140 3098 56 140 minecraft:air
+fill 3094 56 141 3098 56 141 minecraft:air
+fill 3094 57 140 3098 57 140 minecraft:air
+fill 3094 57 141 3098 57 141 minecraft:air
+fill 3094 58 140 3098 58 140 minecraft:air
+fill 3094 58 141 3098 58 141 minecraft:air

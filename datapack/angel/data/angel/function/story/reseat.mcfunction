@@ -1,0 +1,1 @@
+ride @s mount @e[tag=angel.seat_passenger,limit=1]

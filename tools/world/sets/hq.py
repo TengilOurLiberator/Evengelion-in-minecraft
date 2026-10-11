@@ -52,7 +52,7 @@ WHITE = "white_concrete"
 YELLOW = "yellow_concrete"
 IRON = "iron_block"
 EYE_OFF = "minecraft:black_concrete"
-EYE_ON = "minecraft:ochre_froglight"
+EYE_ON = "minecraft:glowstone"                 # hot yellow-white, emits 15; (the old froglight read as a pale cream brick)
 LAMP_OFF = "minecraft:gray_concrete"           # dead lamp panel
 LAMP_ON = "minecraft:sea_lantern"
 LIQUID = "orange_stained_glass"
@@ -78,8 +78,11 @@ EYES_LEFT = []                # filled by build(): (x, y, z) cells, viewer's lef
 EYES_RIGHT = []               # viewer's right (east) eye
 CAGE_LIGHTS = []              # (x, y, z, block_when_on); all are built OFF (LAMP_OFF) by default
 BOOTH_LIGHTS = []             # the subset lighting the commander's booth
-EMERGENCY = []                # (x, y, z) dim red lamps that are on from the start
+EMERGENCY = []                # (x, y, z) red lamps that are on from the start (hidden light block level EMERGENCY_LEVEL beside each)
+EYE_GLOW = []                 # (x, y, z, block_when_on): hidden light blocks that put a glow on the brow and the bridge end; built as
+                              # air - set them with the eyes (optional; the eye blocks themselves already emit 15)
 DOORS = {}                    # name -> dict(box=(x1,y1,z1,x2,y2,z2), closed=block) doors the story opens
+EMERGENCY_LEVEL = 10          # light level of an emergency lamp (it was 7: not enough to read anything by)
 HAND = {}                     # filled by hand_boxes()
 
 
@@ -142,7 +145,7 @@ _RGB = {
 }
 _EXACT = {
     "amethyst_block": (134, 97, 191), "obsidian": (18, 14, 30), "magma_block": (140, 60, 20), "sea_lantern": (200, 225, 215),
-    "ochre_froglight": (240, 220, 140), "verdant_froglight": (200, 240, 170), "iron_block": (205, 205, 205),
+    "ochre_froglight": (240, 220, 140), "glowstone": (255, 205, 100), "verdant_froglight": (200, 240, 170), "iron_block": (205, 205, 205),
     "polished_blackstone": (52, 48, 56), "blackstone": (42, 38, 44), "deepslate_tiles": (55, 55, 60), "polished_deepslate": (70, 70, 75),
     "chiseled_polished_blackstone": (50, 46, 54), "smooth_quartz": (235, 230, 222), "quartz_block": (235, 230, 222),
     "copper_grate": (180, 105, 75), "weathered_copper": (100, 150, 120), "cut_copper": (190, 110, 80),
@@ -199,13 +202,16 @@ def tables(w):
         if nm == "air":
             continue
         rgb[i] = block_rgb(nm)
+        if nm == "barrier":                 # invisible, solid for walking, clear for light
+            kind[i] = 0
+            continue
         if nm == "light":
             kind[i] = 0
             if "level=" in b:
                 emit[i] = int(b.split("level=")[1].split(",")[0].split("]")[0])
             continue
-        if any(t in nm for t in _THIN) and "glass" not in nm.replace("glass_pane", ""):
-            kind[i], alpha[i] = 3, (0.2 if "grate" in nm else 0.3)
+        if any(t in nm for t in _THIN) and "glass" not in nm.replace("glass_pane", "") and nm != "sea_lantern":
+            kind[i], alpha[i] = 3, (0.35 if "grate" in nm else (0.6 if "bars" in nm else 0.45))
         elif "glass" in nm and "pane" not in nm:
             kind[i], alpha[i] = 2, 0.45
         elif "pane" in nm:
@@ -247,6 +253,15 @@ def light_map(w, tab=None, region=None):
 
 
 # ------------------------------------------------------------------------------------------------ ray-cast renderer
+def lightmap_rgb(lv, gamma=0.5):
+    """What the game's lightmap makes of block light lv (0..1 = level / 15) with no skylight: the brightness curve, the warm tint
+    of dim block light and the default 'gamma' lift.  (n,) -> (n, 3).  Calibrated by eye against the real screenshots."""
+    b = lv / (4.0 - 3.0 * lv)
+    c = np.stack([b, b * ((b * 0.6 + 0.4) * 0.6 + 0.4), b * (b * b * 0.6 + 0.4)], axis=-1)
+    c = c * (1 - gamma) + (1.0 - (1.0 - c) ** 4) * gamma
+    return np.clip(c, 0.0, 1.0).astype(np.float32)
+
+
 def raycast(a, tab, path, eye, target, fov=70.0, size=(960, 540), ortho=None, light=None, ambient=0.45, offset=(0, 0, 0),
             sky=(10, 10, 14), fog=0.0, maxd=700.0):
     """Render the voxel array `a` (palette ids) from `eye` towards `target`.  Perspective by default (fov = vertical),
@@ -330,7 +345,7 @@ def raycast(a, tab, path, eye, target, fov=70.0, size=(960, 540), ortho=None, li
                 pc[np.arange(hi.size), ax] -= sg
                 pc = np.clip(pc, 0, [sx - 1, sy - 1, sz - 1])
                 lv = light[pc[:, 0], pc[:, 1], pc[:, 2]].astype(np.float32) / 15.0
-                lum = (0.06 + 0.94 * lv ** 1.4)[:, None] * sh[:, None]
+                lum = lightmap_rgb(lv) * sh[:, None]
                 em = emit[cid[hit]] > 0
                 lum = np.where(em[:, None], 1.15, lum)
             else:
@@ -357,7 +372,7 @@ def raycast(a, tab, path, eye, target, fov=70.0, size=(960, 540), ortho=None, li
                 if light is not None:
                     cc = cell[ti2]
                     lv = light[cc[:, 0], cc[:, 1], cc[:, 2]].astype(np.float32) / 15.0
-                    base = base * (0.15 + 0.85 * lv)[:, None]
+                    base = base * lightmap_rgb(lv)
                 C[ti2] += (T[ti2] * al)[:, None] * base
                 T[ti2] *= (1 - al)
             lastid[ti] = tid
@@ -570,15 +585,17 @@ def sub_axes(x0, x1, y0, y1, z0, z1):
 HC = 10
 HW, HH, HD = 21, 40, 28
 EYE_IZ = 6                      # the lit eye block sits in cell iz 6; the cell in front of it (iz 5) is the recess
-EYE_K = (2, 3, 4, 5, 6)         # |ix - HC| of the cells of one eye: five long, two high, stepping up towards the temple
+EYE_K = (2, 3, 4, 5, 6)         # |ix - HC| of the cells of one eye: five long and ONE high, stepping up towards the temple
 NOSE_PROUD = 1.8
 HALF_W = 7.4                    # half width of the face at the brow: fifteen blocks
 HORN_TOP = 30.5                  # v of the horn tip (the stop sees chin tip to horn tip in about 100 degrees)
 
 
 def eye_low(k):
-    """Lowest row (iy) of the eye slit at |ix - HC| = k; the slit is two rows high and climbs outwards: an angry glare."""
-    return int(math.floor(17.0 + 0.5 * (k - 1.5))) - 2
+    """Row (iy) of the eye slit at |ix - HC| = k.  The slit is one row high, climbs outwards (an angry glare) and sits in the
+    top row of the old two-row socket, so the brow's overhang roofs it.  The player looks up at it from 5 to 9 blocks below, so
+    the one-deep recess and the sill cut the lit face down to well under a block of glow."""
+    return int(math.floor(17.0 + 0.5 * (k - 1.5))) - 1
 
 
 def _hsub():
@@ -624,7 +641,7 @@ def head_field(horn_on=True):
     carve = np.zeros(base.shape, bool)
     for k in EYE_K:
         lo = eye_low(k)
-        carve |= (np.abs(U - k) < 0.5) & (V >= lo) & (V < lo + 2) & (S < EYE_IZ)
+        carve |= (np.abs(U - k) < 0.5) & (V >= lo) & (V < lo + 1) & (S < EYE_IZ)
     return (base | brow | nose | cheek | (horn if horn_on else False)) & ~carve
 
 
@@ -635,7 +652,7 @@ def head_blocks():
     cand = quantize(occ[:, :, ::-1])[:, :, ::-1]                 # to world orientation and back
     eyes_l, eyes_r = [], []
     for k in EYE_K:
-        for r in (0, 1):
+        for r in (0,):
             for sgn in (-1, 1):
                 ix, iy = HC + sgn * k, eye_low(k) + r
                 cand[ix, iy, EYE_IZ] = 1
@@ -711,7 +728,7 @@ def head_stats():
     ch = quantize(head_field(True)[:, :, ::-1])[:, :, ::-1] > 0
     xs, ys, zs = np.nonzero(c)
     _, ysh, _ = np.nonzero(ch)
-    ey = [HEAD_Y0 + iy for (_, iy, _) in [(0, eye_low(k) + r, 0) for k in EYE_K for r in (0, 1)]]
+    ey = [HEAD_Y0 + iy for (_, iy, _) in [(0, eye_low(k) + r, 0) for k in EYE_K for r in (0,)]]
     return dict(width=int(xs.max() - xs.min() + 1), height=int(ys.max() + 1), height_horn=int(ysh.max() + 1), depth=int(zs.max() - zs.min() + 1),
                 eye_lo=min(ey) + 0.0, eye_hi=max(ey) + 1.0)
 
@@ -2085,6 +2102,7 @@ def build(w):
     build_shaft(w)
     cage_anchors(w)
     w.anchor("loop_door", 103.5, UY + 1, 155.5, yaw=YAW["south"])
+    seal_skylight(w)
     HAND["lowered"] = hand_bbox(False)
     HAND["raised"] = hand_bbox(True)
 
@@ -2169,6 +2187,84 @@ def leak_check(w, tab=None):
             near_void |= pad[tuple(sl)]
     leaks = np.argwhere(air & near_void)
     return leaks
+
+
+_SKY_OPEN = ("barrier", "iron_bars", "door", "grate", "ladder", "chain", "torch", "fence", "rod", "pane", "button", "lever", "carpet",
+             "_slab", "_stairs", "_wall", "bulb")        # (bulbs and walls are not all clear in the game; assuming clear is the safe side)
+
+
+def sky_opaque(w):
+    """Bool grid: cells that stop skylight - full opaque cubes (tinted glass stops it too; clear glass, bars, doors, grates,
+    slabs, stairs, light blocks and air let it through, so they are treated as open)."""
+    op = np.zeros(len(w.palette), bool)
+    for i, b in enumerate(w.palette):
+        if not b:
+            continue
+        nm = b.split("[")[0].replace("minecraft:", "")
+        if nm == "air":
+            continue
+        if nm == "tinted_glass":
+            op[i] = True
+        elif "glass" in nm or nm == "light":
+            op[i] = False
+        elif nm in ("sea_lantern", "shroomlight", "magma_block", "redstone_lamp"):
+            op[i] = True
+        elif "lantern" in nm:
+            op[i] = False
+        else:
+            op[i] = not any(t in nm for t in _SKY_OPEN)
+    return op[w.a]
+
+
+def skylight_flood(w):
+    """Skylight 0..15 over the whole canvas, as the game computes it if everything outside the box is open sky (it is: the
+    set stands in a void world).  Returns (S, opaque, interior) where interior = cells that were drawn and are not opaque."""
+    opq = sky_opaque(w)
+    P = np.pad(opq, 1, constant_values=False)
+    above = np.cumsum(P[:, ::-1, :], axis=1)[:, ::-1, :]          # opaque cells at or above each cell
+    S = np.where((above == 0) & ~P, 15, 0).astype(np.int8)
+    for _ in range(16):
+        m = S.copy()
+        for ax in range(3):
+            for sh in (1, -1):
+                m = np.maximum(m, (np.roll(S, sh, axis=ax) - 1).clip(0))
+        S2 = np.where(~P, m, 0).astype(np.int8)
+        if (S2 == S).all():
+            break
+        S = S2
+    S = S[1:-1, 1:-1, 1:-1]
+    return S, opq, (w.a != 0) & ~opq
+
+
+def skylight_check(w):
+    """No skylight may reach any drawn, non-opaque cell (air, glass, bars, slabs ...).  Also the plain per-column rule: scanning
+    down from the top of the box, the first drawn cell must be an opaque cube, never air or a see-through block above one.
+    Returns (n_flood_cells, n_column_cells, sample cells)."""
+    S, opq, inner = skylight_flood(w)
+    flood = inner & (S > 0)
+    first_op = np.where(opq.any(axis=1), opq.shape[1] - 1 - np.argmax(opq[:, ::-1, :], axis=1), -1)       # highest opaque cell per column
+    ys = np.arange(w.a.shape[1])[None, :, None]
+    col = inner & (ys > first_op[:, None, :])
+    both = flood | col
+    return int(flood.sum()), int(col.sum()), [tuple(int(v) for v in p) for p in np.argwhere(both)[:10]]
+
+
+def seal_skylight(w):
+    """Back every drawn see-through cell (doors, emergency-lamp glass, bars ...) that touches untouched space with one dark opaque
+    block, so the open sky of the void world cannot shine in through it."""
+    opq = sky_opaque(w)
+    open_ = (w.a != 0) & ~opq
+    near = np.zeros(open_.shape, bool)
+    for ax in range(3):
+        for sh in (1, -1):
+            s_ = np.roll(open_, sh, axis=ax)
+            sl = [slice(None)] * 3
+            sl[ax] = slice(0, 1) if sh == 1 else slice(-1, None)
+            s_[tuple(sl)] = False
+            near |= s_
+    cells = (w.a == 0) & near
+    w.a[cells] = w._id(WALLM)
+    return int(cells.sum())
 
 
 def verify(w, out=print):
