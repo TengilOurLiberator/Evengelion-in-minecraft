@@ -1,0 +1,939 @@
+{
+ "line.base.1_01": {
+  "sounds": [
+   {
+    "name": "angel:line/base/1_01"
+   }
+  ]
+ },
+ "line.base.1_02": {
+  "sounds": [
+   {
+    "name": "angel:line/base/1_02"
+   }
+  ]
+ },
+ "line.base.1_03": {
+  "sounds": [
+   {
+    "name": "angel:line/base/1_03",
+    "stream": true
+   }
+  ]
+ },
+ "line.misato.1_04": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/1_04"
+   }
+  ]
+ },
+ "line.misato.1_05": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/1_05"
+   }
+  ]
+ },
+ "line.misato.1_06": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/1_06"
+   }
+  ]
+ },
+ "line.misato.2_01": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/2_01"
+   }
+  ]
+ },
+ "line.misato.2_02": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/2_02"
+   }
+  ]
+ },
+ "line.misato.2_03": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/2_03"
+   }
+  ]
+ },
+ "line.misato.2_04": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/2_04"
+   }
+  ]
+ },
+ "line.misato.2_05": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/2_05"
+   }
+  ]
+ },
+ "line.misato.2_06": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/2_06"
+   }
+  ]
+ },
+ "line.misato.2_07": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/2_07"
+   }
+  ]
+ },
+ "line.misato.2_08": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/2_08"
+   }
+  ]
+ },
+ "line.misato.2_09": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/2_09"
+   }
+  ]
+ },
+ "line.misato.2_10": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/2_10"
+   }
+  ]
+ },
+ "line.misato.2_11": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/2_11"
+   }
+  ]
+ },
+ "line.misato.2_12": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/2_12"
+   }
+  ]
+ },
+ "line.ritsuko.2_13": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/2_13"
+   }
+  ]
+ },
+ "line.ritsuko.2_14": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/2_14"
+   }
+  ]
+ },
+ "line.base.2_15": {
+  "sounds": [
+   {
+    "name": "angel:line/base/2_15"
+   }
+  ]
+ },
+ "line.misato.2_16": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/2_16"
+   }
+  ]
+ },
+ "line.base.3_01": {
+  "sounds": [
+   {
+    "name": "angel:line/base/3_01"
+   }
+  ]
+ },
+ "line.misato.3_02": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/3_02"
+   }
+  ]
+ },
+ "line.misato.3_03": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/3_03"
+   }
+  ]
+ },
+ "line.misato.3_04": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/3_04",
+    "stream": true
+   }
+  ]
+ },
+ "line.misato.3_05": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/3_05"
+   }
+  ]
+ },
+ "line.misato.3_06": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/3_06"
+   }
+  ]
+ },
+ "line.misato.3_07": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/3_07"
+   }
+  ]
+ },
+ "line.misato.3_08": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/3_08"
+   }
+  ]
+ },
+ "line.misato.3_09": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/3_09"
+   }
+  ]
+ },
+ "line.misato.3_10": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/3_10"
+   }
+  ]
+ },
+ "line.misato.4_01": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/4_01"
+   }
+  ]
+ },
+ "line.misato.4_02": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/4_02"
+   }
+  ]
+ },
+ "line.misato.4_03": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/4_03"
+   }
+  ]
+ },
+ "line.misato.4_04": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/4_04"
+   }
+  ]
+ },
+ "line.base.4_05": {
+  "sounds": [
+   {
+    "name": "angel:line/base/4_05",
+    "stream": true
+   }
+  ]
+ },
+ "line.ritsuko.4_06": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/4_06"
+   }
+  ]
+ },
+ "line.misato.4_07": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/4_07"
+   }
+  ]
+ },
+ "line.ritsuko.4_08": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/4_08"
+   }
+  ]
+ },
+ "line.misato.4_09": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/4_09"
+   }
+  ]
+ },
+ "line.ritsuko.4_10": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/4_10"
+   }
+  ]
+ },
+ "line.misato.4_11": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/4_11"
+   }
+  ]
+ },
+ "line.base.4_12": {
+  "sounds": [
+   {
+    "name": "angel:line/base/4_12"
+   }
+  ]
+ },
+ "line.misato.4_13": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/4_13"
+   }
+  ]
+ },
+ "line.ritsuko.4_14": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/4_14"
+   }
+  ]
+ },
+ "line.misato.4_15": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/4_15"
+   }
+  ]
+ },
+ "line.ritsuko.4_16": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/4_16"
+   }
+  ]
+ },
+ "line.misato.4_17": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/4_17"
+   }
+  ]
+ },
+ "line.ritsuko.4_18": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/4_18"
+   }
+  ]
+ },
+ "line.ritsuko.5_01": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/5_01"
+   }
+  ]
+ },
+ "line.ritsuko.5_02": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/5_02",
+    "stream": true
+   }
+  ]
+ },
+ "line.ritsuko.5_03": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/5_03",
+    "stream": true
+   }
+  ]
+ },
+ "line.gendo.5_04": {
+  "sounds": [
+   {
+    "name": "angel:line/gendo/5_04"
+   }
+  ]
+ },
+ "line.gendo.5_05": {
+  "sounds": [
+   {
+    "name": "angel:line/gendo/5_05"
+   }
+  ]
+ },
+ "line.gendo.5_06": {
+  "sounds": [
+   {
+    "name": "angel:line/gendo/5_06"
+   }
+  ]
+ },
+ "line.misato.5_07": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/5_07"
+   }
+  ]
+ },
+ "line.ritsuko.5_08": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/5_08"
+   }
+  ]
+ },
+ "line.misato.5_09": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/5_09"
+   }
+  ]
+ },
+ "line.ritsuko.5_10": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/5_10"
+   }
+  ]
+ },
+ "line.misato.5_11": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/5_11"
+   }
+  ]
+ },
+ "line.ritsuko.5_12": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/5_12"
+   }
+  ]
+ },
+ "line.misato.5_13": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/5_13"
+   }
+  ]
+ },
+ "line.ritsuko.5_14": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/5_14"
+   }
+  ]
+ },
+ "line.misato.5_15": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/5_15"
+   }
+  ]
+ },
+ "line.ritsuko.5_16": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/5_16",
+    "stream": true
+   }
+  ]
+ },
+ "line.misato.5_17": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/5_17"
+   }
+  ]
+ },
+ "line.gendo.5_18": {
+  "sounds": [
+   {
+    "name": "angel:line/gendo/5_18"
+   }
+  ]
+ },
+ "line.gendo.5_19": {
+  "sounds": [
+   {
+    "name": "angel:line/gendo/5_19"
+   }
+  ]
+ },
+ "line.gendo.5_20": {
+  "sounds": [
+   {
+    "name": "angel:line/gendo/5_20"
+   }
+  ]
+ },
+ "line.base.5_21": {
+  "sounds": [
+   {
+    "name": "angel:line/base/5_21"
+   }
+  ]
+ },
+ "line.gendo.5_22": {
+  "sounds": [
+   {
+    "name": "angel:line/gendo/5_22"
+   }
+  ]
+ },
+ "line.ritsuko.5_23": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/5_23"
+   }
+  ]
+ },
+ "line.misato.5_24": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/5_24"
+   }
+  ]
+ },
+ "line.gendo.5_25": {
+  "sounds": [
+   {
+    "name": "angel:line/gendo/5_25"
+   }
+  ]
+ },
+ "line.gendo.5_26": {
+  "sounds": [
+   {
+    "name": "angel:line/gendo/5_26"
+   }
+  ]
+ },
+ "line.gendo.5_27": {
+  "sounds": [
+   {
+    "name": "angel:line/gendo/5_27"
+   }
+  ]
+ },
+ "line.rei.5_28": {
+  "sounds": [
+   {
+    "name": "angel:line/rei/5_28"
+   }
+  ]
+ },
+ "line.ritsuko.5_29": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/5_29"
+   }
+  ]
+ },
+ "line.base.5_30": {
+  "sounds": [
+   {
+    "name": "angel:line/base/5_30"
+   }
+  ]
+ },
+ "line.rei.5_31": {
+  "sounds": [
+   {
+    "name": "angel:line/rei/5_31"
+   }
+  ]
+ },
+ "line.base.5_32": {
+  "sounds": [
+   {
+    "name": "angel:line/base/5_32"
+   }
+  ]
+ },
+ "line.ritsuko.5_33": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/5_33"
+   }
+  ]
+ },
+ "line.misato.5_34": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/5_34"
+   }
+  ]
+ },
+ "line.misato.5_35": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/5_35"
+   }
+  ]
+ },
+ "line.rei.5_36": {
+  "sounds": [
+   {
+    "name": "angel:line/rei/5_36"
+   }
+  ]
+ },
+ "line.rei.5_37": {
+  "sounds": [
+   {
+    "name": "angel:line/rei/5_37"
+   }
+  ]
+ },
+ "line.rei.5_38": {
+  "sounds": [
+   {
+    "name": "angel:line/rei/5_38"
+   }
+  ]
+ },
+ "line.rei.5_39": {
+  "sounds": [
+   {
+    "name": "angel:line/rei/5_39"
+   }
+  ]
+ },
+ "line.base.5_40": {
+  "sounds": [
+   {
+    "name": "angel:line/base/5_40"
+   }
+  ]
+ },
+ "line.gendo.5_41": {
+  "sounds": [
+   {
+    "name": "angel:line/gendo/5_41"
+   }
+  ]
+ },
+ "line.misato.5_42": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/5_42"
+   }
+  ]
+ },
+ "line.ritsuko.5_43": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/5_43"
+   }
+  ]
+ },
+ "line.rei.5_44": {
+  "sounds": [
+   {
+    "name": "angel:line/rei/5_44"
+   }
+  ]
+ },
+ "line.base.6_01": {
+  "sounds": [
+   {
+    "name": "angel:line/base/6_01"
+   }
+  ]
+ },
+ "line.base.6_02": {
+  "sounds": [
+   {
+    "name": "angel:line/base/6_02"
+   }
+  ]
+ },
+ "line.ritsuko.6_03": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/6_03"
+   }
+  ]
+ },
+ "line.base.6_04": {
+  "sounds": [
+   {
+    "name": "angel:line/base/6_04"
+   }
+  ]
+ },
+ "line.ritsuko.6_05": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/6_05"
+   }
+  ]
+ },
+ "line.misato.6_06": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/6_06"
+   }
+  ]
+ },
+ "line.base.6_07": {
+  "sounds": [
+   {
+    "name": "angel:line/base/6_07"
+   }
+  ]
+ },
+ "line.base.6_08": {
+  "sounds": [
+   {
+    "name": "angel:line/base/6_08"
+   }
+  ]
+ },
+ "line.base.6_09": {
+  "sounds": [
+   {
+    "name": "angel:line/base/6_09"
+   }
+  ]
+ },
+ "line.ritsuko.6_10": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/6_10"
+   }
+  ]
+ },
+ "line.ritsuko.6_11": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/6_11"
+   }
+  ]
+ },
+ "line.misato.6_12": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/6_12"
+   }
+  ]
+ },
+ "line.base.6_13": {
+  "sounds": [
+   {
+    "name": "angel:line/base/6_13"
+   }
+  ]
+ },
+ "line.base.6_14": {
+  "sounds": [
+   {
+    "name": "angel:line/base/6_14"
+   }
+  ]
+ },
+ "line.base.6_15": {
+  "sounds": [
+   {
+    "name": "angel:line/base/6_15"
+   }
+  ]
+ },
+ "line.misato.6_16": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/6_16"
+   }
+  ]
+ },
+ "line.gendo.6_17": {
+  "sounds": [
+   {
+    "name": "angel:line/gendo/6_17"
+   }
+  ]
+ },
+ "line.misato.6_18": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/6_18"
+   }
+  ]
+ },
+ "line.misato.6_19": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/6_19"
+   }
+  ]
+ },
+ "line.base.6_20": {
+  "sounds": [
+   {
+    "name": "angel:line/base/6_20"
+   }
+  ]
+ },
+ "line.misato.6_21": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/6_21"
+   }
+  ]
+ },
+ "line.misato.7_01": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/7_01"
+   }
+  ]
+ },
+ "line.ritsuko.7_02": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/7_02"
+   }
+  ]
+ },
+ "line.misato.7_03": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/7_03"
+   }
+  ]
+ },
+ "line.misato.7_04": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/7_04"
+   }
+  ]
+ },
+ "line.ritsuko.7_05": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/7_05"
+   }
+  ]
+ },
+ "line.ritsuko.7_06": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/7_06"
+   }
+  ]
+ },
+ "line.ritsuko.7_07": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/7_07"
+   }
+  ]
+ },
+ "line.misato.7_08": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/7_08"
+   }
+  ]
+ },
+ "line.misato.7_09": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/7_09"
+   }
+  ]
+ },
+ "line.base.7_10": {
+  "sounds": [
+   {
+    "name": "angel:line/base/7_10"
+   }
+  ]
+ },
+ "line.misato.7_11": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/7_11"
+   }
+  ]
+ },
+ "line.ritsuko.7_12": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/7_12"
+   }
+  ]
+ },
+ "line.misato.7_13": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/7_13"
+   }
+  ]
+ },
+ "line.ritsuko.7_14": {
+  "sounds": [
+   {
+    "name": "angel:line/ritsuko/7_14"
+   }
+  ]
+ },
+ "line.base.7_15": {
+  "sounds": [
+   {
+    "name": "angel:line/base/7_15"
+   }
+  ]
+ },
+ "line.misato.7_16": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/7_16"
+   }
+  ]
+ },
+ "line.base.7_19": {
+  "sounds": [
+   {
+    "name": "angel:line/base/7_19"
+   }
+  ]
+ },
+ "line.misato.7_20": {
+  "sounds": [
+   {
+    "name": "angel:line/misato/7_20"
+   }
+  ]
+ }
+}

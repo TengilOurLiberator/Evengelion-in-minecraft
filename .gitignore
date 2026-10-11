@@ -1,0 +1,22 @@
+# third-party programs and the running server (Minecraft, Fabric, Vivecraft are not ours to redistribute);
+# the server folder also holds the generated world, logs and player data
+/downloads/
+/server/
+/game/
+
+# audio recordings and working files
+*.wav
+!/tools/voices/*_ref.wav
+*.aup4
+*.aup4-shm
+*.aup4-wal
+
+# the character bridge's saved state
+/characters_bridge/state.json
+
+__pycache__/
+
+/voices/
+/recording/*.wav
+*.aup4
+
