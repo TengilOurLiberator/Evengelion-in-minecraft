@@ -84,6 +84,17 @@ schedule clear angel:world/outskirts/p80
 schedule clear angel:world/outskirts/p81
 schedule clear angel:world/outskirts/p82
 schedule clear angel:world/outskirts/p83
+schedule clear angel:world/outskirts/p84
+schedule clear angel:world/outskirts/p85
+schedule clear angel:world/outskirts/p86
+schedule clear angel:world/outskirts/p87
+schedule clear angel:world/outskirts/p88
+schedule clear angel:world/outskirts/p89
+schedule clear angel:world/outskirts/p90
+schedule clear angel:world/outskirts/p91
+schedule clear angel:world/outskirts/p92
+schedule clear angel:world/outskirts/p93
+schedule clear angel:world/outskirts/p94
 schedule clear angel:world/outskirts/c0
 schedule clear angel:world/outskirts/c1
 schedule clear angel:world/outskirts/c2
@@ -263,6 +274,26 @@ schedule clear angel:world/city/p64
 schedule clear angel:world/city/p65
 schedule clear angel:world/city/p66
 schedule clear angel:world/city/p67
+schedule clear angel:world/city/p68
+schedule clear angel:world/city/p69
+schedule clear angel:world/city/p70
+schedule clear angel:world/city/p71
+schedule clear angel:world/city/p72
+schedule clear angel:world/city/p73
+schedule clear angel:world/city/p74
+schedule clear angel:world/city/p75
+schedule clear angel:world/city/p76
+schedule clear angel:world/city/p77
+schedule clear angel:world/city/p78
+schedule clear angel:world/city/p79
+schedule clear angel:world/city/p80
+schedule clear angel:world/city/p81
+schedule clear angel:world/city/p82
+schedule clear angel:world/city/p83
+schedule clear angel:world/city/p84
+schedule clear angel:world/city/p85
+schedule clear angel:world/city/p86
+schedule clear angel:world/city/p87
 schedule clear angel:world/city/c0
 schedule clear angel:world/city/c1
 schedule clear angel:world/city/c2
@@ -578,6 +609,45 @@ schedule clear angel:world/geofront/p108
 schedule clear angel:world/geofront/p109
 schedule clear angel:world/geofront/p110
 schedule clear angel:world/geofront/p111
+schedule clear angel:world/geofront/p112
+schedule clear angel:world/geofront/p113
+schedule clear angel:world/geofront/p114
+schedule clear angel:world/geofront/p115
+schedule clear angel:world/geofront/p116
+schedule clear angel:world/geofront/p117
+schedule clear angel:world/geofront/p118
+schedule clear angel:world/geofront/p119
+schedule clear angel:world/geofront/p120
+schedule clear angel:world/geofront/p121
+schedule clear angel:world/geofront/p122
+schedule clear angel:world/geofront/p123
+schedule clear angel:world/geofront/p124
+schedule clear angel:world/geofront/p125
+schedule clear angel:world/geofront/p126
+schedule clear angel:world/geofront/p127
+schedule clear angel:world/geofront/p128
+schedule clear angel:world/geofront/p129
+schedule clear angel:world/geofront/p130
+schedule clear angel:world/geofront/p131
+schedule clear angel:world/geofront/p132
+schedule clear angel:world/geofront/p133
+schedule clear angel:world/geofront/p134
+schedule clear angel:world/geofront/p135
+schedule clear angel:world/geofront/p136
+schedule clear angel:world/geofront/p137
+schedule clear angel:world/geofront/p138
+schedule clear angel:world/geofront/p139
+schedule clear angel:world/geofront/p140
+schedule clear angel:world/geofront/p141
+schedule clear angel:world/geofront/p142
+schedule clear angel:world/geofront/p143
+schedule clear angel:world/geofront/p144
+schedule clear angel:world/geofront/p145
+schedule clear angel:world/geofront/p146
+schedule clear angel:world/geofront/p147
+schedule clear angel:world/geofront/p148
+schedule clear angel:world/geofront/p149
+schedule clear angel:world/geofront/p150
 schedule clear angel:world/geofront/c0
 schedule clear angel:world/geofront/c1
 schedule clear angel:world/geofront/c2
@@ -788,6 +858,18 @@ schedule clear angel:world/hq/p27
 schedule clear angel:world/hq/p28
 schedule clear angel:world/hq/p29
 schedule clear angel:world/hq/p30
+schedule clear angel:world/hq/p31
+schedule clear angel:world/hq/p32
+schedule clear angel:world/hq/p33
+schedule clear angel:world/hq/p34
+schedule clear angel:world/hq/p35
+schedule clear angel:world/hq/p36
+schedule clear angel:world/hq/p37
+schedule clear angel:world/hq/p38
+schedule clear angel:world/hq/p39
+schedule clear angel:world/hq/p40
+schedule clear angel:world/hq/p41
+schedule clear angel:world/hq/p42
 schedule clear angel:world/hq/c0
 schedule clear angel:world/hq/c1
 schedule clear angel:world/hq/c2
@@ -862,6 +944,10 @@ forceload remove 80 176 207 271
 forceload remove 176 -16 271 111
 forceload remove 176 80 271 207
 forceload remove 176 176 271 271
+forceload remove -64 -64 159 159
+forceload remove -64 160 159 319
+forceload remove 160 -64 319 159
+forceload remove 160 160 319 319
 forceload remove 984 -16 1111 111
 forceload remove 984 80 1111 207
 forceload remove 984 176 1111 303
@@ -878,6 +964,12 @@ forceload remove 1272 -16 1335 111
 forceload remove 1272 80 1335 207
 forceload remove 1272 176 1335 303
 forceload remove 1272 272 1335 335
+forceload remove 936 -64 1151 159
+forceload remove 936 160 1151 383
+forceload remove 1152 -64 1375 159
+forceload remove 1152 160 1375 383
+forceload remove 1376 -64 1383 159
+forceload remove 1376 160 1383 383
 forceload remove 1998 -2 2111 111
 forceload remove 1985 80 2111 207
 forceload remove 1988 176 2111 303
@@ -893,8 +985,16 @@ forceload remove 2176 272 2269 331
 forceload remove 2272 50 2321 111
 forceload remove 2272 80 2334 207
 forceload remove 2272 176 2331 269
+forceload remove 1936 -64 2159 159
+forceload remove 1936 160 2159 383
+forceload remove 2160 -64 2383 159
+forceload remove 2160 160 2383 383
 forceload remove 2984 -16 3111 111
-forceload remove 2984 80 3111 203
-forceload remove 3080 0 3148 111
-forceload remove 3080 80 3201 203
+forceload remove 2984 80 3111 204
+forceload remove 3080 4 3148 111
+forceload remove 3080 80 3201 204
+forceload remove 2936 -64 3151 159
+forceload remove 2936 160 3151 255
+forceload remove 3152 -64 3255 159
+forceload remove 3152 160 3255 255
 say [angel] placement stopped (forceload released)

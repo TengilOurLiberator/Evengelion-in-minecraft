@@ -1,7 +1,4 @@
-place template angel:city/t4_0_6 1192 51 288
-place template angel:city/t5_0_6 1240 51 288
-place template angel:city/t4_1_6 1192 80 307
-place template angel:city/t5_1_6 1240 80 288
-place template angel:city/t4_2_6 1192 128 314
-place template angel:city/t5_2_6 1240 128 316
-schedule function angel:world/city/p53 1t
+scoreboard players set #ok angel_world 0
+execute if loaded 1176 32 272 if loaded 1303 32 272 if loaded 1176 32 335 if loaded 1303 32 335 if loaded 1239 32 303 run scoreboard players set #ok angel_world 1
+execute if score #ok angel_world matches 1 run function angel:world/city/p53
+execute unless score #ok angel_world matches 1 run schedule function angel:world/city/p52 2t

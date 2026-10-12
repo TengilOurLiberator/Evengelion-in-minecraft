@@ -1,4 +1,4 @@
-scoreboard players set #ok angel_world 0
-execute if loaded 2176 0 -12 if loaded 2303 0 -12 if loaded 2176 0 111 if loaded 2303 0 111 if loaded 2239 0 49 run scoreboard players set #ok angel_world 1
-execute if score #ok angel_world matches 1 run function angel:world/geofront/p66
-execute unless score #ok angel_world matches 1 run schedule function angel:world/geofront/p65 2t
+place template angel:geofront/t3_1_6 2144 48 288
+place template angel:geofront/t2_2_6 2096 96 288
+place template angel:geofront/t3_2_6 2144 96 288
+schedule function angel:world/geofront/p66 1t

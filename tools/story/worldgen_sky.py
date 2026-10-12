@@ -1,13 +1,16 @@
-"""Sky and weather for each set, as the world generator defines them (tools/world/worldgen.py SKY_TICKS), without the teleport that
-`angel:world/enter_<set>` also does: that one turns the player's head to the set's start direction, and the story never does that."""
-import sys
+"""Sky and weather for each set: the story calls the world generator's own function `angel:world/sky_<set>` (outskirts 6000, city 18000,
+geofront 6000, hq 6000): it sets the world clock, pauses it and clears the weather, and moves nobody.  (`angel:world/enter_<set>` does the same
+and also teleports the player, turning his head to the set's start direction; the story never does that.)  Each set has its own biome whose sky and
+fog colours are multiplied by the world clock, so the clock value is the world generator's business, not the story's: there is no tick table here.
 
-from core import TOOLS
-
-CLOCK = "angel:day"
-SKY_TICKS = {"outskirts": 6000, "city": 18000, "geofront": 18000, "hq": 18000}
+The functions come with the world build (tools/world); until the datapack has them a call is a silent no-op in the game, and the checker counts
+`angel:world/...` as external, so `--check` does not depend on them.  Scene 7's dawn runs the clock itself (`time of angel:day rate ...`) from the
+city's night and hands back with `rate 1.0` and `sky("hq")` when the ending returns to the cage.
+"""
+SETS = ("outskirts", "city", "geofront", "hq")
 
 
 def sky(set_name):
-    ticks = SKY_TICKS.get(set_name, 6000)
-    return [f"time of {CLOCK} set {ticks}", f"time of {CLOCK} pause", "execute in minecraft:overworld run weather clear"]
+    if set_name not in SETS:
+        raise ValueError(f"no sky function for set {set_name!r}")
+    return [f"function angel:world/sky_{set_name}"]

@@ -1,2 +1,2 @@
-place template angel:outskirts/t5_2_4 244 128 197
+forceload add -64 -64 159 159
 schedule function angel:world/outskirts/p81 1t

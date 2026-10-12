@@ -1,5 +1,5 @@
-execute if score #step angel.story matches 10 run function angel:story/s3/p10
-execute if score #step angel.story matches 11 run function angel:story/s3/p11
-execute if score #step angel.story matches 12 run function angel:story/s3/p12
-execute if score #step angel.story matches 14 run function angel:story/s3/p14
-execute if score #step angel.story matches 16 run function angel:story/s3/p16
+execute if score #step angel.story matches 17 run function angel:story/s3/p17
+execute if score #step angel.story matches 18 run function angel:story/s3/p18
+execute if score #step angel.story matches 20 run function angel:story/s3/p20
+execute if score #step angel.story matches 22 run function angel:story/s3/p22
+execute if score #step angel.story matches 24 run function angel:story/s3/p24

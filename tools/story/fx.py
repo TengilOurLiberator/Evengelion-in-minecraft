@@ -209,10 +209,11 @@ def air_stop_cmds():
 
 
 # --------------------------------------------------------------------------------------------------- the mine: fireball and mushroom
-def mushroom(ctx, base, grow_ticks=100):
+def mushroom(ctx, base, grow_ticks=100, scale=1.0):
     """Fireball then a mushroom cloud over `base` (x, y, z) = the monster's feet.  Returns (spawn_cmds, step_functions): the spawn creates
     everything tiny; scheduled functions grow it."""
     bx, by, bz = base
+    K = float(scale)                       # 1.0 is a cloud for an Angel 60 blocks tall; every size and height below is multiplied by this
     glow = 'brightness:{sky:15,block:15}'
 
     def disp(tag, block, lo, size, rot=(0, 0, 0, 1), vr=16.0):
@@ -225,26 +226,26 @@ def mushroom(ctx, base, grow_ticks=100):
     parts = {}
     rots = [(0, 0, 0, 1), qaxis("y", 45), qaxis("x", 45), qaxis("z", 45)]
     for i, r in enumerate(rots):
-        spawn.append(disp(f"fb{i}", "orange_concrete" if i % 2 == 0 else "yellow_concrete", (0, 30, 0), (tiny, tiny, tiny), r))
-    spawn.append(disp("stem", "gray_concrete", (-2.0, 0, -2.0), (4.0, tiny, 4.0)))
-    spawn.append(disp("capA", "white_concrete", (0, 30, 0), (tiny, tiny, tiny)))
-    spawn.append(disp("capB", "light_gray_concrete", (0, 30, 0), (tiny, tiny, tiny), qaxis("y", 45)))
-    spawn.append(disp("skirt", "gray_concrete", (0, 30, 0), (tiny, tiny, tiny)))
+        spawn.append(disp(f"fb{i}", "orange_concrete" if i % 2 == 0 else "yellow_concrete", (0, 30 * K, 0), (tiny, tiny, tiny), r))
+    spawn.append(disp("stem", "gray_concrete", (-2.0 * K, 0, -2.0 * K), (4.0 * K, tiny, 4.0 * K)))
+    spawn.append(disp("capA", "white_concrete", (0, 30 * K, 0), (tiny, tiny, tiny)))
+    spawn.append(disp("capB", "light_gray_concrete", (0, 30 * K, 0), (tiny, tiny, tiny), qaxis("y", 45)))
+    spawn.append(disp("skirt", "gray_concrete", (0, 30 * K, 0), (tiny, tiny, tiny)))
 
     def merge(tag, lo, size, rot=(0, 0, 0, 1), dur=20):
         return (f"data merge entity @e[tag=angel.cl_{tag},limit=1] {{start_interpolation:0,interpolation_duration:{dur},"
                 f"{transformation_nbt(lo, rot, size)}}}")
 
-    r1 = 15.0
-    grow1 = [_centered_cube_merge(f"fb{i}", (0, 30, 0), r1, q, 14) for i, q in enumerate(rots)]
-    grow2 = [merge("stem", (-3.0, 0, -3.0), (6.0, 40.0, 6.0), dur=90),
-             _centered_cube_merge("capA", (0, 58, 0), 1.0, (0, 0, 0, 1), 90, size=(30.0, 12.0, 30.0)),
-             _centered_cube_merge("capB", (0, 60, 0), 1.0, qaxis("y", 45), 90, size=(30.0, 9.0, 30.0)),
-             _centered_cube_merge("skirt", (0, 50, 0), 1.0, (0, 0, 0, 1), 90, size=(21.0, 5.0, 21.0))]
-    shrink = [_centered_cube_merge(f"fb{i}", (0, 30, 0), 4.0, q, 60) for i, q in enumerate(rots)]
+    r1 = 15.0 * K
+    grow1 = [_centered_cube_merge(f"fb{i}", (0, 30 * K, 0), r1, q, 14) for i, q in enumerate(rots)]
+    grow2 = [merge("stem", (-3.0 * K, 0, -3.0 * K), (6.0 * K, 40.0 * K, 6.0 * K), dur=90),
+             _centered_cube_merge("capA", (0, 58 * K, 0), 1.0, (0, 0, 0, 1), 90, size=(30.0 * K, 12.0 * K, 30.0 * K)),
+             _centered_cube_merge("capB", (0, 60 * K, 0), 1.0, qaxis("y", 45), 90, size=(30.0 * K, 9.0 * K, 30.0 * K)),
+             _centered_cube_merge("skirt", (0, 50 * K, 0), 1.0, (0, 0, 0, 1), 90, size=(21.0 * K, 5.0 * K, 21.0 * K))]
+    shrink = [_centered_cube_merge(f"fb{i}", (0, 30 * K, 0), 4.0 * K, q, 60) for i, q in enumerate(rots)]
     f1 = reg(ctx, "story/fx/cloud_1", grow1)
     f2 = reg(ctx, "story/fx/cloud_2", grow2 + shrink)
-    f3 = reg(ctx, "story/fx/cloud_3", [f"particle minecraft:campfire_signal_smoke {num(bx)} {num(by + 55)} {num(bz)} 9 6 9 0.02 12 force"])
+    f3 = reg(ctx, "story/fx/cloud_3", [f"particle minecraft:campfire_signal_smoke {num(bx)} {num(by + 55 * K)} {num(bz)} {num(9 * K)} {num(6 * K)} {num(9 * K)} 0.02 12 force"])
     ctx.fx_scheduled += ["story/fx/cloud_1", "story/fx/cloud_2"]
     return spawn, [f"schedule function {NS}:story/fx/cloud_1 3t", f"schedule function {NS}:story/fx/cloud_2 40t"]
 

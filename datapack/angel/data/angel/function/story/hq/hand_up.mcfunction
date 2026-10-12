@@ -89,7 +89,9 @@ fill 3080 35 64 3085 35 64 minecraft:orange_stained_glass
 fill 3080 35 65 3085 35 65 minecraft:orange_stained_glass
 fill 3080 35 66 3085 35 66 minecraft:orange_stained_glass
 fill 3080 35 67 3086 35 67 minecraft:orange_stained_glass
-fill 3080 35 68 3086 35 68 minecraft:orange_stained_glass
+setblock 3082 35 68 minecraft:light[level=10]
+fill 3080 35 68 3081 35 68 minecraft:orange_stained_glass
+fill 3083 35 68 3086 35 68 minecraft:orange_stained_glass
 fill 3080 35 69 3086 35 69 minecraft:orange_stained_glass
 fill 3080 35 70 3086 35 70 minecraft:orange_stained_glass
 fill 3081 35 71 3086 35 71 minecraft:orange_stained_glass
@@ -97,7 +99,9 @@ fill 3081 35 72 3086 35 72 minecraft:orange_stained_glass
 fill 3081 35 73 3086 35 73 minecraft:orange_stained_glass
 fill 3081 35 74 3086 35 74 minecraft:orange_stained_glass
 fill 3079 35 75 3088 35 75 minecraft:orange_stained_glass
-fill 3079 35 76 3088 35 76 minecraft:orange_stained_glass
+setblock 3082 35 76 minecraft:light[level=10]
+fill 3079 35 76 3081 35 76 minecraft:orange_stained_glass
+fill 3083 35 76 3088 35 76 minecraft:orange_stained_glass
 fill 3079 35 77 3088 35 77 minecraft:orange_stained_glass
 fill 3079 35 78 3088 35 78 minecraft:orange_stained_glass
 fill 3082 35 79 3083 35 79 minecraft:gray_concrete
@@ -732,32 +736,55 @@ fill 3087 61 72 3089 61 72 minecraft:purple_wool
 fill 3087 61 73 3089 61 73 minecraft:purple_concrete
 setblock 3086 61 73 minecraft:purple_wool
 setblock 3090 61 73 minecraft:purple_wool
-fill 3091 61 74 3101 61 74 minecraft:black_concrete
+fill 3091 61 74 3101 61 74 minecraft:lime_concrete
 fill 3087 61 74 3090 61 74 minecraft:purple_concrete
 setblock 3086 61 74 minecraft:purple_wool
-fill 3091 61 75 3101 61 75 minecraft:black_concrete
-fill 3088 61 75 3090 61 75 minecraft:lime_concrete
+fill 3088 61 75 3091 61 75 minecraft:lime_concrete
+setblock 3101 61 75 minecraft:lime_concrete
 setblock 3087 61 75 minecraft:purple_concrete
+setblock 3092 61 75 minecraft:purple_concrete
+setblock 3096 61 75 minecraft:purple_concrete
+setblock 3100 61 75 minecraft:purple_concrete
 setblock 3086 61 75 minecraft:purple_wool
-fill 3091 61 76 3101 61 76 minecraft:black_concrete
-fill 3086 61 76 3090 61 76 minecraft:lime_concrete
-fill 3091 61 77 3101 61 77 minecraft:black_concrete
-fill 3086 61 77 3090 61 77 minecraft:lime_concrete
-fill 3091 61 78 3101 61 78 minecraft:black_concrete
-fill 3087 61 78 3090 61 78 minecraft:lime_concrete
-fill 3091 61 79 3101 61 79 minecraft:black_concrete
-fill 3088 61 79 3090 61 79 minecraft:purple_concrete
-fill 3091 61 80 3101 61 80 minecraft:black_concrete
-fill 3088 61 80 3090 61 80 minecraft:purple_concrete
-fill 3088 61 81 3090 61 81 minecraft:purple_concrete
-fill 3091 61 84 3092 61 84 minecraft:purple_concrete
-fill 3100 61 84 3101 61 84 minecraft:purple_concrete
-fill 3091 61 85 3092 61 85 minecraft:black_concrete
-fill 3100 61 85 3101 61 85 minecraft:black_concrete
-fill 3094 61 85 3095 61 85 minecraft:purple_concrete
-fill 3097 61 85 3098 61 85 minecraft:purple_concrete
-fill 3094 61 86 3095 61 86 minecraft:black_concrete
-fill 3097 61 86 3098 61 86 minecraft:black_concrete
+fill 3093 61 75 3095 61 75 minecraft:purple_wool
+fill 3097 61 75 3099 61 75 minecraft:purple_wool
+fill 3086 61 76 3091 61 76 minecraft:lime_concrete
+setblock 3101 61 76 minecraft:lime_concrete
+setblock 3092 61 76 minecraft:purple_concrete
+setblock 3096 61 76 minecraft:purple_concrete
+setblock 3100 61 76 minecraft:purple_concrete
+fill 3093 61 76 3095 61 76 minecraft:purple_wool
+fill 3097 61 76 3099 61 76 minecraft:purple_wool
+fill 3086 61 77 3091 61 77 minecraft:lime_concrete
+setblock 3101 61 77 minecraft:lime_concrete
+setblock 3092 61 77 minecraft:purple_concrete
+setblock 3096 61 77 minecraft:purple_concrete
+setblock 3100 61 77 minecraft:purple_concrete
+fill 3093 61 77 3095 61 77 minecraft:purple_wool
+fill 3097 61 77 3099 61 77 minecraft:purple_wool
+fill 3087 61 78 3091 61 78 minecraft:lime_concrete
+setblock 3101 61 78 minecraft:lime_concrete
+setblock 3092 61 78 minecraft:purple_concrete
+setblock 3096 61 78 minecraft:purple_concrete
+setblock 3100 61 78 minecraft:purple_concrete
+fill 3093 61 78 3095 61 78 minecraft:purple_wool
+fill 3097 61 78 3099 61 78 minecraft:purple_wool
+setblock 3091 61 79 minecraft:lime_concrete
+setblock 3101 61 79 minecraft:lime_concrete
+fill 3088 61 79 3090 61 79 minecraft:obsidian
+fill 3092 61 79 3100 61 79 minecraft:purple_wool
+fill 3088 61 80 3091 61 80 minecraft:lime_concrete
+setblock 3101 61 80 minecraft:lime_concrete
+fill 3092 61 80 3100 61 80 minecraft:obsidian
+fill 3088 61 81 3090 61 81 minecraft:lime_concrete
+fill 3091 61 84 3092 61 84 minecraft:purple_wool
+fill 3100 61 84 3101 61 84 minecraft:purple_wool
+fill 3091 61 85 3092 61 85 minecraft:lime_concrete
+fill 3100 61 85 3101 61 85 minecraft:lime_concrete
+fill 3094 61 85 3095 61 85 minecraft:purple_wool
+fill 3097 61 85 3098 61 85 minecraft:purple_wool
+fill 3094 61 86 3095 61 86 minecraft:lime_concrete
+fill 3097 61 86 3098 61 86 minecraft:lime_concrete
 fill 3088 62 73 3089 62 73 minecraft:purple_wool
 fill 3088 62 74 3090 62 74 minecraft:lime_concrete
 fill 3091 62 74 3101 62 74 minecraft:purple_concrete
@@ -765,37 +792,39 @@ setblock 3087 62 74 minecraft:purple_wool
 fill 3086 62 75 3090 62 75 minecraft:lime_concrete
 fill 3091 62 75 3101 62 75 minecraft:purple_concrete
 fill 3086 62 76 3087 62 76 minecraft:lime_concrete
-fill 3088 62 76 3101 62 76 minecraft:purple_concrete
+fill 3091 62 76 3101 62 76 minecraft:purple_concrete
+fill 3088 62 76 3090 62 76 minecraft:purple_wool
 setblock 3087 62 77 minecraft:lime_concrete
-fill 3088 62 77 3101 62 77 minecraft:purple_concrete
-fill 3088 62 78 3101 62 78 minecraft:purple_concrete
+fill 3091 62 77 3101 62 77 minecraft:purple_concrete
+fill 3088 62 77 3090 62 77 minecraft:purple_wool
+fill 3091 62 78 3101 62 78 minecraft:purple_concrete
+fill 3088 62 78 3090 62 78 minecraft:purple_wool
 fill 3091 62 79 3101 62 79 minecraft:purple_concrete
 fill 3088 62 79 3090 62 79 minecraft:purple_wool
 fill 3091 62 80 3101 62 80 minecraft:purple_concrete
 fill 3088 62 80 3090 62 80 minecraft:purple_wool
-fill 3091 62 81 3092 62 81 minecraft:purple_concrete
-fill 3094 62 81 3095 62 81 minecraft:purple_concrete
-fill 3097 62 81 3098 62 81 minecraft:purple_concrete
-fill 3100 62 81 3101 62 81 minecraft:purple_concrete
-fill 3088 62 81 3090 62 81 minecraft:purple_wool
-fill 3091 62 82 3092 62 82 minecraft:purple_concrete
-fill 3094 62 82 3095 62 82 minecraft:purple_concrete
-fill 3097 62 82 3098 62 82 minecraft:purple_concrete
-fill 3100 62 82 3101 62 82 minecraft:purple_concrete
-fill 3091 62 83 3092 62 83 minecraft:purple_concrete
-fill 3094 62 83 3095 62 83 minecraft:purple_concrete
-fill 3097 62 83 3098 62 83 minecraft:purple_concrete
-fill 3100 62 83 3101 62 83 minecraft:purple_concrete
-fill 3094 62 84 3095 62 84 minecraft:purple_concrete
-fill 3097 62 84 3098 62 84 minecraft:purple_concrete
+fill 3088 62 81 3092 62 81 minecraft:purple_wool
+fill 3094 62 81 3095 62 81 minecraft:purple_wool
+fill 3097 62 81 3098 62 81 minecraft:purple_wool
+fill 3100 62 81 3101 62 81 minecraft:purple_wool
+fill 3091 62 82 3092 62 82 minecraft:purple_wool
+fill 3094 62 82 3095 62 82 minecraft:purple_wool
+fill 3097 62 82 3098 62 82 minecraft:purple_wool
+fill 3100 62 82 3101 62 82 minecraft:purple_wool
+fill 3091 62 83 3092 62 83 minecraft:obsidian
+fill 3094 62 83 3095 62 83 minecraft:obsidian
+fill 3097 62 83 3098 62 83 minecraft:obsidian
+fill 3100 62 83 3101 62 83 minecraft:obsidian
 fill 3091 62 84 3092 62 84 minecraft:purple_wool
+fill 3094 62 84 3095 62 84 minecraft:purple_wool
+fill 3097 62 84 3098 62 84 minecraft:purple_wool
 fill 3100 62 84 3101 62 84 minecraft:purple_wool
-fill 3091 62 85 3092 62 85 minecraft:black_concrete
-fill 3100 62 85 3101 62 85 minecraft:black_concrete
+fill 3091 62 85 3092 62 85 minecraft:lime_concrete
+fill 3100 62 85 3101 62 85 minecraft:lime_concrete
 fill 3094 62 85 3095 62 85 minecraft:purple_wool
 fill 3097 62 85 3098 62 85 minecraft:purple_wool
-fill 3094 62 86 3095 62 86 minecraft:black_concrete
-fill 3097 62 86 3098 62 86 minecraft:black_concrete
+fill 3094 62 86 3095 62 86 minecraft:lime_concrete
+fill 3097 62 86 3098 62 86 minecraft:lime_concrete
 fill 3091 63 74 3101 63 74 minecraft:green_concrete
 fill 3088 63 74 3089 63 74 minecraft:lime_concrete
 fill 3087 63 75 3090 63 75 minecraft:lime_concrete

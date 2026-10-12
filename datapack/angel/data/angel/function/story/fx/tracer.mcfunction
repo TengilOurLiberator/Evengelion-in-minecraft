@@ -18,4 +18,3 @@ particle minecraft:end_rod ^ ^ ^53 0 0 0 0 1 force
 particle minecraft:end_rod ^ ^ ^56 0 0 0 0 1 force
 particle minecraft:end_rod ^ ^ ^59 0 0 0 0 1 force
 particle minecraft:flame ^ ^-0.5 ^3 0.2 0.2 0.2 0.02 4 force
-playsound minecraft:entity.firework_rocket.launch ambient @a ~ ~ ~ 4 0.85 0.3

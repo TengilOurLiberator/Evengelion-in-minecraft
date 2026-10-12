@@ -40,6 +40,7 @@ TITLE = "The empty city"
 SIREN_AT = (70.0, 78.0, 118.0)      # the air-raid siren, on a roof in the old town west of the street (shared with scene 2: it fades as the car leaves)
 SIREN_VOL = 1.8
 ALARMS_AT = (112.0, 66.0, 168.0)    # the car alarms far off, south-east of the street
+MON_H = 100                         # the Angel's height in blocks (angel:angel/summon snaps to 20, 30, 40, 50, 60, 80, 100, 150): at 135 blocks 100 fills 36 degrees of the view from outskirts.street, 60 only 24
 
 
 def build(s, ctx):
@@ -122,7 +123,7 @@ def build(s, ctx):
     frames = fx.crash_route(ctx, (crash["x"], crash["y"], crash["z"]))
     fx.crash_functions(ctx, (crash["x"], crash["y"], crash["z"]), frames)
     fx.air_functions(ctx, air_tick)
-    under = [(0.05, [f"execute positioned {num(spawn['x'])} {num(spawn['y'])} {num(spawn['z'])} rotated {num(spawn['yaw'])} 0 run function angel:angel/summon {{height:60}}",
+    under = [(0.05, [f"execute positioned {num(spawn['x'])} {num(spawn['y'])} {num(spawn['z'])} rotated {num(spawn['yaw'])} 0 run function angel:angel/summon {{height:{MON_H}}}",
                      *air_start])]
     # it walks angel_walk_1..4 at 0.15 blocks per tick: 16 + 16 + 12 + 10 blocks (its footfalls are its own: tools/fight, angel:angel/walk)
     t_acc = 0

@@ -1,7 +1,4 @@
-forceload remove 2984 -16 3111 111
-forceload remove 2984 80 3111 203
-forceload remove 3080 0 3148 111
-forceload remove 3080 80 3201 203
-say [angel] placed hq: 40 tiles, 731975 blocks
-scoreboard players set #all angel_world 0
-say [angel] every set is placed
+scoreboard players set #ok angel_world 0
+execute if loaded 2936 0 -64 if loaded 3151 0 -64 if loaded 2936 0 159 if loaded 3151 0 159 if loaded 3043 0 47 run scoreboard players set #ok angel_world 1
+execute if score #ok angel_world matches 1 run function angel:world/hq/p31
+execute unless score #ok angel_world matches 1 run schedule function angel:world/hq/p30 2t

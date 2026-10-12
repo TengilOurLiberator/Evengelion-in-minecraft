@@ -1,12 +1,9 @@
 scoreboard players set #force angel.story 0
-execute positioned 76.0 64.5 141.0 rotated -80.24 0.0 run function angel:story/rig/car/spawn_closed
-execute positioned 76.0 64.5 141.0 rotated -80.24 0 run function angel:cast/summon {id:"misato"}
-function angel:cast/mount {id:"misato",tag:"angel.seat_driver"}
-function angel:cast/look {id:"misato",mode:"ahead"}
-scoreboard players set #mv.route angel.story 1
-scoreboard players set #mv.n angel.story 0
-scoreboard players set #mv.limit angel.story 76
-scoreboard players set #mv.on angel.story 1
-function angel:story/m/slide_in/root
+execute at @a[limit=1] run playsound angel:sfx.jolt master @a ~ ~ ~ 1.0 1.0 0
+execute at @a[limit=1] run particle minecraft:block{block_state:"minecraft:dirt"} ~ ~0.1 ~ 3 0.1 3 0.15 40 force
+execute at @a[limit=1] run particle minecraft:dust_plume ~ ~0.5 ~ 4 0.5 4 0.03 60 force
+execute at @a[limit=1] run particle minecraft:falling_dust{block_state:"minecraft:stone"} ~ ~4 ~ 5 1.5 5 0.0 50 force
+schedule function angel:story/fx/jolt2 14t
+playsound angel:sfx.car_alarms_far master @a 112.0 66.0 168.0 2.0 1.0 0.0
 scoreboard players set #step angel.story 32
 function angel:story/s1/e32

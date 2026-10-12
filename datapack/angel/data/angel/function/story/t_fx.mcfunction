@@ -2,6 +2,7 @@ execute if score #fx.fall angel.story matches 1 run function angel:story/fx/fall
 execute if score #fx.smoke angel.story matches 1 at @e[tag=angel.rig_ac3,tag=angel.pt_fuselage,limit=1] run function angel:story/fx/smoke_tick
 execute if score #fx.air angel.story matches 1 run function angel:story/fx/air_tick
 execute if score #fx.wreck angel.story matches 1 run function angel:story/fx/wreck_tick
+execute if score #fx.crater angel.story matches 1 run function angel:story/fx/crater_tick
 execute if score #f.lead_misato angel.story matches 1 run function angel:story/lead/mon_misato
 execute if score #f.turn_1 angel.story matches 1.. run function angel:story/turn/t1
 execute if score #f.turn_2 angel.story matches 1.. run function angel:story/turn/t2

@@ -1,4 +1,7 @@
-scoreboard players set #ok angel_world 0
-execute if loaded 1272 32 272 if loaded 1335 32 272 if loaded 1272 32 335 if loaded 1335 32 335 if loaded 1303 32 303 run scoreboard players set #ok angel_world 1
-execute if score #ok angel_world matches 1 run function angel:world/city/p64
-execute unless score #ok angel_world matches 1 run schedule function angel:world/city/p63 2t
+place template angel:city/t6_0_4 1288 33 192
+place template angel:city/t6_0_5 1288 33 240
+place template angel:city/t6_1_4 1296 80 192
+place template angel:city/t6_1_5 1288 80 240
+place template angel:city/t6_2_4 1304 128 192
+place template angel:city/t6_2_5 1302 128 240
+schedule function angel:world/city/p64 1t

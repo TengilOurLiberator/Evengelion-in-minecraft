@@ -41,9 +41,19 @@ schedule clear angel:story/hq/ring_3
 schedule clear angel:story/hq/ring_4
 schedule clear angel:story/hq/side_open_1
 schedule clear angel:story/s1/f_a1
+schedule clear angel:story/s1/f_a10
+schedule clear angel:story/s1/f_a11
+schedule clear angel:story/s1/f_a12
+schedule clear angel:story/s1/f_a13
+schedule clear angel:story/s1/f_a14
 schedule clear angel:story/s1/f_a2
 schedule clear angel:story/s1/f_a3
 schedule clear angel:story/s1/f_a4
+schedule clear angel:story/s1/f_a5
+schedule clear angel:story/s1/f_a6
+schedule clear angel:story/s1/f_a7
+schedule clear angel:story/s1/f_a8
+schedule clear angel:story/s1/f_a9
 schedule clear angel:story/s2/f_a1
 schedule clear angel:story/s2/f_a10
 schedule clear angel:story/s2/f_a11
@@ -53,8 +63,6 @@ schedule clear angel:story/s2/f_a14
 schedule clear angel:story/s2/f_a15
 schedule clear angel:story/s2/f_a16
 schedule clear angel:story/s2/f_a17
-schedule clear angel:story/s2/f_a18
-schedule clear angel:story/s2/f_a19
 schedule clear angel:story/s2/f_a2
 schedule clear angel:story/s2/f_a3
 schedule clear angel:story/s2/f_a4
@@ -64,6 +72,14 @@ schedule clear angel:story/s2/f_a7
 schedule clear angel:story/s2/f_a8
 schedule clear angel:story/s2/f_a9
 schedule clear angel:story/s2/f_cleanup_air
+schedule clear angel:story/s3/f_a1
+schedule clear angel:story/s3/f_a2
+schedule clear angel:story/s3/f_a3
+schedule clear angel:story/s3/f_a4
+schedule clear angel:story/s3/f_a5
+schedule clear angel:story/s3/f_a6
+schedule clear angel:story/s3/f_a7
+schedule clear angel:story/s3/f_a8
 schedule clear angel:story/s4/f_a1
 schedule clear angel:story/s4/f_a2
 schedule clear angel:story/s4/f_a3
@@ -298,6 +314,7 @@ scoreboard players set #mv.on angel.story 0
 scoreboard players set #ride angel.story 0
 scoreboard players set #consent angel.story 0
 scoreboard players set #fx.air angel.story 0
+scoreboard players set #fx.crater angel.story 0
 scoreboard players set #fx.fall angel.story 0
 scoreboard players set #fx.smoke angel.story 0
 scoreboard players set #fx.wreck angel.story 0

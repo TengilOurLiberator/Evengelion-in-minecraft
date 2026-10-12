@@ -192,13 +192,34 @@ the bridge speaks, in the order `cmds[0], cmds[1], ..., cmds[n-1], cmds[loop_fro
 
 **Sound** (`audio.py`): `s.bed("hq")` / `s.bed(None)` an ambience bed that restarts itself every N seconds (the length of its .ogg, read
 from sounds.json; 60 s while the file does not exist: REBUILD when the sounds arrive), `s.music("father")` / `s.music(None)` a music cue
-(`decision` loops), `s.loop("klaxon")` an alarm layer, `s.sfx("sfx.door_boom", at=(x, y, z), vol=, pitch=, minvol=)` a one-shot effect
-(`at=None`: at the player). Starting a bed or a cue stops the one of its kind in play; `stopsound` is sent for each event, the timers are
-cleared, and `angel:story/halt` does it all. A sound event that does not exist yet is silent.
+(`decision`, `dread`, `road`, `fight`, `fight_final` loop; `MUSIC_LOOP` in audio.py), `s.loop("klaxon")` an alarm layer (its own length, or
+`LOOP_PERIOD`), `s.sfx("sfx.door_boom", at=(x, y, z), vol=, pitch=, minvol=)` a one-shot effect (`at=None`: at the player). Starting a bed or a
+cue stops the one of its kind in play; `stopsound` is sent for each event, the timers are cleared, and `angel:story/halt` does it all. A sound
+event that does not exist yet is silent. Added with scenes 1 to 3 (all additive; what scenes 4 to 7 use is generated as before):
 
-**Cards** (`cards.py`): `s.card("EVANGELION  UNIT 01")`, `s.card("TO BE CONTINUED", small="an unofficial fan work", hold=3.5)`. See the module
-for why it is built in the world (a black room of six slabs round the player and four billboarded text displays, nothing following the
-head) and not with `title` (Vivecraft draws titles on the HUD quad, whose place and visibility are the player's own setting).
+| call | meaning |
+|---|---|
+| `s.bed("cicadas+town_empty")` | two beds layered as one: they start and stop together |
+| `s.bed("tunnel", fade=3.0)` | the bed comes in over 3 s. Minecraft cannot change the volume of a sound that is playing, so a fade is a staircase of restarts, a notch louder every 0.8 s, the last step being the ordinary loop. Beds only, never music |
+| `s.bed("geofront", fade=2.5, out="tunnel", out_fade=1.2)` | crossfade: the bed in play (`out`) is ramped down while the new one comes in |
+| `s.bed_out("car_interior", 1.5)` | ramp the bed in play down to nothing |
+| `s.loop("siren", at=(x, y, z), vol=1.8)` | the layer from a place in the world (it fades with distance as the car drives away); `name=` gives a second cue of the same sound a name of its own |
+| `s.silence()` | every bed, cue and layer stopped and their timers cleared, then `stopsound @a` for whatever else is sounding |
+| `s.quiet(0.4, 2.4)` | declares a window (seconds from here) in which NOTHING may sound; `sim.check_quiet` follows every command and scheduled function that can run in it and fails the build on a `playsound` (scene 2's mine) |
+
+`--check` also verifies that every `angel:` sound event the story plays or stops is in the pack's sounds.json, that the card font exists and covers
+the cards' characters, and that music.descent's bloom lands on geofront.reveal (scene 3: see its docstring).
+
+**Cards** (`cards.py`, typeface `cardfont.py`): `s.card("EVANGELION  UNIT 01")`, `s.card("TO BE CONTINUED", small="an unofficial fan work", hold=3.5)`,
+`s.card("ANGEL ATTACK", hold=2.0, back=2, back_wait=0.2, under=[(0.05, [cmds])])`: `under` runs commands beside the card (that many seconds after
+its hit), `back` is the seconds of blindness that bring the world back (3 = a slow fade, 1 or 2 = a quick return to the same view). The text is
+set in the resource pack's font `angel:card`, a bitmap font that `cardfont.py` builds from KaTeX_Main-Bold / -Regular (Computer Modern Roman, SIL
+Open Font License 1.1; the TTFs and the licence notice are in `fonts/`): bold, condensed (84 %), widely spaced capitals and a lighter lower case for
+the small line, drawn into `assets/angel/textures/font/card.png` (16 x 5 cells of 144 px) with `assets/angel/font/card.json` (`height` 18,
+`ascent` 15, the `chars` rows, a `space` provider). `python cardfont.py --preview card.png` draws the cards the way the game lays glyphs out; a
+plain `build_story.py` writes the font beside the datapack. See `cards.py` for why a card is built in the world (a black room of six slabs round
+the player and four billboarded text displays, nothing following the head) and not with `title` (Vivecraft draws titles on the HUD quad, whose
+place and visibility are the player's own setting).
 
 **Leading** (`lead.py`): `lead(s, ctx, "misato", [Stop(x, y, z, say_at=["4.01"]), (x, y, z), ...], speed=0.15, companion=("misato", back, side))`
 makes a character walk a route and never leave the player behind (waits at each stop for him within 6 blocks, stops and turns back to look
@@ -218,7 +239,7 @@ when the story has been in the set (`#hq.dirty`). A scene that wants the cage li
 
 | file | role |
 |---|---|
-| `audio.py`, `cards.py`, `lead.py`, `hq_cage.py` | scenes 4 and 5: beds / music / sfx, title cards, characters that lead, the cage's block lists |
+| `audio.py`, `cards.py`, `cardfont.py`, `lead.py`, `hq_cage.py` | beds / music / sfx, title cards and their typeface, characters that lead, the cage's block lists |
 | `build_story.py` | entry point |
 | `core.py` | constants, writer + manifest, selectors, tree dispatch, quaternion helpers |
 | `lines.py` | script.md + durations.json + sounds.json -> `angel:say/*` |

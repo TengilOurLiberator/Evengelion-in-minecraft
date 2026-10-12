@@ -1,8 +1,6 @@
 scoreboard players set #force angel.story 0
 time of angel:day rate 1.0
-time of angel:day set 18000
-time of angel:day pause
-execute in minecraft:overworld run weather clear
+function angel:world/sky_hq
 tp @a[limit=1] 3096.5 54.0 72.5
 function angel:story/launch/cage_lights_on
 function angel:story/launch/eyes_off
@@ -10,7 +8,7 @@ function angel:cast/remove_all
 function angel:cast/gurney_remove
 execute positioned 3094.5 54.0 76.5 rotated 180.0 0 run function angel:cast/summon {id:"misato"}
 execute positioned 3098.5 54.0 76.5 rotated 180.0 0 run function angel:cast/summon {id:"ritsuko"}
-execute positioned 3115.5 95.0 42.5 rotated 0.0 0 run function angel:cast/summon {id:"gendo"}
+execute positioned 3110.5 63.0 57.5 rotated 43.0 0 run function angel:cast/summon {id:"gendo"}
 execute positioned 3096.5 54.0 80.5 rotated -90.0 0 run function angel:cast/gurney {}
 execute positioned 3096.5 54.82 80.5 rotated -90.0 0 run function angel:cast/summon {id:"rei"}
 function angel:cast/mount {id:"rei",tag:"angel.seat_gurney"}

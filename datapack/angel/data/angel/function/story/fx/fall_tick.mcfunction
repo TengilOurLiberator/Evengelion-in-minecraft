@@ -87,3 +87,4 @@ execute if score #fx.c angel.story matches 84 positioned 84.5 64.5 142.5 rotated
 execute at @e[tag=angel.rig_ac3d,tag=angel.pt_fuselage,limit=1] run particle minecraft:large_smoke ~ ~ ~ 0.6 0.6 0.6 0.02 8 force
 execute at @e[tag=angel.rig_ac3d,tag=angel.pt_fuselage,limit=1] run particle minecraft:flame ~ ~ ~ 0.5 0.5 0.5 0.03 6 force
 execute if score #fx.c angel.story matches 84 run function angel:story/fx/impact_crash
+execute if score #fx.c angel.story matches 58 run playsound angel:sfx.crash master @a 84.5 64.5 142.5 1.0 1.0 0.0

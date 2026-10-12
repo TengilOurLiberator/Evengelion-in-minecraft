@@ -1,4 +1,2 @@
-place template angel:geofront/t3_1_0 2144 48 1
-place template angel:geofront/t3_1_1 2163 48 86
-place template angel:geofront/t2_2_0 2096 96 16
+place template angel:geofront/t3_0_1 2144 0 48
 schedule function angel:world/geofront/p37 1t

@@ -1,2 +1,2 @@
-place template angel:outskirts/t4_0_3 192 32 144
+place template angel:outskirts/t5_0_2 240 32 96
 schedule function angel:world/outskirts/p68 1t

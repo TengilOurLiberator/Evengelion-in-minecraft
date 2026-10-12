@@ -1,2 +1,2 @@
-forceload add 1985 80 2111 207
+place template angel:geofront/t1_2_1 2048 96 48
 schedule function angel:world/geofront/p8 1t

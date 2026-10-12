@@ -10,5 +10,6 @@ scoreboard players set #present_misato angel.story 1
 scoreboard players set #present_ritsuko angel.story 0
 scoreboard players set #present_gendo angel.story 0
 scoreboard players set #present_rei angel.story 0
+function angel:story/snd/bed_car_interior/start
 scoreboard players set #step angel.story 5
 function angel:story/s3/e5

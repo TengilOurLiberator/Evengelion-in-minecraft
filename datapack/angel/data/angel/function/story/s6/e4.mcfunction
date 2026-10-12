@@ -1,7 +1,5 @@
 scoreboard players set #force angel.story 0
-time of angel:day set 18000
-time of angel:day pause
-execute in minecraft:overworld run weather clear
+function angel:world/sky_hq
 scoreboard players set #ride angel.story 0
 ride @a[limit=1] dismount
 kill @e[tag=angel.lseat]

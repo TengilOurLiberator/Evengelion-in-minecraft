@@ -399,7 +399,7 @@ def check_descent(ctx, report):
     if t_music is None or t_release is None:
         report.error("scene 3: cannot find the music.descent start and the wagon's release in the steps")
         return
-    ticks = (t_release - t_music) + (d["reveal"] - d["station"])
+    ticks = (t_release - t_music) + (d["reveal"] - d["station"]) - d.get("offset", 0)
     if ticks != d["bloom"]:
         report.error(f"scene 3: music.descent starts {ticks} ticks before the reveal, its bloom is at tick {d['bloom']}")
     else:

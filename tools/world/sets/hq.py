@@ -1,4 +1,4 @@
-﻿"""HQ - the underground headquarters: corridors, the flooded approach, THE CAGE with the giant's head, the entry plug
+"""HQ - the underground headquarters: corridors, the flooded approach, THE CAGE with the giant's head, the entry plug
 and the launch shaft.  192 x 160 x 192 (x east, y up, z south); every coordinate below is local to the set.
 
 PLAN (top view, x ->, z v; bottom-left of the box is the north-west corner)

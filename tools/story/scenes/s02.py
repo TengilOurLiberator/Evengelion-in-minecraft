@@ -34,7 +34,7 @@ from core import NS, OBJ, blind, P, PA, T, angdiff, fn, local_to_world, num, sse
 from engine import C, Cond, Nudges
 from motion import Path, leg_frames
 from models import DOOR_OPEN_DEG
-from scenes.s01 import SIREN_AT, SIREN_VOL
+from scenes.s01 import MON_H, SIREN_AT, SIREN_VOL
 
 N = 2
 TITLE = "The road"
@@ -107,7 +107,7 @@ def build(s, ctx):
     seen = []
     for i in range(0, len(fr), 20):
         eye = fr[i, :3] + np.array([0.0, 1.6, 0.0])
-        tgt = np.array([mine[0], mine[1] + 50.0, mine[2]])
+        tgt = np.array([mine[0], mine[1] + 0.8 * MON_H, mine[2]])
         d = tgt - eye
         n = int(np.linalg.norm(d) / 0.5)
         seen.append(all(not probe.solid(*(eye + d * (k / n))) for k in range(1, n)))
@@ -135,7 +135,7 @@ def build(s, ctx):
     s.do(*ctx.rig_spawn(car, "dooropen", arrive_pose, carfx_door_open(car)),
          cast_summon("misato", arrive["x"], arrive["y"], arrive["z"], arrive["yaw"]), cast_mount("misato", "driver"),
          *ride_passenger(),
-         f"execute positioned {num(walk4['x'])} {num(walk4['y'])} {num(walk4['z'])} rotated 90 0 run function angel:angel/summon {{height:60}}",
+         f"execute positioned {num(walk4['x'])} {num(walk4['y'])} {num(walk4['z'])} rotated 90 0 run function angel:angel/summon {{height:{MON_H}}}",
          sset("#beat", 20), sset("#present_misato", 1), sset("#present_ritsuko", 0), sset("#present_gendo", 0), sset("#present_rei", 0),
          note="car, Misato at the wheel, the boy beside her, the monster inland")
     s.do(*ctx.audio.start("loop", "siren", at=SIREN_AT, vol=SIREN_VOL), *ctx.audio.start("bed", "town_empty"),
@@ -173,7 +173,7 @@ def build(s, ctx):
     s.say("2.06", gap=0)
 
     # ---------------------------------------------------------------- THE MINE (everything below is relative to this tick, T0)
-    spawn_cloud, cloud_sched = fx.mushroom(ctx, (mine[0], mine[1], mine[2]))
+    spawn_cloud, cloud_sched = fx.mushroom(ctx, (mine[0], mine[1], mine[2]), scale=MON_H / 60.0)
     ctx.extra_functions["story/s2/whiteout"] = sh.box_shell("angel.mwhite", "white_concrete", None, (4.0, 4.0, 4.0), bright=15)
     at_eyes = f"execute at {P()} anchored eyes positioned ^ ^ ^ run "
     lie_cmds = [sset("#ride", 0), f"ride {P()} dismount", cast_remove("misato"), "kill @e[tag=angel.rig_car]",

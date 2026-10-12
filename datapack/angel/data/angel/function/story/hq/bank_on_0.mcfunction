@@ -1,7 +1,8 @@
 setblock 3066 93 128 minecraft:sea_lantern
 setblock 3126 93 128 minecraft:sea_lantern
-fill 3075 109 31 3076 109 31 minecraft:sea_lantern
-fill 3116 109 31 3117 109 31 minecraft:sea_lantern
+fill 3075 109 31 3077 109 31 minecraft:sea_lantern
+fill 3115 109 31 3117 109 31 minecraft:sea_lantern
+setblock 3075 109 32 minecraft:sea_lantern
 fill 3075 109 115 3077 109 115 minecraft:sea_lantern
 fill 3115 109 115 3117 109 115 minecraft:sea_lantern
 fill 3075 109 116 3077 109 116 minecraft:sea_lantern

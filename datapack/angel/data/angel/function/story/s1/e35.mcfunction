@@ -1,2 +1,5 @@
 scoreboard players set #force angel.story 0
-function angel:say/1_04
+function angel:story/card/bg
+effect clear @a minecraft:blindness
+scoreboard players set #step angel.story 36
+function angel:story/s1/e36

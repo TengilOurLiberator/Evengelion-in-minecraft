@@ -1,1 +1,1 @@
-function angel:angel/walk {x:212.5,y:63.0,z:128.5,speed:0.15}
+function angel:story/snd/bed_mix_cicadas_town_empty/ramp_in32/start

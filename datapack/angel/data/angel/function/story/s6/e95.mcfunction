@@ -8,8 +8,6 @@ stopsound @a * angel:sfx.launch
 stopsound @a * angel:sfx.launch_roar
 stopsound @a * angel:sfx.launch_charge
 execute at @a[limit=1] run playsound angel:sfx.launch_arrive master @a ~ ~ ~ 2.0 1.0 1.0
-time of angel:day set 18000
-time of angel:day pause
-execute in minecraft:overworld run weather clear
+function angel:world/sky_city
 scoreboard players set #step angel.story 96
 function angel:story/s6/e96

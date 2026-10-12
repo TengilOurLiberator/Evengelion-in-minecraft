@@ -168,11 +168,11 @@
     },
     {
      "ticks": 13670,
-     "value": "#0f0f16"
+     "value": "#06080d"
     },
     {
      "ticks": 22330,
-     "value": "#0f0f16"
+     "value": "#06080d"
     }
    ],
    "modifier": "multiply"
@@ -251,11 +251,11 @@
     },
     {
      "ticks": 13140,
-     "value": 0.24
+     "value": 0.1
     },
     {
      "ticks": 22860,
-     "value": 0.24
+     "value": 0.1
     }
    ],
    "modifier": "multiply"

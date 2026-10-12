@@ -13,8 +13,8 @@ wagon is let go (the held breath is the wait: 2.9 s of music out of silence with
 the wagon has been held for a minute for the answers or 3.07 ended before it had even reached the holding point (the scene then waits for
 it to arrive and be at rest first).  geofront.wall_opens (frame 892) comes 65 ticks after the wagon is let go; 3.08 begins there with
 sfx.air_open and the tunnel bed dropping away to amb.geofront, and the reveal (bloom) comes 37 ticks later, during "Look out of your window".
-Scheduled functions run after the tick functions, the route counter is advanced by a tick function: so a release scheduled LEAD ticks after
-the music reaches the reveal frame V exactly 160 ticks after the music (checked live: see the report).
+Measured live (scratch server, logged game ticks): a scheduled function runs before that tick's tick functions, so the route counter moves on the
+release tick itself and the reveal comes V - S - 1 ticks after the release; hence LEAD = 160 - (V - S) + 1 (SCHED_BEFORE_MOVER).
 
 On the wagon the car stands the other way round, so its LEFT side -- the boy's window -- faces the cavern (the gallery has the cavern on
 the right of the direction of travel).  Beat 30 for the ride, 31 from wall_opens.
@@ -44,6 +44,7 @@ MAX_QUIET = 60.0                  # longer than this after 3.10 and we fade and 
 BLOOM_TICKS = 160                 # music.descent: the bloom is at exactly 8.000 s
 GATE_TRIGGER = 3.6                # seconds after the car starts to roll in that the gate begins to close (the car's tail is clear of the doorway by 6.8 s)
 GATE_SEGMENTS = (17, 15, 15, 15, 15, 15, 15)    # sfx.gate_close: the slide is heard from 0.7 s and the boom is at 5.35 s: start at tick 17, six moves of 15, the last ends at tick 107
+SCHED_BEFORE_MOVER = 1            # measured live: a scheduled function runs BEFORE that tick's story/mover (the counter moves on the release tick itself), so the reveal comes one tick sooner
 STOP_LEAD = 130                   # ticks before the end of the ride that sfx.train_stop (6.5 s) begins
 
 
@@ -191,11 +192,11 @@ def build(s, ctx):
     # the descent music: the wagon always leaves the holding point from rest, V - S frames (= ticks) before the reveal
     S_f, V_f = ride.stations["tunnel"], ride.marks["reveal"]
     W_f = ride.marks["wall_opens"]
-    LEAD = BLOOM_TICKS - (V_f - S_f)
+    LEAD = BLOOM_TICKS - (V_f - S_f) + SCHED_BEFORE_MOVER
     ctx.warn(f"scene 3: holding point = frame {S_f}, wall_opens = frame {W_f} ({W_f - S_f} ticks after release), reveal = frame {V_f} ({V_f - S_f} ticks after release): "
              f"music.descent starts {LEAD} ticks ({LEAD / 20.0:.2f} s) BEFORE the wagon is let go, so its bloom (tick {BLOOM_TICKS}) lands on the reveal"
              if LEAD >= 1 else f"scene 3: reveal is {V_f - S_f} ticks after release: music.descent starts {-LEAD} ticks AFTER the wagon is let go")
-    ctx.descent = dict(station=S_f, wall=W_f, reveal=V_f, lead=LEAD, end=ride.end, bloom=BLOOM_TICKS)
+    ctx.descent = dict(station=S_f, wall=W_f, reveal=V_f, lead=LEAD, end=ride.end, bloom=BLOOM_TICKS, offset=SCHED_BEFORE_MOVER)
 
     # ================================================================ setup (for a jump): the car at the gate, both in it
     sx, sy, sz = carfx.seat_world(gate_pose, "passenger")

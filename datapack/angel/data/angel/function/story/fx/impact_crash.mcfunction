@@ -8,9 +8,7 @@ particle minecraft:lava 84.5 65.5 142.5 3 2 3 0.1 50 force
 particle minecraft:flame 84.5 65.5 142.5 4 2 4 0.1 120 force
 particle minecraft:large_smoke 84.5 67.5 142.5 3 3 3 0.08 120 force
 particle minecraft:block{block_state:"minecraft:gray_concrete"} 84.5 65.5 142.5 4 1 4 0.5 80 force
-playsound minecraft:entity.generic.explode master @a 84.5 64.5 142.5 10.0 0.8 0.9
-playsound minecraft:entity.dragon_fireball.explode master @a 84.5 64.5 142.5 8.0 0.7 0.7
-playsound minecraft:entity.lightning_bolt.impact master @a 84.5 64.5 142.5 6.0 0.6 0.6
+playsound angel:sfx.explosion_near master @a 84.5 64.5 142.5 0.8 1.0 0.0
 summon minecraft:block_display 84.5 64.5 142.5 {Tags:["angel.wreck","angel.story"],block_state:"minecraft:gray_concrete",teleport_duration:0,view_range:2.0f,transformation:{translation:[-1.8f,0.0f,-0.5f],left_rotation:[0.0f,0.0f,0.0f,1.0f],scale:[3.6f,0.9f,1.4f],right_rotation:[0f,0f,0f,1f]}}
 summon minecraft:block_display 84.5 64.5 142.5 {Tags:["angel.wreck","angel.story"],block_state:"minecraft:black_concrete",teleport_duration:0,view_range:2.0f,transformation:{translation:[-1.22182f,0.0f,1.9254f],left_rotation:[0.0f,0.98883f,0.0f,0.14905f],scale:[1.5f,0.5f,2.5f],right_rotation:[0f,0f,0f,1f]}}
 summon minecraft:block_display 84.5 64.5 142.5 {Tags:["angel.wreck","angel.story"],block_state:"minecraft:light_gray_concrete",teleport_duration:0,view_range:2.0f,transformation:{translation:[2.72287f,0.0f,-2.36346f],left_rotation:[0.0f,0.98242f,0.0f,-0.18668f],scale:[1.6f,0.35f,1.5f],right_rotation:[0f,0f,0f,1f]}}

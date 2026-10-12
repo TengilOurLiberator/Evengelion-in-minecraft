@@ -2199,7 +2199,8 @@ def render_view(w, eye, yaw, pitch, path, fov=80.0, size=(480, 270), maxd=360.0)
     names = w.palette
     col = np.array([(0, 0, 0), (0, 0, 0)] + [_rgb(b) for b in names[2:]], dtype=np.float32)
     clear = np.array([True, True] + [see_through(b) for b in names[2:]])
-    glassy = np.array([False, False] + [("glass" in b and "pane" not in b) or "water" in b or "pane" in b for b in names[2:]])
+    isslab = np.array([False, False] + [("_slab[type=bottom" in b) for b in names[2:]])
+    glassy =np.array([False, False] + [("glass" in b and "pane" not in b) or "water" in b or "pane" in b for b in names[2:]])
     yr, pr = math.radians(yaw), math.radians(pitch)
     # Minecraft yaw 0 looks +z, yaw -90 looks +x
     fwd = np.array([-math.sin(yr) * math.cos(pr), -math.sin(pr), math.cos(yr) * math.cos(pr)])
@@ -2247,6 +2248,14 @@ def render_view(w, eye, yaw, pitch, path, fov=80.0, size=(480, 270), maxd=360.0)
         ids = np.zeros(act.size, np.int64)
         ids[inb] = w.a[c[inb, 0], c[inb, 1], c[inb, 2]]
         hit = inb & (ids > 1) & ~clear[ids]
+        if isslab[ids].any():                            # a bottom slab is half a block: hit it only if the ray gets below 0.5 inside the cell
+            sl = hit & isslab[ids]
+            yh = np.array(eye, float)[1] + dirs[act, 1] * t - c[:, 1]
+            t_exit = tmax[act].min(axis=1)
+            dy = dirs[act, 1]
+            with np.errstate(divide="ignore", invalid="ignore"):
+                t_top = np.where(dy < 0, (c[:, 1] + 0.5 - np.array(eye, float)[1]) / dy, 1e30)
+            hit &= ~(sl & (yh >= 0.5) & ~(t_top < t_exit))
         gl = inb & (ids > 1) & glassy[ids]
         if gl.any():
             gi = act[gl]
@@ -2380,9 +2389,10 @@ def checks(w):
     st = A["street"] + eye
     for lab, dy in (("head", 1.7), ("chest", 1.2), ("feet", 0.2)):
         check("street -> vision girl (%s)" % lab, st, A["vision"] + np.array([0, dy, 0]))
-    check("street -> angel_spawn +40", st, A["angel_spawn"] + np.array([0, 40, 0]))
+    for h in (100, 70, 40, 10):
+        check("street -> angel_spawn +%d" % h, st, A["angel_spawn"] + np.array([0, h, 0]))
     r = A["ridge"] + eye
-    for h in (60, 40, 20, 8, 1):
+    for h in (100, 60, 40, 20, 8, 1):
         check("ridge -> angel_spawn +%d" % h, r, A["angel_spawn"] + np.array([0, h, 0]))
     for i in range(1, 5):
         check("ridge -> angel_walk_%d +30" % i, r, A["angel_walk_%d" % i] + np.array([0, 30, 0]))
@@ -2430,14 +2440,22 @@ def main():
     slice_view(w, os.path.join(out, "slice_street_z125.png"), "z", 125, 85, 190, 25, 62, 8)
     slice_view(w, os.path.join(out, "slice_tunnel_x190.png"), "x", 190, 0, 60, 30, 80, 12)
     A = w.anchors
-    eyes = (("eye_start_east", "start", None, 0, 100), ("eye_street_east", "street", None, 0, 75),
-            ("eye_street_back", "street", 90.0, 0, 100), ("eye_phone_use", "phone_use", None, 0, 90),
-            ("eye_ridge_sea", "ridge", -16.0, 14, 100), ("eye_gate", "gate", None, 6, 85),
-            ("eye_cartrain", "cartrain", None, 0, 100), ("eye_angel_walk_1_to_town", "angel_walk_1", None, 0, 80))
-    for name, anc, yaw, pitch, fov in eyes:
+    # first-person previews at the game's default vertical fov 70 (fov here is the vertical one), 16:9, at the anchors' own yaw; the last
+    # field is the eye height above the anchor (1.62 standing, 1.2 seated in a car)
+    eyes = (("eye_start_east", "start", None, 0, 70, 1.62), ("eye_start_west", "start", 90.0, 0, 70, 1.62),
+            ("eye_street_east", "street", None, 0, 70, 1.62), ("eye_street_east_seated", "street", None, 0, 70, 1.2),
+            ("eye_street_back", "street", 90.0, 0, 70, 1.62), ("eye_phone_use", "phone_use", None, 0, 70, 1.62),
+            ("eye_car_arrive", "car_arrive", None, 0, 70, 1.2), ("eye_ridge_sea", "ridge", None, 0, 70, 1.2),
+            ("eye_ridge_sea_down", "ridge", None, 10, 70, 1.2), ("eye_gate", "gate", None, 0, 70, 1.62),
+            ("eye_cartrain", "cartrain", None, 0, 70, 1.62), ("eye_cartrain_south", "cartrain", 0.0, 0, 70, 1.62),
+            ("eye_angel_walk_1_to_town", "angel_walk_1", None, 0, 70, 1.62))
+    for name, anc, yaw, pitch, fov, up in eyes:
         a = A[anc]
-        render_view(w, (a["x"] - origin[0], a["y"] - origin[1] + 1.62, a["z"] - origin[2]), a["yaw"] if yaw is None else yaw,
-                    pitch, os.path.join(out, name + ".png"), fov=fov)
+        render_view(w, (a["x"] - origin[0], a["y"] - origin[1] + up, a["z"] - origin[2]), a["yaw"] if yaw is None else yaw,
+                    pitch, os.path.join(out, name + ".png"), fov=fov, size=(640, 360))
+    render_view(w, (60, 36, 128), -90.0, 4, os.path.join(out, "eye_forecourt_east.png"), fov=70, size=(640, 360))
+    render_view(w, (196, 95, 128), -90.0, 18, os.path.join(out, "aerial_bay.png"), fov=70, size=(640, 360))
+    render_view(w, (60, 120, 128), -90.0, 20, os.path.join(out, "aerial_overview.png"), fov=70, size=(640, 360))
     return w, S
 
 

@@ -348,12 +348,12 @@ fill 3079 37 85 3080 37 85 minecraft:purple_wool
 fill 3082 37 85 3083 37 85 minecraft:purple_wool
 fill 3085 37 85 3086 37 85 minecraft:purple_wool
 fill 3088 37 85 3089 37 85 minecraft:purple_wool
-fill 3079 37 86 3080 37 86 minecraft:black_concrete
-fill 3088 37 86 3089 37 86 minecraft:black_concrete
+fill 3079 37 86 3080 37 86 minecraft:green_concrete
+fill 3088 37 86 3089 37 86 minecraft:green_concrete
 fill 3082 37 86 3083 37 86 minecraft:purple_wool
 fill 3085 37 86 3086 37 86 minecraft:purple_wool
-fill 3082 37 87 3083 37 87 minecraft:black_concrete
-fill 3085 37 87 3086 37 87 minecraft:black_concrete
+fill 3082 37 87 3083 37 87 minecraft:green_concrete
+fill 3085 37 87 3086 37 87 minecraft:green_concrete
 fill 3079 38 50 3082 38 50 minecraft:polished_blackstone
 fill 3078 38 51 3079 38 51 minecraft:polished_blackstone
 fill 3082 38 51 3083 38 51 minecraft:polished_blackstone

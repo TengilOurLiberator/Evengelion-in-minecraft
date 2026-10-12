@@ -1,1 +1,2 @@
-execute at @a[limit=1] anchored eyes positioned ^ ^ ^0.4 run particle minecraft:flash{color:[1.0,1.0,1.0,1.0]} ~ ~ ~ 0 0 0 0 1 force
+particle minecraft:dust_plume 180.021 83.3 53.546 3.0 0.4 3.0 0.02 60 force
+particle minecraft:block{block_state:"minecraft:dirt"} 180.021 83.3 53.546 3.0 0.2 3.0 0.2 30 force

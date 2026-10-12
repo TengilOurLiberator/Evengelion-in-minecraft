@@ -1,4 +1,2 @@
-scoreboard players set #ok angel_world 0
-execute if loaded 176 32 80 if loaded 271 32 80 if loaded 176 32 207 if loaded 271 32 207 if loaded 223 32 143 run scoreboard players set #ok angel_world 1
-execute if score #ok angel_world matches 1 run function angel:world/outskirts/p66
-execute unless score #ok angel_world matches 1 run schedule function angel:world/outskirts/p65 2t
+place template angel:outskirts/t4_0_2 192 32 96
+schedule function angel:world/outskirts/p66 1t

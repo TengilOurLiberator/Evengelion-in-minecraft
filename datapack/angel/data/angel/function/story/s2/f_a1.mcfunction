@@ -1,1 +1,1 @@
-execute at @a[limit=1] anchored eyes positioned ^ ^ ^0.4 run particle minecraft:flash{color:[1.0,1.0,1.0,1.0]} ~ ~ ~ 0 0 0 0 1 force
+execute as @e[tag=angel.mwhite] run data merge entity @s {block_state:"minecraft:white_stained_glass"}

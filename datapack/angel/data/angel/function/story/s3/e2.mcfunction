@@ -9,8 +9,6 @@ forceload add 192 0
 forceload add 192 16
 forceload add 192 32
 tp @a[limit=1] 190.0 76.0 31.5
-time of angel:day set 6000
-time of angel:day pause
-execute in minecraft:overworld run weather clear
+function angel:world/sky_outskirts
 scoreboard players set #step angel.story 3
 function angel:story/s3/e3
