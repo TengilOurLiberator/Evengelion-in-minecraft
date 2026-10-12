@@ -1,1 +1,1 @@
-function angel:say/7_17
+function angel:say/file/7_17

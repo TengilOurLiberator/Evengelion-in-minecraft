@@ -4,6 +4,7 @@ execute if score #fx.air angel.story matches 1 run function angel:story/fx/air_t
 execute if score #fx.wreck angel.story matches 1 run function angel:story/fx/wreck_tick
 execute if score #fx.wreck angel.story matches 1 run function angel:story/fx/wreck_column
 execute if score #fx.crater angel.story matches 1 run function angel:story/fx/crater_tick
+execute if score #fx.leave angel.story matches 1 run function angel:story/fx/leave_tick
 execute if score #f.lead_misato angel.story matches 1 run function angel:story/lead/mon_misato
 execute if score #f.sp_misato angel.story matches 1..2 run function angel:story/lead/sp_misato
 execute if score #f.turn_1 angel.story matches 1.. run function angel:story/turn/t1

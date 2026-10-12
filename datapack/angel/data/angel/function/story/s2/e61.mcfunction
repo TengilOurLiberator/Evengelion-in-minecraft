@@ -1,5 +1,9 @@
 scoreboard players set #force angel.story 0
-particle minecraft:dust_plume 179.5 83.3 56.5 2.2 0.4 2.2 0.02 30 force
-particle minecraft:block{block_state:"minecraft:dirt"} 179.5 83.3 56.5 2.2 0.2 2.2 0.2 15 force
-scoreboard players set #step angel.story 62
-function angel:story/s2/e62
+scoreboard players set #wait angel.story 1
+scoreboard players set #speaker angel.story 1
+scoreboard players set #pk angel.story 0
+scoreboard players set #wt angel.story -1
+scoreboard players set #stk angel.story 0
+execute if score #timeout_s angel.story matches 1.. run function angel:story/wt_global
+scoreboard players set #nagt angel.story 0
+scoreboard players set #nagi angel.story 0

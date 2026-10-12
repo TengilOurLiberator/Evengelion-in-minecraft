@@ -1,4 +1,4 @@
-﻿"""The conversation logic: who was addressed, story gating, asking Claude, speaking, remembering.
+"""The conversation logic: who was addressed, story gating, asking Claude, speaking, remembering.
 
 Used unchanged by the live bridge and by `bridge.py --text`.
 """
@@ -49,8 +49,9 @@ class ReplyJob:
 
 
 class Director:
-    def __init__(self, world, brains, classifier, output, memory, beats, cfg=SETTINGS, say=print, talk_wait=None):
+    def __init__(self, world, brains, classifier, output, memory, beats, cfg=SETTINGS, say=print, talk_wait=None, conductor=None):
         self.world, self.brains, self.classifier, self.out = world, brains, classifier, output
+        self.conductor = conductor                       # conductor.py: told what the player said at a wait (it adapts the lines that follow)
         self.mem, self.beats, self.cfg, self.say = memory, beats, cfg, say
         self.talk_wait = cfg["talk_wait"] if talk_wait is None else talk_wait
         self._prev_talking, self._prev_last = False, 0
@@ -103,6 +104,11 @@ class Director:
         who_hears = [c for c in CHARACTERS if st.present[c] > 0]
         mode = {1: "answer", 2: "pilot"}.get(st.wait, "chat")
         res["mode"] = mode
+        if self.conductor is not None and mode in ("answer", "pilot"):
+            try:
+                self.conductor.note_answer(text, mode)             # the lines that follow the wait are re-voiced while the reply is being written
+            except Exception as e:
+                self.say(f"   [conductor] {e.__class__.__name__}: {e}")
 
         # --- who is addressed ---
         last = self.mem.last_speaker if self.mem.last_speaker and st.present.get(self.mem.last_speaker) else None
@@ -160,6 +166,9 @@ class Director:
         res["spoken"] = spoken
         if spoken:
             self.mem.character_said(who, " ".join(spoken))
+            if self.conductor is not None:
+                said = " ".join(spoken)
+                self.conductor.history.append(f"{NAMES[who]} (replying live): {said}")
         return spoken
 
     def _chat(self, who, st, text, mode, res, t0):

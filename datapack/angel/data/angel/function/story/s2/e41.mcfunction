@@ -1,4 +1,4 @@
 scoreboard players set #force angel.story 0
-schedule function angel:story/s2/f_a5 48t
+# quiet window 0.4..2.4 s
 scoreboard players set #step angel.story 42
 function angel:story/s2/e42

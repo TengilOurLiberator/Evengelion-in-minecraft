@@ -1,4 +1,5 @@
 scoreboard players set #force angel.story 0
-function angel:cast/look {id:"misato",mode:"player"}
+execute as @e[type=minecraft:block_display,tag=angel.mon] run data merge entity @s {Glowing:1b,glow_color_override:16744448}
+scoreboard players set #fx.crater angel.story 1
 scoreboard players set #step angel.story 99
 function angel:story/s2/e99

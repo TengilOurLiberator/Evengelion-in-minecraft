@@ -1,0 +1,1 @@
+$execute if score #live angel.story matches 1 if score #talking angel.story matches 1 if score #cue_n angel.story matches $(n) unless score #cue_ack angel.story matches $(n) run function angel:say/claimed {n:$(n),ticks:$(ticks)}

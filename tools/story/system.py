@@ -35,13 +35,15 @@ def build_system(out, ctx):
                 "#scene": 0, "#step": -1, "#mv.on": 0, "#mv.n": 0, "#mv.limit": 0, "#mv.route": 0, "#ride": 0, "#timeout_s": 0,
                 "#subtitles": CFG.subtitles_default, "#line_left": 0, "#sleep": 0, "#force": 0, "#tick": 0, "#wt": -1, "#consent": 0,
                 "#c5": 5, "#c20": 20, "#looking": 0, "#pk": 0, "#line": 0, "#rd": 0, "#placed": 0, "#nagt": 0, "#nagi": 0, "#hush": 0,
-                "#ctl": 0, "#tut.off": 0, "#ob.on": 0, "#ob.line": -1, "#ob.shown": 0, "#stk": 0, "#stkh": 0, "#ob.k": 0, "#ob.gf": 1}
+                "#ctl": 0, "#tut.off": 0, "#ob.on": 0, "#ob.line": -1, "#ob.shown": 0, "#stk": 0, "#stkh": 0, "#ob.k": 0, "#ob.gf": 1,
+                # the voice bridge handshake (lines.py): heartbeat, live switch, the cue and its claim
+                "#bridge_hb": 0, "#live_ok": 1, "#live": 0, "#cue": 0, "#cue_n": 0, "#cue_ack": -1, "#cue_fb": 0, "#cue_wait": 0, "#cue_t": 0, "#ack_t": 0}
     for c in CHARACTERS:
         defaults[f"#present_{c}"] = 0
     load = [f"scoreboard objectives add {OBJ} dummy"]
     for k, v in defaults.items():
         load.append(f"execute unless score {k} {OBJ} matches -2147483648..2147483647 run {sset(k, v)}")
-    load += [sset("#c5", 5), sset("#c20", 20), sset("#c3600", 3600),
+    load += [sset("#c5", 5), sset("#c20", 20), sset("#c3600", 3600), sset("#c1000", 1000),
              sset("#stk_hint", T(CFG.stuck_hint_s)), sset("#stk_skip", T(CFG.stuck_skip_s)),        # (angel:story/stuck {hint_s:..,skip_s:..} changes them until the next reload)
              f"kill @e[tag=angel.objective]", sset("#ob.shown", 0), sset("#ob.bl", -1), sset("#ob.line", -1)]    # a /reload never leaves a duplicate waypoint: the tick makes them again
     # a reload or restart: if no story is running there is nothing that should still be standing
@@ -65,8 +67,13 @@ def build_system(out, ctx):
     out.function("story/tick", tick)
     # t_fx: continuous effects that scenes switch on with flags (aircraft orbit etc.)
     out.function("story/t_fx", ctx.fx_tick or ["# no continuous effects"])
-    out.function("story/t_line", [f"execute {sc('#talking', '1')} run {ssub('#line_left')}",
-                                  f"execute {sc('#talking', '1')} {sc('#line_left', '..0')} run {sset('#talking', 0)}"])
+    # The line clock.  The ENGINE owns the end of every line: #line_left counts down and #talking goes to 0 at zero, whether the file or the bridge is
+    # speaking (the bridge writes the real length with angel:say/claim), so a bridge that dies mid-line cannot hold the story.  #bridge_hb is the
+    # bridge's heartbeat (set to 20 every quarter second), counted down here; a live cue nobody claims is taken over by the game (lines.py).
+    out.function("story/t_line", [f"execute {sc('#bridge_hb', '1..')} run {ssub('#bridge_hb')}",
+                                  f"execute {sc('#talking', '1')} run {ssub('#line_left')}",
+                                  f"execute {sc('#talking', '1')} {sc('#line_left', '..0')} run {sset('#talking', 0)}",
+                                  f"execute {sc('#talking', '1')} {sc('#live', '1')} unless score #cue_ack {OBJ} = #cue_n {OBJ} run function {NS}:say/unclaimed"])
 
     # ----------------------------------------------------------------------------------------------------------- halt
     halt = ["# stop everything the story started: timers, entities, cast, monster, forceloads, scene flags"]
@@ -82,7 +89,7 @@ def build_system(out, ctx):
     halt.append(f"function {NS}:angel/remove")
     for (x, z) in sorted(ctx.forceloads):
         halt.append(f"forceload remove {x} {z}")
-    halt += [sset("#wait", 0), sset("#talking", 0), sset("#line_left", 0), sset("#mv.on", 0), sset("#ride", 0), sset("#consent", 0), sset("#hush", 0), sset("#rd", 0)]
+    halt += [sset("#wait", 0), sset("#talking", 0), sset("#line_left", 0), sset("#live", 0), sset("#mv.on", 0), sset("#ride", 0), sset("#consent", 0), sset("#hush", 0), sset("#rd", 0)]
     halt += [sset(f"#fx.{f}", 0) for f in sorted(ctx.fx_flags)]
     halt += [sset(f"#f.{f}", 0) for f in flags]
     halt += [f"execute {sc('#bridge_speaking', '..-1')} run {sset('#bridge_speaking', 0)}"]
@@ -104,10 +111,18 @@ def build_system(out, ctx):
     out.function("story/skip", [f"execute {sc('#wait', '1..')} run tellraw @a {text_json('[angel] wait skipped', 'gray')}",
                                 sset("#wait", 0)])
     out.function("story/next", [fn("story/skip"),
-                                sset("#talking", 0), sset("#line_left", 0), "stopsound @a voice",
+                                sset("#talking", 0), sset("#line_left", 0), sset("#live", 0), "stopsound @a voice",
                                 sset("#force", 1), f"tellraw @a {text_json('[angel] step skipped', 'gray')}"])
     out.function("story/answered", [f"execute {sc('#wait', '1')} run {sset('#wait', 0)}"])
     out.function("story/consented", [f"execute {sc('#wait', '1..')} run {sset('#wait', 0)}", sset("#consent", 1)])
+    out.function("story/bridge_on", [sset("#live_ok", 1), f"tellraw @a {text_json('[angel] a connected voice bridge performs the lines', 'gray')}"])
+    out.function("story/bridge_off", [sset("#live_ok", 0), f"tellraw @a {text_json('[angel] the pre-rendered lines always play', 'gray')}"])
+    out.function("story/bridge_status", [
+        "tellraw @a [" + ",".join([
+            text_json("[angel] bridge heartbeat "), '{"score":{"name":"#bridge_hb","objective":"angel.story"}}', text_json(" live_ok "),
+            '{"score":{"name":"#live_ok","objective":"angel.story"}}', text_json(" cue "), '{"score":{"name":"#cue","objective":"angel.story"}}',
+            text_json(" ack "), '{"score":{"name":"#cue_ack","objective":"angel.story"}}', text_json(" fallback "),
+            '{"score":{"name":"#cue_fb","objective":"angel.story"}}']) + "]"])
     out.function("story/timeout", [f"$scoreboard players set #timeout_s {OBJ} $(s)"])
     out.function("story/timeout_off", [sset("#timeout_s", 0)])
     out.function("story/subtitles_on", [sset("#subtitles", 1)])

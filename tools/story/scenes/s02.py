@@ -31,10 +31,10 @@ import paths
 import ride_air
 from audio import sfx
 from context import (cast_look, cast_mount, cast_remove, cast_summon, play_at, play_player, ride_passenger, tp_player)
-from core import NS, OBJ, blind, P, PA, T, angdiff, fn, local_to_world, num, sset, QI
+from core import NS, OBJ, blind, P, PA, T, angdiff, fn, local_to_world, num, qaxis, sset, QI
 from engine import C, Cond
 from motion import Path, leg_frames
-from models import DOOR_OPEN_DEG
+from models import DOOR_OPEN_DEG, transformation_nbt
 from objective import objective
 from scenes.s01 import MON_H, SIREN_AT, SIREN_VOL
 
@@ -48,13 +48,89 @@ YAW_BLEND = 6.0              # seconds the car takes to swing from the way it la
 BLACK_HOLD = 24             # ticks of REAL black from the blast: a black room of six opaque slabs round his head (blindness alone leaves the near blocks
                             # visible: the first playthrough saw a bright grey room), moved with him when he is put beside the car
 BLACK_FADE = 20             # ticks in which the black comes back: blindness for the last second (clear at tick 48 + 24 + 20 = 92)
-MISATO_BACK = 2.4           # blocks further from the car than the boy, and behind him: she is not in his first view of the car on its side
 GLOW_COLOUR = 16744448      # 0xFF7F00, the outline of the Angel in the crater
+
+# Misato after the blast.  The first version put her 2.4 blocks BEHIND the boy's shoulder (178 degrees off the way he is turned: the car): the player
+# looked at the car, heard her from behind and could not find her.  Now she stands where the picture shows her as it comes back.
+MIS_DIST = (2.3, 2.0, 2.6, 1.8, 2.9)        # blocks from the boy (the checker wants 3 at most)
+MIS_ANG = (35, -35, 42, -42, 28, -28, 50, -50)   # degrees off the way he looks (the checker wants 25..55: in view, not on the line to the car)
+CAR_BOX = (-3.75, -1.7, -3.55, 3.55)        # the car lying on its right side, in its own frame (x left; xmin, xmax, zmin, zmax): the hull and its open top
+PUSH_LOCAL = (-4.75, 1.7)                   # where she stands to push (car frame; the z takes the side she already stands on)
+DRIVER_LOCAL = (-2.3, 0.12)                 # where she steps up to the driver's side of the car (the right flank)
+WALK_SPEED_MIS = 0.11                       # blocks a tick
+# the cloud of the mine thins out over this many seconds from the start of sfx.mine (the blast is at 2.4 s): gone 24 s after it
+CLOUD_GONE = 26.6
 
 
 def smoothstep(u):
     u = min(1.0, max(0.0, u))
     return u * u * (3 - 2 * u)
+
+
+def to_local(pose, x, z):
+    """World (x, z) in the frame of a car at `pose` (x left, z forward)."""
+    yaw = math.radians(pose[3])
+    dx, dz = x - pose[0], z - pose[2]
+    return dx * math.cos(yaw) + dz * math.sin(yaw), -dx * math.sin(yaw) + dz * math.cos(yaw)
+
+
+def box_gap(pose, x, z):
+    lx, lz = to_local(pose, x, z)
+    return math.hypot(max(CAR_BOX[0] - lx, 0.0, lx - CAR_BOX[1]), max(CAR_BOX[2] - lz, 0.0, lz - CAR_BOX[3]))
+
+
+def yaw_to(x0, z0, x1, z1):
+    return math.degrees(math.atan2(-(x1 - x0), z1 - z0))
+
+
+def wrap(a):
+    return (a + 180.0) % 360.0 - 180.0
+
+
+def free_standing(probe, x, z, ref_y, flat=0.5):
+    """Ground height at (x, z) if a person can stand there (flat enough, room for a body, no wall within 0.35), else None."""
+    y = probe.surface(x, z, ref_y)
+    if y is None or abs(y - ref_y) > flat:
+        return None
+    for dx, dz in ((0, 0), (0.35, 0), (-0.35, 0), (0, 0.35), (0, -0.35)):
+        for h in (0.65, 1.2, 1.7):           # (a half-block step beside her is no wall: the cast steps over 1.0)
+            if probe.solid(x + dx, y + h, z + dz):
+                return None
+    return y
+
+
+def cloud_dissipation(mine, K):
+    """[(seconds from the start of sfx.mine, [commands])]: the mushroom cloud (parts angel.cl_*, see fx.mushroom: the cap and skirt have bloomed by 6.5 s)
+    hangs, then thins and spreads, greys and darkens, rises and shrinks in stages, and is removed part by part: the fireballs first, the skirt,
+    the stem, the caps.  The first version removed nothing: all eight parts stood until the scene was torn down, minutes later."""
+    bx, by, bz = mine
+    ident = (0, 0, 0, 1)
+    rot45 = qaxis("y", 45)
+    cube = lambda tag, cy, size, rot, dur: fx._centered_cube_merge(tag, (0, cy * K, 0), 1.0, rot, dur, size=tuple(v * K for v in size))
+    look = lambda tag, block, br: (f'data merge entity @e[tag=angel.cl_{tag},limit=1] {{block_state:{{Name:"minecraft:{block}"}},'
+                                   f'brightness:{{sky:{br},block:0}}}}')
+    smoke = lambda cy, spread, n: (f"particle minecraft:large_smoke {num(bx)} {num(by + cy * K)} {num(bz)} {num(spread * K)} {num(2.0 * K)} {num(spread * K)} 0.02 {n} force")
+    st = []
+    st.append((11.0, [f"kill @e[tag=angel.cl_fb{i}]" for i in range(4)] + [
+        cube("capA", 64, (38, 9, 38), ident, 120), cube("capB", 66, (36, 7, 36), rot45, 120), cube("skirt", 50, (26, 4, 26), ident, 120),
+        f"data merge entity @e[tag=angel.cl_stem,limit=1] {{start_interpolation:0,interpolation_duration:120,{transformation_nbt((-2.0 * K, 0, -2.0 * K), ident, (4.0 * K, 40.0 * K, 4.0 * K))}}}",
+        look("capA", "light_gray_concrete", 12), look("capB", "gray_concrete", 12), look("skirt", "gray_concrete", 10), look("stem", "gray_concrete", 10),
+        smoke(60, 14, 40)]))
+    st.append((16.5, [
+        "kill @e[tag=angel.cl_skirt]",
+        f"data merge entity @e[tag=angel.cl_stem,limit=1] {{start_interpolation:0,interpolation_duration:90,{transformation_nbt((-1.5 * K, 14.0 * K, -1.5 * K), ident, (3.0 * K, 28.0 * K, 3.0 * K))}}}",
+        cube("capA", 70, (34, 6, 34), ident, 100), cube("capB", 72, (32, 5, 32), rot45, 100),
+        look("capA", "gray_concrete", 9), look("capB", "gray_concrete", 8), look("stem", "gray_concrete", 6),
+        smoke(66, 16, 50)]))
+    st.append((21.0, [
+        "kill @e[tag=angel.cl_stem]",
+        cube("capA", 78, (24, 4, 24), ident, 70), cube("capB", 80, (22, 3, 22), rot45, 70),
+        look("capA", "gray_concrete", 6), look("capB", "black_concrete", 5),
+        smoke(74, 14, 40)]))
+    st.append((24.0, [cube("capA", 88, (8, 1.2, 8), ident, 50), cube("capB", 90, (7, 1.0, 7), rot45, 50),
+                      look("capA", "black_concrete", 3), look("capB", "black_concrete", 2), smoke(84, 8, 24)]))
+    st.append((CLOUD_GONE, ["kill @e[tag=angel.cloud]"]))
+    return st
 
 
 def build(s, ctx):
@@ -101,23 +177,62 @@ def build(s, ctx):
     gate_pose = to_gate.pose(to_gate.end)
     ctx.warn(f"scene 2: the call lasts {call_secs:.1f} s; the car limps down at {limp_v} blocks/s and takes {to_gate.seconds():.1f} s")
 
-    player_spot, misato_spot = carfx.lie_stand_spots(lie_pose, side_blocks=6.3, fwd=(-0.8, 1.6))
-    py_ = probe.surface(player_spot[0], player_spot[1], by) or by
-    # Misato stands further out and a little behind the boy (when he is turned to the car she is behind his shoulder), where the ground is flat
-    # and at the boy's height; if there is no such place she keeps her old spot
-    cand = local_to_world((lie_pose[0], lie_pose[1], lie_pose[2]), lie_pose[3], 0.0, -(6.3 + MISATO_BACK), 0.0, -1.2)
-    cand_y = probe.surface(cand[0], cand[2], by)
-    if cand_y is not None and abs(cand_y - py_) <= 0.6:
-        misato_spot = (cand[0], cand[2])
-        ctx.warn(f"scene 2: Misato stands behind the boy at ({cand[0]:.1f}, {cand[2]:.1f}), ground {cand_y:.1f} (his {py_:.1f})")
-    else:
-        ctx.warn(f"scene 2: no flat ground for Misato behind the boy (ground {cand_y}): she keeps her old place beside him")
-    my_ = probe.surface(misato_spot[0], misato_spot[1], by) or by
     cx_, cz_ = lie_pose[0], lie_pose[2]
-    face_car = math.degrees(math.atan2(-(cx_ - misato_spot[0]), (cz_ - misato_spot[1])))
     roof = carfx.lie_top(lie_pose)                                               # the open top of the car lying on its right side (the side the boy is on)
     lie_centre = carfx.lie_centre(lie_pose)
     mine = (walk4["x"], walk4["y"], walk4["z"])
+    # He is put down on the open-top side of the car, turned to the middle of the car (tp ... facing).  Misato is put where that picture shows her: 2 to 3
+    # blocks from him, 25 to 55 degrees off the way he looks (in his forward 120 degrees but not on the line to the car), on level ground with room for a
+    # body, clear of the car's hull, and turned to him.  His own spot is the original one (6.3 blocks out, a little before the car's middle) unless
+    # the hill leaves her no room there (the car lies 2.4 blocks from it, and the ground falls away to the west): then it slides along the car.
+    misato_spot = player_spot = py_ = gaze = None
+    for side_blocks, along in ((6.3, -0.8), (6.3, -1.6), (6.3, -2.4), (6.3, -3.0), (6.8, -2.4), (6.8, -3.0), (6.3, -3.6), (6.8, -3.6), (7.3, -3.0)):
+        ps = local_to_world((lie_pose[0], lie_pose[1], lie_pose[2]), lie_pose[3], 0.0, -side_blocks, 0.0, along)
+        ps = (ps[0], ps[2])
+        pg = free_standing(probe, ps[0], ps[1], by)
+        if pg is None:
+            continue
+        gz = yaw_to(ps[0], ps[1], lie_centre[0], lie_centre[2])
+        for dist in MIS_DIST:
+            for ang in MIS_ANG:
+                yw = math.radians(gz + ang)
+                mx_, mz_ = ps[0] - dist * math.sin(yw), ps[1] + dist * math.cos(yw)
+                if (free_standing(probe, mx_, mz_, pg) is not None and box_gap(lie_pose, mx_, mz_) >= 1.1
+                        and dist * abs(math.sin(math.radians(ang))) >= 1.0):
+                    misato_spot, player_spot, py_, gaze = (mx_, mz_), ps, pg, gz
+                    break
+            if misato_spot:
+                break
+        if misato_spot:
+            ctx.warn(f"scene 2: the boy stands {side_blocks} blocks out of the car's side and {along:+.1f} along it")
+            break
+    if misato_spot is None:
+        raise ValueError("scene 2: no standable place for Misato within 3 blocks of the boy in his forward 120 degrees")
+    my_ = probe.surface(misato_spot[0], misato_spot[1], by) or by
+    face_boy = yaw_to(misato_spot[0], misato_spot[1], player_spot[0], player_spot[1])
+    m_off = wrap(yaw_to(player_spot[0], player_spot[1], misato_spot[0], misato_spot[1]) - gaze)
+    m_dist = math.hypot(misato_spot[0] - player_spot[0], misato_spot[1] - player_spot[1])
+    ctx.warn(f"scene 2: Misato stands at ({misato_spot[0]:.1f}, {my_:.1f}, {misato_spot[1]:.1f}), {m_dist:.1f} blocks from the boy, {m_off:+.0f} degrees off the way "
+             f"he looks, {box_gap(lie_pose, *misato_spot):.1f} clear of the car, turned to him (ground {my_:.1f}, his {py_:.1f})")
+    # where she stands to push (beside the open top, on the side she is already on), and where she steps up to the driver's side of the upright car
+    side = 1.0 if to_local(lie_pose, *misato_spot)[1] >= 0 else -1.0
+    push_xy = local_to_world((lie_pose[0], lie_pose[1], lie_pose[2]), lie_pose[3], 0.0, PUSH_LOCAL[0], 0.0, side * PUSH_LOCAL[1])
+    push_y = free_standing(probe, push_xy[0], push_xy[2], py_)
+    if push_y is None:
+        push_xy, push_y = (misato_spot[0], 0.0, misato_spot[1]), my_
+        ctx.warn("scene 2: no standable place by the car's open top: she pushes from where she stands")
+    face_push = yaw_to(push_xy[0], push_xy[2], lie_centre[0], lie_centre[2])
+    drv_xy = local_to_world((lie_pose[0], lie_pose[1], lie_pose[2]), lie_pose[3], 0.0, DRIVER_LOCAL[0], 0.0, DRIVER_LOCAL[1])
+    drv_y = free_standing(probe, drv_xy[0], drv_xy[2], py_)
+    if drv_y is None:
+        raise ValueError("scene 2: no standable place at the driver's side of the car")
+    ctx.presence = getattr(ctx, "presence", [])
+    ctx.presence.append(dict(scene=2, who="misato", set="outskirts", car=lie_pose, car_box=CAR_BOX,
+                             player=(player_spot[0], py_, player_spot[1], gaze),
+                             stations=[dict(name="picture back (2.07)", x=misato_spot[0], z=misato_spot[1], y=my_, yaw=face_boy, cone=True, maxd=3.0),
+                                       dict(name="at the car (2.09)", x=push_xy[0], z=push_xy[2], y=push_y, yaw=face_push, cone=False, maxd=6.0),
+                                       dict(name="driver's side (2.11)", x=drv_xy[0], z=drv_xy[2], y=drv_y, yaw=None, cone=False, maxd=6.0, hull=False)],
+                             from_note="tick 50, in the black", to_note="the drive resumes"))
 
     # how much of the call the Angel's upper body is in line of sight from the car (it stands 70 to 100 blocks off, behind the ridge's shoulder)
     fr = np.array(to_gate.frames)
@@ -178,14 +293,18 @@ def build(s, ctx):
     s.sleep(0.8)
 
     # ================================================================ the ridge: the planes pull back
-    # the aircraft that circled the monster in scene 1 (if they still do) climb away to the east; the wreck in the town is let go (it is far behind)
-    retreat = []
-    for i in range(1, ride_air.N_AC + 1):
-        retreat += [f"execute as @e[tag=angel.rig_ac{i},tag=angel.rpart] run data merge entity @s {{teleport_duration:59}}",
-                    f"execute as @e[tag=angel.rig_ac{i},tag=angel.pt_fuselage,limit=1] at @s run tp @e[tag=angel.rig_ac{i},tag=angel.rpart] ^ ^28 ^90"]
-    s.do(sset("#fx.air", 0), sset("#fx.wreck", 0), "kill @e[tag=angel.wreck]", *retreat, f"schedule function angel:story/s2/f_cleanup_air 140t", note="the planes pull back")
-    ctx.fx_scheduled.append("story/s2/f_cleanup_air")
-    s.function("cleanup_air", ride_air.stop_cmds())
+    # The aircraft that circle the monster (scene 1; none on a jump) break off one after another, turn away from the ridge, climb and leave over the
+    # horizon (ride_air.leave_setup: the orbit and the tracers stop at once, nothing is left hanging), and are gone while 2.05 is still being said.
+    # The wreck in the town goes on burning (smoke on the horizon) until the scene is over.
+    away_dx, away_dz = walk4["x"] - ridge["x"], walk4["z"] - ridge["z"]
+    away_n = math.hypot(away_dx, away_dz)
+    away = (walk4["x"] + away_dx / away_n * 900.0, walk4["y"] + MON_H + 220.0, walk4["z"] + away_dz / away_n * 900.0)
+    leave = ride_air.leave_setup(ctx, away)
+    along = lambda d, h: (walk4["x"] + away_dx / away_n * d, walk4["y"] + MON_H + h, walk4["z"] + away_dz / away_n * d)
+    s.do(*leave, sfx("sfx.jet_pass", at=along(0.0, 0.0), vol=4.0, pitch=1.0, minvol=0.3),
+         note="the planes pull back: they peel off one after another, turn away and climb out over the horizon (about 3 s); the jets' note recedes")
+    s.after(1.3, sfx("sfx.jet_pass", at=along(120.0, 40.0), vol=3.0, pitch=0.9, minvol=0.2), note="the engines, further off")
+    s.after(2.6, sfx("sfx.jet_pass", at=along(300.0, 80.0), vol=2.2, pitch=0.82, minvol=0.15), note="and fading")
     # she stops on the ridge and looks back at the monster through field glasses: it stands to the LEFT of the way the car faces, in the boy's window
     s.do(*carfx.look_road(car), f"rotate @e[tag=angel.misato,tag=angel.char,limit=1] facing {num(walk4['x'])} {num(walk4['y'] + 0.55 * MON_H)} {num(walk4['z'])}",
          note="Misato looks back at the monster (it is ahead and to the left: the boy's side)")
@@ -204,7 +323,7 @@ def build(s, ctx):
     lie_cmds = [sset("#ride", 0), f"ride {P()} dismount", cast_remove("misato"), "kill @e[tag=angel.rig_car]",
                 *ctx.rig_spawn(car, "side", lie_pose, carfx.roll_motions(car, 90.0)),
                 "kill @e[tag=angel.mblack]", to_spot, at_eyes + fn("story/s2/blackout"),
-                cast_summon("misato", misato_spot[0], my_, misato_spot[1], face_car), cast_look("misato", "player"),
+                cast_summon("misato", misato_spot[0], my_, misato_spot[1], face_boy), cast_look("misato", "player"),
                 sset("#beat", 21),
                 f"function angel:angel/pose {{pose:\"regenerating\"}}",
                 f'summon minecraft:interaction {num(lie_centre[0])} {num(by)} {num(lie_centre[2])} '
@@ -212,6 +331,7 @@ def build(s, ctx):
     s.do(fn("story/snd/silence"),                                                   # tick 0: every sound stopped ...
          sfx("sfx.mine", vol=4.0),                                                  # ... the mine begins (whine, then 2 s of nothing, then the blast)
          at_eyes + fn("story/s2/whiteout"), *fx.flash_burst(), *spawn_cloud, *cloud_sched,
+         *ride_air.stop_cmds(), sset("#fx.leave", 0),                              # (the sky is already empty; this is the belt and braces)
          note="T0: SILENCE (stopsound everything), sfx.mine, the white-out begins with the whine, the fireball and cloud are built behind it")
     s.quiet(0.4, 2.4, note="sfx.mine: digital silence from 0.4 s to 2.4 s; the checker proves nothing else is scheduled to sound in it")
     s.after(WHITE_VEIL, sh.set_block("angel.mwhite", "white_stained_glass"), note="tick 20: the white thins to a veil (still silent), the fireball dim behind it; it holds")
@@ -233,12 +353,25 @@ def build(s, ctx):
                 note="dust in the air over the car and round him" if k == 0 else "")
     s.after(t_back + 0.5, sfx("sfx.ears_ringing", vol=1.0), note="tick 82: the ringing begins as the picture comes back (8 s, under 2.07)")
     s.after(9.0, *ctx.audio.start("bed", "town_empty", fade=6.0), note="tick 180: the blast's tail has ended: the town's air comes back slowly (6 s); no music")
+    for t_c, cmds_c in cloud_dissipation(mine, MON_H / 60.0):
+        s.after(t_c, *cmds_c, note=(f"the mushroom cloud dissipates: stage at {t_c:.1f} s from the start of sfx.mine" if t_c < CLOUD_GONE
+                                    else f"{t_c:.1f} s from the start of sfx.mine ({t_c - BLAST / 20.0:.1f} s after the blast): the last of the cloud is gone"))
+    ctx.removals = getattr(ctx, "removals", [])
+    ctx.removals.append(dict(scene=2, tag="angel.cloud", spawn_note="T0: SILENCE", within=BLAST / 20.0 + 25.0, at_end=True,
+                             why="gone 25 s after the blast, long before the telephone call"))
     s.sleep((BLAST + BLACK_HOLD + BLACK_FADE) / 20.0 + 0.3, note="the picture is back (clear at tick 92)")
 
     # ================================================================ on the ground
     s.say("2.07")
     s.wait_answer(speaker="misato", prompt="answer Misato")
+    # 2.08: "Come on. Push when I say.": she walks the couple of blocks to the car's open top, beside where he will stand, and turns to the car
+    mis = "@e[type=minecraft:mannequin,tag=angel.misato,limit=1]"
+    mis_arrived = Cond(["if score #arrived_misato angel.cast matches 1"], 0.5, "Misato has arrived")
+    s.do(cast_look("misato", "ahead"), f'function angel:cast/walk {{id:"misato",x:{num(push_xy[0])},y:{num(push_y)},z:{num(push_xy[2])},speed:{num(WALK_SPEED_MIS)}}}',
+         note="2.08: she walks to the car to push")
     s.say("2.08")
+    s.until(mis_arrived, timeout=8, on_timeout=['function angel:cast/stop {id:"misato"}'], est=0.5, note="Misato is at the car (the walk has its own time limit)")
+    s.do(f"execute as {mis} anchored eyes run rotate @s facing {num(lie_centre[0])} {num(by + 1.6)} {num(lie_centre[2])}", note="she faces the car (eyes level with it), hands ready")
     s.say("2.09")
     ia_push = "@e[tag=angel.ia_push,limit=1]"
     cleanup_push = [f"kill {ia_push}"]
@@ -261,11 +394,15 @@ def build(s, ctx):
     s.say("2.10")
     # both get in: Misato first (the door opens), then the boy
     upright = (cx_, by, cz_, LIE_YAW, 0.0)
-    s.do(*carfx.door_cmds(car, upright, True, 8), cast_remove("misato"),
-         cast_summon("misato", cx_, by, cz_, LIE_YAW), cast_mount("misato", "driver"),
+    # (the first version removed her and summoned her already in the seat: she was never seen to get in, and a cast mount makes her invisible for 12 ticks)
+    s.do(*carfx.door_cmds(car, upright, True, 8), cast_look("misato", "ahead"),
+         f'function angel:cast/walk {{id:"misato",x:{num(drv_xy[0])},y:{num(drv_y)},z:{num(drv_xy[2])},speed:{num(WALK_SPEED_MIS)}}}',
          f'summon minecraft:interaction {num(cx_)} {num(by)} {num(cz_)} {{Tags:["angel.story","angel.ia_car"],width:6f,height:2.6f,response:1b}}',
-         note="the door opens; Misato gets in")
+         note="the door opens; Misato walks round to the driver's side")
     s.say("2.11")
+    s.until(mis_arrived, timeout=8, on_timeout=['function angel:cast/stop {id:"misato"}'], est=0.5, note="Misato is at the driver's side")
+    s.do(f"data merge entity {mis} {{immovable:1b,NoGravity:1b}}", f"ride {mis} mount @e[tag=angel.seat_driver,limit=1]", f"tag {mis} add angel.mounted",
+         *carfx.look_road(car), note="she steps up into the driver's seat (a plain ride: the cast's own mount would hide her for 12 ticks)")
     dx, dy, dz = carfx.door_world(upright)
     ia_car = "@e[tag=angel.ia_car,limit=1]"
     s.until([C.near(dx, dy, dz, 2.2, est=5), C.data(ia_car, "interaction", est=5), C.data(ia_car, "attack", est=5)],
@@ -291,7 +428,9 @@ def build(s, ctx):
     s.say("2.15")
     carfx.say_glancing(s, car, "2.16", glance=3.0)
     s.until(to_gate.cond_done(), est=to_gate.seconds(), timeout=90, note="the car reaches the gate")
-    s.do(*crater_off, *ctx.audio.stop("music"), note="the car stops at the gate: the music stops, the Angel is left behind")
+    s.do(*crater_off, *ctx.audio.stop("music"), sset("#fx.wreck", 0), "kill @e[tag=angel.wreck]", *ride_air.stop_cmds(), sset("#fx.leave", 0),
+         "kill @e[tag=angel.cloud]", "kill @e[tag=angel.ia_push]", "kill @e[tag=angel.ia_car]", "kill @e[tag=angel.mwhite]", "kill @e[tag=angel.mblack]",
+         note="the car stops at the gate: the music stops, the Angel is left behind; the town's wreck, the last of the cloud and every prop of the scene are removed")
     s.sleep(0.8)
     s.next_scene(3)
 

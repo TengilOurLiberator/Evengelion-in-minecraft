@@ -273,6 +273,7 @@ def main():
     ap.add_argument("--ids", help="comma list of line ids")
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--method", choices=["vc+dsp", "dsp"])
+    ap.add_argument("--allow-humans", action="store_true", help="also write the four human voices into voices\\final from the user's raw recordings (they are TTS now: see tts_lines.py)")
     ap.add_argument("--make-refs", action="store_true")
     ap.add_argument("--no-recast", action="store_true", help="with --make-refs: use the DSP-shaped voice directly")
     ap.add_argument("--raw", default=common.RAW_DIR)
@@ -280,6 +281,15 @@ def main():
     ap.add_argument("--script", help="script.md to read directions from (default D:\\angel-attack\\script.md)")
     a = ap.parse_args()
     speakers = [s.strip().upper() for s in a.speaker.split(",")] if a.speaker else common.SPEAKERS
+    if os.path.normcase(os.path.abspath(a.out)) == os.path.normcase(os.path.abspath(common.FINAL_DIR)) and not a.make_refs and not a.allow_humans:
+        # The four human voices are TTS now (tts_lines.py install writes voices\final\<SPEAKER>); rebuilding them from the user's raw recordings
+        # would put the recorded voices back into the pack.
+        if a.speaker and any(s in common.HUMANS for s in speakers):
+            sys.exit("MISATO, RITSUKO, GENDO and REI are TTS voices now (tools\\voices\\tts_lines.py). transform.py into voices\\final would replace them with "
+                     "the user's converted recordings; pass --allow-humans if that is really what you want, or --out another folder.")
+        if not a.speaker:
+            speakers = ["BASE"]
+            print("(only BASE is transformed: the four human voices are made by tts_lines.py; --allow-humans to include them)")
     if a.make_refs:
         make_refs([s for s in speakers if s in common.HUMANS], recast=not a.no_recast)
         return

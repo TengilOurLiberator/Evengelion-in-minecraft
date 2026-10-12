@@ -231,7 +231,8 @@ queued or playing.  When: 7.01-02 at start, 7.03 at the first steps (8 blocks fr
 
 ### Guards (build-time)
 
-`function\fight\say\7_NN` is `function angel:say/7_NN` if `data\angel\function\say\7_NN.mcfunction` existed when the pack was built,
+`function\fight\say\7_NN` is `function angel:say/file/7_NN` (the pre-rendered file, played by the game itself: a bark is never cued to the voice
+bridge, see tools/story/lines.py) if `data\angel\function\say\7_NN.mcfunction` existed when the pack was built,
 otherwise a `tellraw` of the line from script.md that also sets `#talking angel.story` to 1 for a while.  `fight\hand_won` calls
 `function angel:story/fight_done {result:"won"}` only if `function\story\fight_done.mcfunction` existed, otherwise it writes
 `"won"` to storage `angel:fight handoff`.  Rebuild once the story engine's files are in.  (A `function` of a missing id is a runtime error

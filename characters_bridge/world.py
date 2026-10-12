@@ -41,7 +41,7 @@ class World:
 
     def score(self, name):
         reply = self.run(rc.score_get(name))
-        value = rc.parse_score(reply)
+        value = rc.parse_score(reply, name)
         if value is None and not self._warned and "objective" in reply.lower():
             self._warned = True
             warnings.warn(f"scoreboard objective {rc.OBJECTIVE} does not exist yet: {reply.strip()}")

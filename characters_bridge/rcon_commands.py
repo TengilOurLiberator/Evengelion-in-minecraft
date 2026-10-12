@@ -14,6 +14,14 @@ Scoreboard objective ``angel.story`` holds these fake players:
     #lastspoke            OPTIONAL: id (1-4) of the character whose recorded line played last
   written by the bridge
     #bridge_speaking      OPTIONAL signal: id (1-4) of the character the bridge is voicing now, 0 when it stops
+    #bridge_hb            HEARTBEAT: set to 20 every quarter second; the game counts it down, so above 0 = a bridge is connected (lines.py, system.py)
+
+  the performance of the scripted lines (tools\story\lines.py explains the whole handshake)
+    #cue                  written by the game: cue number * 1000 + #line (scene * 100 + number) when a MISATO/RITSUKO/GENDO/REI line is due and the
+                          heartbeat is alive; the bridge performs it and claims it
+    #cue_ack              written by `function angel:say/claim {n:..,ticks:..}`: the cue number claimed (the real length goes to #line_left)
+    #scene, #step         where the story is (the bridge looks ahead in the step listing from there)
+    #subtitles            1 = the game shows spoken lines as chat text too
 
 Entities: characters carry tags ``angel.char`` and ``angel.<id>``. The player is the first player online.
 Functions the bridge runs: ``angel:story/answered`` and ``angel:story/consented``.
@@ -47,15 +55,39 @@ def score_set(name, value):
 
 SCORE_BEAT, SCORE_WAIT, SCORE_SPEAKER, SCORE_TALKING = "#beat", "#wait", "#speaker", "#talking"
 SCORE_LASTSPOKE, SCORE_BRIDGE_SPEAKING = "#lastspoke", "#bridge_speaking"
+SCORE_BRIDGE_HB, SCORE_CUE, SCORE_CUE_ACK = "#bridge_hb", "#cue", "#cue_ack"
+SCORE_SCENE, SCORE_STEP, SCORE_SUBTITLES = "#scene", "#step", "#subtitles"
+HEARTBEAT_TICKS = 20
+
+
+def heartbeat():
+    return score_set(SCORE_BRIDGE_HB, HEARTBEAT_TICKS)
+
+
+def claim(n, ticks):
+    """Take cue n: the line will last `ticks` game ticks (written to #line_left); refused by the game if the cue is not current or was taken over."""
+    return f"function angel:say/claim {{n:{int(n)},ticks:{int(ticks)}}}"
+
+
+def use_dry():
+    """The scratch-server test variant (build_story.py --dry): a mannequin tagged angel.testplayer is the player."""
+    global PLAYER
+    PLAYER = "@e[type=minecraft:mannequin,tag=angel.testplayer,limit=1]"
 
 
 def score_present(who):
     return f"#present_{who}"
 
 
-def parse_score(reply):
-    """'#beat has 5 [angel.story]' -> 5. Anything else (unset score, unknown objective, no reply) -> None."""
-    m = re.search(r"\bhas (-?\d+)", reply or "")
+def parse_score(reply, name=None):
+    """'#beat has 5 [angel.story]' -> 5. Anything else (unset score, unknown objective, no reply) -> None.
+    With `name` the reply must be about THAT score: the vanilla server shares one RCON response buffer between all RCON clients, so a command sent
+    while another client's command is running can come back with the other's text (the bridge keeps to one connection; this guards against a second
+    client, such as tools\\rcon.py in another window)."""
+    if name:
+        m = re.search(re.escape(name) + r" has (-?\d+)", reply or "")
+    else:
+        m = re.search(r"\bhas (-?\d+)", reply or "")
     return int(m.group(1)) if m else None
 
 

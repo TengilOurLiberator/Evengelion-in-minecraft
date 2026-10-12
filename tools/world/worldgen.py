@@ -157,7 +157,11 @@ def init_lines():
     """The commands that put a fresh world in order. Call `function angel:world/init` once from the pack's load function."""
     return (["scoreboard objectives add angel_world dummy", "difficulty peaceful"]
             + [f"gamerule minecraft:{g} {v}" for g, v in GAMERULES]
-            + [f"time of {CLOCK} set {SKY_DEFAULT}", f"time of {CLOCK} pause", "weather clear"])
+            + [f"time of {CLOCK} set {SKY_DEFAULT}", f"time of {CLOCK} pause", "weather clear"]
+            # the world is a void: whoever joins must appear on the station platform (outskirts.start), never at 0 0 0 over nothing,
+            # and a death (a fall out of the world) must put them straight back there without the death screen
+            + ["setworldspawn 37 65 128", "gamerule minecraft:immediate_respawn true", "gamerule minecraft:keep_inventory true",
+               "gamerule minecraft:fall_damage false"])
 
 
 def sky_lines(set_name):

@@ -56,15 +56,21 @@ def build(dry=False, out_dir=None, warn=print, quiet=False):
     from lines import write_lines
     from system import build_system, register as register_system
 
+    from lines import Line
     ctx = Context(warn)
     out = Out(out_dir) if out_dir else Out()
     register_system(ctx)
     mods = discover()
-    for mod in mods:
-        s = Scene(mod.N, mod.TITLE, ctx)
-        mod.build(s, ctx)
-        s.module = mod
-        ctx.scenes.append(s)
+    Line.touched.clear()
+    Line.tracking = True                     # which lines' LENGTHS the scenes read while they are built (sim.check_timing_bound)
+    try:
+        for mod in mods:
+            s = Scene(mod.N, mod.TITLE, ctx)
+            mod.build(s, ctx)
+            s.module = mod
+            ctx.scenes.append(s)
+    finally:
+        Line.tracking = False
     comp = Compiler(out, ctx)
     for s in ctx.scenes:
         comp.compile(s)
@@ -86,7 +92,8 @@ def main(argv=None):
     ap.add_argument("--quiet", action="store_true")
     ap.add_argument("--extra", help="a folder of extra scene modules sNN.py (they replace scenes of the same number)")
     ap.add_argument("--scenes", help="build only these scene numbers, e.g. 1,2,3,4,5 (for testing while another scene is being written)")
-    ap.add_argument("--steps", help="also write a JSON listing of every scene's steps (for test drivers)")
+    ap.add_argument("--steps", help="also write a JSON listing of every scene's steps (for test drivers and the voice bridge)")
+    ap.add_argument("--steps-only", action="store_true", help="with --steps: stop after writing the listing (nothing is written to the datapack)")
     ap.add_argument("--stuck-hint", type=float, help="seconds without progress before a generic direction line (default CFG.stuck_hint_s = 60)")
     ap.add_argument("--stuck-skip", type=float, help="seconds without progress before a step is skipped by itself (default CFG.stuck_skip_s = 150)")
     args = ap.parse_args(argv)
@@ -101,12 +108,39 @@ def main(argv=None):
     ctx, out, summary = build(args.dry, args.out, warn=(lambda m: None) if args.quiet else print)
     if args.steps:
         import json
+        import re as _re
         listing = {}
         for sc_ in ctx.scenes:
-            listing[sc_.n] = [{"i": st.index, "kind": st.kind, "note": getattr(st, "note", ""), "est": getattr(st, "est", None),
-                               "line": getattr(st, "lid", None), "mode": getattr(st, "mode", None)} for st in sc_.steps]
+            rows = []
+            for st in sc_.steps:
+                row = {"i": st.index, "kind": st.kind, "note": getattr(st, "note", ""), "est": getattr(st, "est", None),
+                       "line": getattr(st, "lid", None), "mode": getattr(st, "mode", None)}
+                if st.kind in ("goto", "branch"):
+                    row["target"] = sc_.labels[st.label]                          # step index the jump goes to
+                    if st.kind == "branch":
+                        row["cond"] = st.cond.text()
+                if st.kind in ("sleep", "after"):
+                    row["sec"] = st.sec
+                if st.kind == "handover":
+                    row["to"] = st.to
+                if st.kind == "wait":
+                    nud = getattr(st, "nudges", None)
+                    row.update(speaker=st.speaker, prompt=st.prompt, timeout=st.timeout, answer_ends=bool(getattr(st, "answer_ends", False)),
+                               nudge_lines=list(nud.lines) if nud is not None else [],
+                               nudge_first=nud.first if nud is not None else None, nudge_repeat=nud.repeat if nud is not None else None)
+                if st.kind == "until":
+                    nag = getattr(st, "nag", None)
+                    row["nag_lines"] = sorted({m.group(1).replace("_", ".") for c in (nag[2] if nag else []) for m in [_re.search(r"say/(\d+_\d+)", c)] if m})
+                    row["timeout"] = st.timeout
+                rows.append(row)
+            listing[sc_.n] = rows
+        n_scenes = len(listing)
+        listing["_meta"] = {"setup_end": {str(sc_.n): int(getattr(sc_, "setup_end", 0) or 0) for sc_ in ctx.scenes}}
         with open(args.steps, "w", encoding="utf-8") as f:
             json.dump(listing, f, indent=1)
+        if args.steps_only:
+            print(f"step listing: {sum(len(v) for k, v in listing.items() if k != '_meta')} steps of {n_scenes} scenes -> {args.steps}")
+            return 0
     if args.check:
         import sim
         return sim.main_check(ctx, out)

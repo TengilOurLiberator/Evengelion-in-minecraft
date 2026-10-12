@@ -821,7 +821,8 @@
  "line.misato.2_01": {
   "sounds": [
    {
-    "name": "angel:line/misato/2_01"
+    "name": "angel:line/misato/2_01",
+    "stream": true
    }
   ]
  },
@@ -1138,8 +1139,7 @@
  "line.ritsuko.5_02": {
   "sounds": [
    {
-    "name": "angel:line/ritsuko/5_02",
-    "stream": true
+    "name": "angel:line/ritsuko/5_02"
    }
   ]
  },
@@ -1267,7 +1267,8 @@
  "line.gendo.5_20": {
   "sounds": [
    {
-    "name": "angel:line/gendo/5_20"
+    "name": "angel:line/gendo/5_20",
+    "stream": true
    }
   ]
  },
@@ -1617,7 +1618,8 @@
  "line.ritsuko.7_05": {
   "sounds": [
    {
-    "name": "angel:line/ritsuko/7_05"
+    "name": "angel:line/ritsuko/7_05",
+    "stream": true
    }
   ]
  },

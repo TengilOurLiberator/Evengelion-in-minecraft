@@ -496,18 +496,24 @@ class McSim:
             return (lo == "" or v >= int(lo)) and (hi == "" or v <= int(hi))
         return v == int(rng)
 
-    def run_function(self, path, depth=0):
+    def run_function(self, path, depth=0, args=None):
         self.calls.append((self.tick, path))
         if depth > 12 or path not in self.files:
             return 0
         for line in self.files[path]:
-            r = self.run(line, depth)
+            r = self.run(line, depth, args)
             if r is not None and r[0] == "return":
                 return r[1]
         return 0
 
-    def run(self, line, depth=0):
+    @staticmethod
+    def _compare(a, op, b):
+        return {"=": a == b, "<": a < b, ">": a > b, "<=": a <= b, ">=": a >= b}[op]
+
+    def run(self, line, depth=0, args=None):
         line = line.strip()
+        if line.startswith("$"):                        # a macro line: $(name) is replaced from the call's compound
+            line = re.sub(r"\$\((\w+)\)", lambda m: str((args or {}).get(m.group(1), "0")), line[1:])
         if not line or line.startswith("#"):
             return None
         toks = line.split()
@@ -520,17 +526,26 @@ class McSim:
                     if (w == "if") != ok:
                         return None
                     i += 6
+                elif w in ("if", "unless") and i + 6 < len(toks) + 1 and toks[i + 1] == "score" and toks[i + 4] in ("=", "<", ">", "<=", ">="):
+                    ok = self._compare(self.get(toks[i + 2]), toks[i + 4], self.get(toks[i + 5]))
+                    if (w == "if") != ok:
+                        return None
+                    i += 7
                 elif w == "run":
-                    return self.run(" ".join(toks[i + 1:]), depth)
+                    return self.run(" ".join(toks[i + 1:]), depth, args)
                 else:
                     return None                      # a selector, a position, a data test ...: not simulated
             return None
         if toks[0] == "return":
             if len(toks) > 1 and toks[1] == "run":
-                self.run(" ".join(toks[2:]), depth)
+                self.run(" ".join(toks[2:]), depth, args)
             return ("return", 0)
         if toks[0] == "function":
-            self.run_function(toks[1].split(":", 1)[1], depth + 1)
+            cargs = None
+            if "{" in line:                              # function angel:say/claimed {n:5,ticks:20}
+                body = line[line.index("{") + 1:line.rindex("}")]
+                cargs = dict(kv.split(":", 1) for kv in body.split(",") if ":" in kv)
+            self.run_function(toks[1].split(":", 1)[1], depth + 1, cargs)
             return None
         if toks[0] == "scoreboard" and toks[1] == "players":
             op = toks[2]
@@ -542,9 +557,147 @@ class McSim:
                 self.score[toks[3]] = self.get(toks[3]) - int(toks[5])
             elif op == "operation":
                 a, o, b = toks[3], toks[5], toks[6]
+                x, y = self.get(a), self.get(b)
                 if o == "=":
-                    self.score[a] = self.get(b)
+                    self.score[a] = y
+                elif o == "+=":
+                    self.score[a] = x + y
+                elif o == "-=":
+                    self.score[a] = x - y
+                elif o == "*=":
+                    self.score[a] = x * y
+                elif o == "%=":
+                    self.score[a] = x % y if y else x
         return None
+
+
+def check_presence(ctx, out, report):
+    """A character who must be there is there.  A scene records (ctx.presence) where the player is put and each place the character stands in the
+    stretch the checker is told about; for every one of them this proves, on the built voxel world, that she stands on solid ground with room for
+    a body, within `maxd` blocks of the player (3 for the moment the picture comes back, 6 after), and where `cone` is set also in the player's
+    forward 120 degrees but 25 degrees or more off the line he looks along (she is seen at once and does not stand in front of what he looks at),
+    clear of the car's hull, and turned to him.  Then it walks the commands between the two notes (`from_note`, `to_note`): every `cast/remove` of
+    the character must be followed, in the same command list (the same tick), by a `cast/summon` of her (never a gap in which she does not exist,
+    never two of her), and nothing in the stretch may make her invisible (`invisibility`; the cast's own `cast/mount` does, for 12 ticks)."""
+    import math
+    for rec in getattr(ctx, "presence", []):
+        who, sc = rec["who"], next((s for s in ctx.scenes if s.n == rec["scene"]), None)
+        if sc is None:
+            continue
+        probe = ctx.probe(rec["set"])
+        px, py, pz, pyaw = rec["player"]
+        cx, cy, cz, cyaw, _ = rec["car"]
+        bx0, bx1, bz0, bz1 = rec["car_box"]
+        n_ok = 0
+        for st in rec["stations"]:
+            x, y, z = st["x"], st["y"], st["z"]
+            name = f"scene {sc.n} {who} at '{st['name']}'"
+            d = math.hypot(x - px, z - pz)
+            if d > st["maxd"]:
+                report.error(f"{name}: {d:.1f} blocks from the player, more than {st['maxd']:.0f}")
+            surf = probe.surface(x, z, y)
+            if surf is None or abs(surf - y) > 0.05:
+                report.error(f"{name}: no solid ground under her (ground {surf}, she is put at {y:.2f})")
+            elif any(probe.solid(x + dx, y + h, z + dz) for dx, dz in ((0, 0), (0.3, 0), (-0.3, 0), (0, 0.3), (0, -0.3)) for h in (0.65, 1.2, 1.7)):
+                report.error(f"{name}: her body would be inside a block at ({x:.1f}, {y:.1f}, {z:.1f})")
+            lx = (x - cx) * math.cos(math.radians(cyaw)) + (z - cz) * math.sin(math.radians(cyaw))
+            lz = -(x - cx) * math.sin(math.radians(cyaw)) + (z - cz) * math.cos(math.radians(cyaw))
+            gap = math.hypot(max(bx0 - lx, 0.0, lx - bx1), max(bz0 - lz, 0.0, lz - bz1))
+            if st.get("hull", True) and gap < 0.9:
+                report.error(f"{name}: only {gap:.1f} blocks from the car's hull (she would stand in it or block it)")
+            if st["cone"]:
+                brg = math.degrees(math.atan2(-(x - px), z - pz))
+                off = (brg - pyaw + 180.0) % 360.0 - 180.0
+                if abs(off) > 55.0:
+                    report.error(f"{name}: {off:+.0f} degrees off the way the player looks; the forward 120 degrees are +-60 and she must be well inside")
+                elif abs(off) < 25.0:
+                    report.error(f"{name}: {off:+.0f} degrees off the way the player looks: she stands on the line to the car")
+                want = math.degrees(math.atan2(-(px - x), pz - z))
+                turn = (st["yaw"] - want + 180.0) % 360.0 - 180.0 if st["yaw"] is not None else 0.0
+                if abs(turn) > 20.0:
+                    report.error(f"{name}: she is not turned to the player ({turn:+.0f} degrees)")
+            n_ok += 1
+        # the commands between the notes
+        lo = next((i for i, s in enumerate(sc.steps) if (getattr(s, "note", "") or "").startswith(rec["from_note"])), None)
+        hi = next((i for i, s in enumerate(sc.steps) if (getattr(s, "note", "") or "").startswith(rec["to_note"])), None)
+        if lo is None or hi is None or hi < lo:
+            report.error(f"scene {sc.n}: the presence check cannot find its notes {rec['from_note']!r} .. {rec['to_note']!r}")
+            continue
+        n_cmd = 0
+        rm, sm = f'cast/remove {{id:"{who}"}}', f'cast/summon {{id:"{who}"}}'
+        for s in sc.steps[lo:hi + 1]:
+            if s.kind == "after":
+                body = out.files.get(f"data/angel/function/{s.path}.mcfunction", "").splitlines()
+            elif s.kind == "do":
+                body = list(s.cmds)
+            else:
+                continue
+            for j, c in enumerate(body):
+                n_cmd += 1
+                if "invisibility" in c and ("effect give" in c):
+                    report.error(f"scene {sc.n}: {who} is made invisible in the stretch ({c[:70]})")
+                if rm in c and not any(sm in later for later in body[j + 1:]):
+                    report.error(f"scene {sc.n}: {who} is removed ({c[:60]}) with no summon after it in the same tick: she would not exist for a while")
+                if f"cast/mount" in c and f'id:"{who}"' in c:
+                    report.error(f"scene {sc.n}: the cast's own mount of {who} hides her for 12 ticks ({c[:60]}); ride her onto the seat directly")
+        report.note(f"scene {sc.n} presence of {who}: {n_ok} stations on solid ground (3 blocks from the player when the picture comes back, in his forward cone, "
+                    f"turned to him), {n_cmd} commands from '{rec['from_note'][:24]}' to '{rec['to_note'][:24]}' leave her no gap, no second copy and no invisibility")
+
+
+def check_leftovers(ctx, out, report):
+    """Entities that should leave do leave.  (1) `ctx.removals` (a scene lists what it spawns and by when it must be gone): the kill must be scheduled, in a
+    timed effect beside the spawn, no later than `within` seconds from it, and again in the scene's last `do`; (2) the aircraft that break away on the
+    ridge (ride_air.leave_setup) are, by the end of the line the scene says as they go (2.05, plus its gap), at least 200 blocks from where they were,
+    and all removed before the mine."""
+    import ride_air
+    for rec in getattr(ctx, "removals", []):
+        sc = next((s for s in ctx.scenes if s.n == rec["scene"]), None)
+        if sc is None:
+            continue
+        i0 = next((i for i, s in enumerate(sc.steps) if (getattr(s, "note", "") or "").startswith(rec["spawn_note"])), None)
+        if i0 is None:
+            report.error(f"scene {sc.n}: the leftovers check cannot find the step {rec['spawn_note']!r}")
+            continue
+        best, j = None, i0 + 1
+        while j < len(sc.steps) and sc.steps[j].kind in ("after", "do"):
+            st = sc.steps[j]
+            body = out.files.get(f"data/angel/function/{st.path}.mcfunction", "").splitlines() if st.kind == "after" else list(st.cmds)
+            if st.kind == "after" and any(f"kill @e[tag={rec['tag']}" in c for c in body):
+                best = st.sec if best is None else min(best, st.sec)
+            j += 1
+        if best is None:
+            report.error(f"scene {sc.n}: nothing removes {rec['tag']} after '{rec['spawn_note'][:30]}' (it would stand until the scene is torn down)")
+        elif best > rec["within"] + 1e-6:
+            report.error(f"scene {sc.n}: {rec['tag']} is removed {best:.1f} s after '{rec['spawn_note'][:30]}', later than the {rec['within']:.1f} s allowed ({rec['why']})")
+        else:
+            report.note(f"scene {sc.n}: {rec['tag']} is removed {best:.1f} s after '{rec['spawn_note'][:30]}' (at most {rec['within']:.1f} s: {rec['why']})")
+        last = [s for s in sc.steps if s.kind == "do" and any(f"kill @e[tag={rec['tag']}" in c for c in s.cmds)]
+        if rec.get("at_end") and not (last and sc.steps.index(last[-1]) > i0):
+            report.error(f"scene {sc.n}: {rec['tag']} is not killed again when the scene ends")
+    # the aircraft
+    for sc in ctx.scenes:
+        i05 = next((i for i, s in enumerate(sc.steps) if s.kind == "say" and getattr(s, "lid", "") == "2.05"), None)
+        if sc.n != 2 or i05 is None:
+            continue
+        gap = 0.4 * TPS
+        window = ctx.lines["2.05"].ticks + gap
+        worst = None
+        for k, delay in enumerate(ride_air.LEAVE_DELAY[:ride_air.N_AC]):
+            run = max(0.0, min(window, ride_air.LEAVE_END) - delay)
+            dist, t = 0.0, 0
+            while t < run:
+                v = next(v for lo, hi, v in ride_air.LEAVE_SPEED if lo <= t <= hi)
+                dist += v
+                t += 1
+            worst = dist if worst is None else min(worst, dist)
+        total = ctx.lines["2.05"].ticks + gap + ctx.lines["2.06"].ticks
+        if worst < 200.0:
+            report.error(f"scene 2: by the end of 2.05 the slowest aircraft has flown only {worst:.0f} blocks away from where it broke off (200 wanted)")
+        elif ride_air.LEAVE_END > window:
+            report.error(f"scene 2: the aircraft are removed {ride_air.LEAVE_END} ticks after they break off, after 2.05 has finished ({window:.0f}): the sky must be empty by then")
+        else:
+            report.note(f"scene 2: the aircraft break off 4 ticks apart, turn away and climb; by the end of 2.05 the slowest has flown {worst:.0f} blocks; "
+                        f"all are removed {ride_air.LEAVE_END} ticks after the first breaks off, before 2.05 has ended ({window:.0f} ticks)")
 
 
 def check_nudge_cadence(ctx, out, report, minutes=3.0):
@@ -562,7 +715,7 @@ def check_nudge_cadence(ctx, out, report, minutes=3.0):
             i, base = st.index, f"story/s{scene.n}/"
             m = McSim(out)
             m.score.update({"#step": i, "#wait": st.mode, "#talking": 0, "#line_left": 0, "#bridge_speaking": 0, "#wt": -1, "#force": 0,
-                            "#timeout_s": 0, "#nagt": 0, "#nagi": 0})
+                            "#timeout_s": 0, "#nagt": 0, "#nagi": 0, "#stk_skip": 10 ** 9, "#stk_hint": 10 ** 9})   # (the safety net is not what is measured here)
             starts, ends = [], []                               # nudge starts (ticks); ticks at which the line a nudge started ended
             prev_talking = 0
             for tick in range(int(minutes * 60 * TPS)):
@@ -598,6 +751,180 @@ def check_nudge_cadence(ctx, out, report, minutes=3.0):
                 report.error(f"nudges of scene {scene.n} step {i} ({st.note[:40]}): " + "; ".join(problems) + f"  (starts {starts[:8]})")
     report.note(f"nudge cadence: {n_checked} nudged waits driven through {minutes:g} minutes of silence on the compiled functions: "
                 + ("every gap from the end of one nudge line to the start of the next is the configured interval" if not bad else f"{bad} wrong"))
+
+
+def _policy():
+    """characters_bridge/line_policy.py (VERBATIM / ADAPT tables), loaded by path"""
+    import importlib.util
+    p = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "characters_bridge", "line_policy.py")
+    spec = importlib.util.spec_from_file_location("line_policy_for_checker", p)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def check_timing_bound(ctx, report):
+    """The verbatim / adaptable split of the bridge (characters_bridge/line_policy.py) against the script and the scenes.
+    * every line of MISATO, RITSUKO, GENDO, REI is in exactly one table; nothing else is;
+    * a line whose length a scene reads while it is built (a timed effect scheduled against it) is VERBATIM: the bridge plays its pre-rendered file,
+      so the length the scene was built on is the length it has;
+    * an adaptable line has room to vary (six words or more) and its `keep` words occur in it."""
+    from core import CHARACTERS
+    from lines import Line
+    pol = _policy()
+    human = [lid for lid in ctx.line_order if ctx.lines[lid].speaker in CHARACTERS]
+    known = set(human)
+    both = sorted(set(pol.VERBATIM) & set(pol.ADAPT))
+    if both:
+        report.error(f"line policy: listed as both verbatim and adaptable: {both}")
+    unlisted = [l for l in human if l not in pol.VERBATIM and l not in pol.ADAPT]
+    if unlisted:
+        report.error(f"line policy: lines in neither table: {unlisted}")
+    unknown = sorted((set(pol.VERBATIM) | set(pol.ADAPT)) - known)
+    if unknown:
+        report.error(f"line policy: lines that are not character lines of the script: {unknown}")
+    bound = sorted(l for l in Line.touched if l in pol.ADAPT)
+    if bound:
+        report.error(f"line policy: a scene schedules something against the length of {bound}, so they must be VERBATIM (their length is the pre-rendered one)")
+    timed = sorted(l for l in Line.touched if l in pol.VERBATIM and ctx.lines[l].speaker in CHARACTERS)
+    for lid in human:
+        if lid in pol.ADAPT:
+            words = re.findall(r"[A-Za-z0-9']+", ctx.lines[lid].text.lower())
+            if len(words) < 6:
+                report.error(f"line policy: {lid} has {len(words)} words: too short to adapt within a 20 % budget; make it verbatim")
+            for k in pol.ADAPT[lid]:
+                if k.lower() not in words:
+                    report.error(f"line policy: {lid} keeps the word {k!r}, which is not in the line")
+    for lid in human:
+        if ctx.lines[lid].scene == 7 and lid not in pol.VERBATIM:
+            report.error(f"line policy: fight bark {lid} must be verbatim")
+    nv = sum(1 for l in human if l in pol.VERBATIM)
+    report.note(f"line policy: {len(human)} character lines, {nv} verbatim, {len(human) - nv} adaptable; the scenes read the length of {len(timed)} lines "
+                f"({', '.join(timed)}), all verbatim")
+
+
+def check_handshake(ctx, out, report):
+    """The bridge handshake (lines.py, system.py t_line) driven tick by tick on the generated functions: no bridge, a bridge that claims, one that
+    never claims, one that dies before or after its claim, the switch, a fight bark, and the fallback table."""
+    from core import CHARACTERS
+    from lines import ACK_TICKS, WATCHDOG_TICKS
+    human = [ctx.lines[l] for l in ctx.line_order if ctx.lines[l].speaker in CHARACTERS]
+    ln = next(l for l in human if l.id == "2.03")
+    problems = []
+
+    def fresh(hb=0, live_ok=1):
+        m = McSim(out)
+        m.score.update({"#talking": 0, "#line_left": 0, "#live": 0, "#live_ok": live_ok, "#bridge_hb": hb, "#cue_n": 0, "#cue_ack": -1,
+                        "#cue": 0, "#cue_fb": 0, "#cue_wait": 0, "#c1000": 1000, "#present_misato": 0})
+        return m
+
+    def tick(m, beat_hb=None):
+        m.tick += 1
+        if beat_hb is not None:
+            m.score["#bridge_hb"] = beat_hb
+        m.run_function("story/t_line")
+
+    def run_until_quiet(m, limit=2000, hb=None):
+        n = 0
+        while m.get("#talking") == 1 and n < limit:
+            tick(m, hb)
+            n += 1
+        return n
+
+    # A. no bridge: the file plays, the cue is untouched, the line ends after exactly its own length
+    m = fresh()
+    m.run_function(f"say/{ln.key}")
+    if (m.get("#live"), m.get("#talking"), m.get("#line_left"), m.get("#cue_n")) != (0, 1, ln.ticks, 0) or "say/file/2_03" not in [p for _, p in m.calls]:
+        problems.append(f"no bridge: live {m.get('#live')} talking {m.get('#talking')} line_left {m.get('#line_left')} (want {ln.ticks}) cue_n {m.get('#cue_n')}")
+    n = run_until_quiet(m)
+    if abs(n - ln.ticks) > 1:
+        problems.append(f"no bridge: the line ended after {n} ticks, not {ln.ticks}")
+    # B. a bridge that claims at tick 3 with a real length of 77 ticks
+    m = fresh(hb=20)
+    m.run_function(f"say/{ln.key}")
+    want_cue = 1000 + ln.code
+    if (m.get("#live"), m.get("#talking"), m.get("#line_left"), m.get("#cue_n"), m.get("#cue")) != (1, 1, ln.ticks + WATCHDOG_TICKS, 1, want_cue):
+        problems.append(f"bridge cue: live {m.get('#live')} talking {m.get('#talking')} line_left {m.get('#line_left')} (want {ln.ticks + WATCHDOG_TICKS}) "
+                        f"cue {m.get('#cue')} (want {want_cue})")
+    if "say/file/2_03" in [p for _, p in m.calls]:
+        problems.append("bridge cue: the file was played although the bridge is connected")
+    for _ in range(3):
+        tick(m, 20)
+    m.run_function("say/claim", 0, {"n": "1", "ticks": "77"})
+    if (m.get("#cue_ack"), m.get("#line_left")) != (1, 77):
+        problems.append(f"claim: ack {m.get('#cue_ack')} line_left {m.get('#line_left')} (want 1, 77)")
+    m.run_function("say/claim", 0, {"n": "1", "ticks": "5"})            # a second claim of the same cue changes nothing
+    m.run_function("say/claim", 0, {"n": "9", "ticks": "5"})            # nor does one for another cue
+    if m.get("#line_left") != 77:
+        problems.append("claim: a repeated or wrong claim changed the clock")
+    n = run_until_quiet(m, hb=20)
+    if n != 77 or m.get("#cue_fb") != 0 or "say/file/2_03" in [p for _, p in m.calls]:
+        problems.append(f"claimed line: ended after {n} ticks (want 77), fallback {m.get('#cue_fb')}")
+    # C. a bridge that is alive but never claims: the game plays the file after ACK_TICKS
+    m = fresh(hb=20)
+    m.run_function(f"say/{ln.key}")
+    t = 0
+    while m.get("#live") == 1 and t < 100:
+        tick(m, 20)
+        t += 1
+    if t != ACK_TICKS or m.get("#cue_fb") != 1 or m.get("#line_left") < ln.ticks - ACK_TICKS or "say/file/2_03" not in [p for _, p in m.calls]:
+        problems.append(f"unclaimed cue: the game took over after {t} ticks (want {ACK_TICKS}), fallback {m.get('#cue_fb')}, line_left {m.get('#line_left')}")
+    m.run_function("say/claim", 0, {"n": "1", "ticks": "5"})            # a claim that arrives after the takeover is refused
+    if m.get("#cue_ack") == 1 or m.get("#line_left") <= 5:
+        problems.append("a late claim after the takeover was accepted")
+    n = run_until_quiet(m, hb=20)
+    if n > ln.ticks + 1:
+        problems.append(f"after the takeover the line ran {n} ticks (> its {ln.ticks})")
+    # D. the bridge dies before it claims: the game takes over at once when the heartbeat runs out
+    m = fresh(hb=3)
+    m.run_function(f"say/{ln.key}")
+    t = 0
+    while m.get("#live") == 1 and t < 100:
+        tick(m)
+        t += 1
+    if t > 4 or m.get("#cue_fb") != 1:
+        problems.append(f"bridge dead before the claim: the game took over after {t} ticks (want <= 4)")
+    # E. the bridge claims and then dies: the clock still releases the line
+    m = fresh(hb=20)
+    m.run_function(f"say/{ln.key}")
+    m.run_function("say/claim", 0, {"n": "1", "ticks": "60"})
+    n = run_until_quiet(m)
+    if n != 60 or m.get("#talking") != 0:
+        problems.append(f"bridge killed mid-line: the story was held {n} ticks (want 60)")
+    # F. the switch, and a bark
+    m = fresh(hb=20, live_ok=0)
+    m.run_function(f"say/{ln.key}")
+    if m.get("#live") != 0 or m.get("#cue_n") != 0 or "say/file/2_03" not in [p for _, p in m.calls]:
+        problems.append("bridge_off: a cue was issued although live_ok is 0")
+    m = fresh(hb=20)
+    bark = next(l for l in human if l.id == "7.04")
+    m.run_function(f"say/file/{bark.key}")
+    if m.get("#cue_n") != 0 or m.get("#live") != 0 or m.get("#talking") != 1:
+        problems.append("a fight bark (say/file/7_04) touched the cue")
+    # G. BASE lines are never cued
+    base = next(l for l in ctx.lines.values() if l.speaker == "base")
+    m = fresh(hb=20)
+    m.run_function(f"say/{base.key}")
+    if m.get("#cue_n") != 0 or m.get("#talking") != 1:
+        problems.append(f"BASE line {base.id} was cued")
+    # H. the takeover table: #line -> the file of every character line
+    bad = 0
+    for l in human:
+        m = fresh()
+        m.score["#line"] = l.code
+        m.run_function("say/fb/root")
+        if f"say/file/{l.key}" not in [p for _, p in m.calls]:
+            bad += 1
+            problems.append(f"takeover table: #line {l.code} does not reach say/file/{l.key}")
+    if len({l.code for l in human}) != len(human):
+        problems.append("two character lines share a #line code")
+    for p in problems:
+        report.error("bridge handshake: " + p)
+    if not problems:
+        report.note(f"bridge handshake: driven tick by tick on the generated functions: no bridge -> the file, exactly its length; a bridge that claims -> "
+                    f"its reported length ({WATCHDOG_TICKS / 20:g} s watchdog until then); never claims -> the game plays the file after {ACK_TICKS} ticks; "
+                    f"dead before the claim -> at once; killed mid-line -> released by the clock; bridge_off, barks and BASE never cued; "
+                    f"takeover table covers all {len(human)} character lines")
 
 
 def check_hush(ctx, out, report):
@@ -916,11 +1243,15 @@ def main_check(ctx, out):
     check_cards(ctx, out, report)
     waits_without_nudge(ctx, report)
     check_nudge_cadence(ctx, out, report)
+    check_timing_bound(ctx, report)
+    check_handshake(ctx, out, report)
     check_hush(ctx, out, report)
     check_music(ctx, out, report)
     check_encoding(ctx, out, report)
     check_prompt(out, report)
     check_relocations(ctx, out, report)
+    check_presence(ctx, out, report)
+    check_leftovers(ctx, out, report)
     check_commands(out, report)
     for l in check_routes(ctx, report):
         print(l)

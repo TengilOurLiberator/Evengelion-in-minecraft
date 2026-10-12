@@ -210,14 +210,20 @@ schedule clear angel:story/s2/f_a22
 schedule clear angel:story/s2/f_a23
 schedule clear angel:story/s2/f_a24
 schedule clear angel:story/s2/f_a25
+schedule clear angel:story/s2/f_a26
+schedule clear angel:story/s2/f_a27
+schedule clear angel:story/s2/f_a28
+schedule clear angel:story/s2/f_a29
 schedule clear angel:story/s2/f_a3
+schedule clear angel:story/s2/f_a30
+schedule clear angel:story/s2/f_a31
+schedule clear angel:story/s2/f_a32
 schedule clear angel:story/s2/f_a4
 schedule clear angel:story/s2/f_a5
 schedule clear angel:story/s2/f_a6
 schedule clear angel:story/s2/f_a7
 schedule clear angel:story/s2/f_a8
 schedule clear angel:story/s2/f_a9
-schedule clear angel:story/s2/f_cleanup_air
 schedule clear angel:story/s3/f_a1
 schedule clear angel:story/s3/f_a10
 schedule clear angel:story/s3/f_a11
@@ -537,6 +543,7 @@ forceload remove 3184 176
 scoreboard players set #wait angel.story 0
 scoreboard players set #talking angel.story 0
 scoreboard players set #line_left angel.story 0
+scoreboard players set #live angel.story 0
 scoreboard players set #mv.on angel.story 0
 scoreboard players set #ride angel.story 0
 scoreboard players set #consent angel.story 0
@@ -545,6 +552,7 @@ scoreboard players set #rd angel.story 0
 scoreboard players set #fx.air angel.story 0
 scoreboard players set #fx.crater angel.story 0
 scoreboard players set #fx.fall angel.story 0
+scoreboard players set #fx.leave angel.story 0
 scoreboard players set #fx.smoke angel.story 0
 scoreboard players set #fx.wreck angel.story 0
 scoreboard players set #f.alarm angel.story 0

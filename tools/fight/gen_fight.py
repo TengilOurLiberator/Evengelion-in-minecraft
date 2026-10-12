@@ -305,7 +305,8 @@ def gen(F, pack_function_dir, story_hand_exists):
     for i in ids:
         real = os.path.join(pack_function_dir, "say", f"{i}.mcfunction")
         if os.path.isfile(real):
-            put(f"say/{i}", [f"function angel:say/{i}"])
+            # barks are pre-rendered and spoken by the game itself (instant, the same length every time): never cued to the voice bridge
+            put(f"say/{i}", [f"function angel:say/file/{i}"])
         else:
             who, txt = lines.get(i, ("", i))
             col = {"MISATO": "gold", "RITSUKO": "aqua", "GENDO": "gray", "BASE": "green", "REI": "white"}.get(who, "white")

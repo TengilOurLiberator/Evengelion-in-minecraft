@@ -275,7 +275,7 @@ def build_wagon():
     xsplit = {"L": (0.0, HALF_W), "R": (-HALF_W, 0.0)}
     for k, zs in enumerate([(-4.5, -1.5), (-1.5, 1.5), (1.5, 4.5)]):
         for sd, xs in xsplit.items():
-            add(f"deck{k}{sd}", v.add_model(deck_model(f"wagon_deck_{k}{sd}", xs, zs, sheet)))
+            add(f"deck{k}{sd}", v.add_model(deck_model(f"wagon_deck_{k}{sd}".lower(), xs, zs, sheet)))
     bg = v.add_model(bogie_model(sheet))
     c = bg.center
     add("bogieB", bg, at=(c[0], c[1], -2.8 + c[2]))
@@ -286,20 +286,20 @@ def build_wagon():
     segs = {"F": (1.5, 4.3, (False, True)), "M": (-1.5, 1.5, (False, False)), "B": (-4.3, -1.5, (True, False))}
     for sd, sg in (("L", 1), ("R", -1)):
         for nm, (z0, z1, posts) in segs.items():
-            m = v.add_model(rail_model(f"wagon_rail_{nm}{sd}", sg, z0, z1, sheet, posts, lamp=(nm == "F" and sd == "L")))
+            m = v.add_model(rail_model(f"wagon_rail_{nm}{sd}".lower(), sg, z0, z1, sheet, posts, lamp=(nm == "F" and sd == "L")))
             add(f"rail{nm}{sd}", m, only=("rail", sd))
         for k, (z0, z1) in enumerate([(-4.5, -1.5), (-1.5, 1.5), (1.5, 4.5)]):
-            m = v.add_model(kerb_model(f"wagon_kerb_{k}{sd}", sg, z0, z1, sheet))
+            m = v.add_model(kerb_model(f"wagon_kerb_{k}{sd}".lower(), sg, z0, z1, sheet))
             add(f"kerb{k}{sd}", m, only=("kerb", sd))
     for nm, (x0, x1) in (("L", (0.0, 2.5)), ("R", (-2.5, 0.0))):
-        add(f"railF{nm}x", v.add_model(rail_front_model(f"wagon_railfront_{nm}", x0, x1, sheet)))
+        add(f"railF{nm}x", v.add_model(rail_front_model(f"wagon_railfront_{nm}".lower(), x0, x1, sheet)))
     # the loading ramp: two halves, tilted down towards the rear about the rear edge of the bed
     ang = math.degrees(math.atan2(1.0, 4.0))
     R = rax("x", -ang)
     pv = np.array([0.0, 0.0, -4.5])
     for nm, xs in (("L", (0.0, 2.3)), ("R", (-2.3, 0.0))):
         for k, zs in enumerate([(-6.5, -4.5), (-8.5, -6.5)]):
-            m = v.add_model(ramp_model(f"wagon_ramp_{nm}{k}", xs, zs, sheet))
+            m = v.add_model(ramp_model(f"wagon_ramp_{nm}{k}".lower(), xs, zs, sheet))
             at = pv + R @ (np.array(m.center) - pv)
             add(f"ramp{nm}{k}", m, only=("ramp",), at=tuple(at), R=R)
     return v

@@ -1,8 +1,58 @@
-# Voices: one reader, five characters
+# Voices
+
+## The four characters are TTS now (`tts_lines.py`)
+
+MISATO, RITSUKO, GENDO and REI are no longer the user's recordings: they are **Chatterbox text to speech, cloned from a short reference clip each**, and
+the same four voices speak the scripted lines live in the character bridge (`characters_bridge`, which performs the lines when it is connected and
+otherwise leaves the game to play the pre-rendered files made here).  BASE is unchanged (synthetic, DSP machine voice, `synth_base.py` + `transform.py`).
+The user's own recordings are untouched but out of the pack: `voices\backup_user_recordings\` holds the old `final\<SPEAKER>` folders and the pack's
+`sounds\line\<speaker>` oggs (and the old `sounds.json` / `durations.json` as `*.before`); `voices\raw` (the raw readings) was never moved.
+
+```
+$py = "D:\voice-assistant\.venv\Scripts\python.exe"
+& $py tools\voices\tts_lines.py refs        # voices\tts_refs\<SPEAKER>.wav (+ refs.json) from the user's voice-converted recordings
+& $py tools\voices\tts_lines.py tune        # measure settings on sample lines (voices\tts_tune.json); nothing else is written
+& $py tools\voices\tts_lines.py render      # all 111 lines, dry, each transcribed back and re-rolled on a mismatch -> voices\tts_raw
+& $py tools\voices\tts_lines.py rescore     # recompute the transcript similarities from the stored transcripts; lists what is still below 0.97
+& $py tools\voices\tts_lines.py backup      # MOVE the old recordings (voices\final\<4>, the pack's four line folders) to voices\backup_user_recordings
+& $py tools\voices\tts_lines.py install     # effects by direction + loudness -> voices\final, then pack_sounds.py (oggs, sounds.json, durations.json)
+& $py tools\voices\tts_lines.py audition    # three varied lines per character -> voices\audition_tts\
+& $py tools\voices\tts_lines.py report      # the measurements below -> voices\tts_report.json
+```
+
+* **References** (`voices\tts_refs\`, built by `refs`): the 2-4 cleanest, longest, effect-free lines of the user's voice-converted recordings
+  (`voices\final`, or the backup) joined into one clip (`refs.json` names the lines).  Chosen by Whisper transcript match, calm pitch (p90/p10), no long
+  pause, length.  GENDO has no effect-free line (all 13 are "from above" or "radio"), so his clip is re-rendered **dry** from his raw recording through the
+  same voice conversion with no effect (`transform.render(..., direction="")`).  REI's clip is shaped (pitch 1.08, vocal tract 1.2, breath -12 dB: `tts_config.REF_SHAPE`):
+  built from the same synthetic base as Misato's, the two cloned voices were 0.87 alike; shaped, 0.76.  **Hard rule: nothing but the user's own (converted)
+  voice is ever a reference -- never a recording of a real actor or of the TV series.**
+* **Settings** (`tts_config.py`, tuned by measuring, since a listener is not available): the standard Chatterbox model (Turbo ignores `exaggeration` and
+  `cfg_weight`, the two knobs that make Rei breathe and Gendo drone) with per-character `exaggeration`, `cfg_weight`, `temperature` and a `tempo` (Rubber Band,
+  pitch kept).  `tune` tried 3 x 3 of exaggeration x cfg weight on 6-8 lines per character; the numbers it printed (transcript match, words per second at tempo 1,
+  median pitch, similarity to the reference, longest pause) decided: Misato 0.55 / 0.30 / temp 0.8 / tempo 1.10; Ritsuko 0.35 / 0.35 / 0.7 / 0.85; Gendo 0.10 / 0.45 / 0.6 / 0.82;
+  Rei 0.20 / 0.40 / 0.6 / 0.80.  Higher exaggeration raised Misato's pitch and animation; lower kept Gendo at the reference's 88 Hz and made him slow; Rei needed some
+  exaggeration to keep her voiced.
+* **Rendering** (`render`): every line is spoken (up to 6 seeds, 24 for a single word), transcribed back with Whisper large-v3, and the best take kept;
+  a take loses points for a stray whisper (no voiced speech), a pause over 1.3 s, a spike, a pace far outside the character's range.  Words are compared
+  forgivingly (numbers spelled out, `ray` = Rei, `alright`).  `tts_config.RESPELL` can respell a word for the model without touching the script.
+  REI's 5.31 has no words: it is a breath made from shaped noise (`tts_lib.breath_in`).
+* **Finishing** (`install`): the effects are transform.py's, reused -- `transform.directions()` (the `DIRECTION_RULES` of `config.py`: radio, telephone, from
+  above, intercom, cockpit, public address, ...), `fx.apply()` with `config.FX`, and `transform.finish()` (-19 LUFS, peaks under -1.5 dB, the same lead and tail) --
+  but **not** its voice-conversion stage.  Rei keeps her `gain_db` of -2 (-21 LUFS: she is very soft).
+* **Measured** (`report`, 111 lines): every take transcribes back at >= 0.97; median pitch REI 246 > MISATO 218 > RITSUKO 147 > GENDO 87 Hz; speech rate (words per
+  second, silence at both ends trimmed) Misato 2.96, Ritsuko 2.82, Gendo 2.11, Rei 2.35; speaker similarity between two characters at most 0.77
+  (Misato-Ritsuko), lowest 0.67; one character's lines are 0.93-0.95 alike on average (lowest line 0.80); finished lines at -19.0 LUFS median (Rei -21.0), highest peak
+  -1.5 dB, no clipped sample, longest pause 1.3 s.
+* After `install`, rebuild the story and the fight (`build_story.py`, `build_fight.py`): the scenes are timed from `voices\durations.json`, and `build_story.py --check`
+  must still say 0 errors, 0 warnings.
+* The modules: `tts_config.py` (all numbers), `tts_lib.py` (`Synth`, `master`, the word normaliser; imported by the bridge too), `tts_lines.py` (the commands).
+
+## The older pipeline: one reader, five characters
 
 The user reads every line in their own voice; this pipeline cuts the reading into lines and turns that one voice
 into MISATO, RITSUKO, GENDO, REI and BASE. Same approach as Genesis (`D:\genesis-vr\work`): cut per line, keep the
-best take, clean it, process it, encode to ogg for the resource pack.
+best take, clean it, process it, encode to ogg for the resource pack.  (Used now for BASE and for the references of the TTS voices; the four human
+voices are not made this way any more.)
 
 Python is the shared environment, nothing is installed into it:
 `D:\voice-assistant\.venv\Scripts\python.exe` (faster-whisper, chatterbox-tts, silero-vad, librosa, scipy, torchaudio,

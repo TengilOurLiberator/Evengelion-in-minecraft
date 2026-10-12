@@ -15,7 +15,8 @@ PROJECT = os.path.dirname(ROOT)
 
 CHARACTER_DIR = os.path.join(PROJECT, "characters")            # <id>.md sheets and beats.md (written by the project lead)
 BEATS_FILE = os.path.join(CHARACTER_DIR, "beats.md")
-VOICE_DIR = os.path.join(PROJECT, "voices", "final")           # <SPEAKER>\*.wav: the user's OWN recorded lines, processed.
+VOICE_DIR = os.path.join(PROJECT, "voices", "final")           # <SPEAKER>\<id>.wav: the PRE-RENDERED TTS take of every line (tools\voices\tts_lines.py); the bridge plays them for verbatim lines and as the fallback.
+                                                               # The voices' reference clips are voices\tts_refs (tools\voices\tts_config.py). The user's recordings are in voices\backup_user_recordings.
 SERVER_DIR = os.path.join(PROJECT, "server")
 CACHE_DIR = os.path.join(ROOT, "cache")                        # reference clips assembled for Chatterbox, an empty cwd for Claude
 STATE_FILE = os.path.join(ROOT, "state.json")                  # rolling memory, so a restart does not make them forget
@@ -71,6 +72,7 @@ SETTINGS = {
     "subtitles": True,                # also tellraw every spoken sentence to the game chat
 }
 
+# LEGACY (unused since the voices became tools\voices\tts_config.py; kept so an old config.json still loads).
 # Fallback voices, used until voices\final\<SPEAKER>\*.wav exist. All use Chatterbox's own built-in voice.
 #   pitch        >1 higher, <1 lower (resample, speed is restored afterwards)
 #   pace         >1 faster, <1 slower

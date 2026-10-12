@@ -32,7 +32,9 @@ $py = "D:\voice-assistant\.venv\Scripts\python.exe"
 | `function angel:story/timeout {s:45}` | every wait goes on by itself after 45 s (`function angel:story/timeout_off`; default off) |
 | `function angel:story/subtitles_on` / `_off` | show every recorded line as chat text too (lines with no recording are always shown) |
 | `function angel:story/status` | one line in chat: scene, step, beat, wait, talking, route frame |
-| `function angel:say/1_04` | play any single line |
+| `function angel:say/1_04` | play any single line (cued to the bridge when one is connected) |
+| `function angel:say/file/1_04` | play the pre-rendered file of a line, whatever the bridge is doing |
+| `function angel:story/bridge_off` / `bridge_on` / `bridge_status` | never / again let a connected bridge perform the lines; show the handshake scores |
 
 The story waits while nobody is online. A line whose recording does not exist yet (7.17 and 7.18 at the time of writing) runs silently
 with its text in chat. Everything the story summons carries the tag `angel.story`; `halt` (called by every scene start, `stop`, and
@@ -54,6 +56,41 @@ Fake players on `angel.story`, exactly as `characters_bridge/rcon_commands.py` e
 | `#bridge_speaking` | written by the bridge; while it is non-zero the speak prompt is hidden |
 
 `angel:story/answered` clears `#wait` 1; `angel:story/consented` clears any wait and sets `#consent` 1.
+
+### The voice bridge performs the lines (`lines.py`, `system.py` `t_line`)
+
+The four characters' lines (MISATO, RITSUKO, GENDO, REI) are TTS now (`tools/voices/tts_lines.py`), pre-rendered into the pack as before, **and**
+performed live by the bridge when it is connected.  A `say` step runs `angel:say/<key>`; what that does depends on one score, `#bridge_hb`:
+
+| score (all `angel.story`) | who writes it | meaning |
+|---|---|---|
+| `#bridge_hb` | the bridge: `set 20` every 0.25 s; the game counts it down each tick (`t_line`) | above 0 = a bridge is connected (it spoke in the last second) |
+| `#live_ok` | `story/bridge_on` / `story/bridge_off` (default 1) | 0 = the pre-rendered files always play |
+| `#cue` | the game, in `say/cue` | `cue number * 1000 + #line` (`#line` = scene * 100 + number): ONE number the bridge reads per poll |
+| `#cue_n`, `#cue_t` | the game | the cue counter, and the game tick of the cue |
+| `#cue_ack`, `#ack_t` | `function angel:say/claim {n:..,ticks:..}` | the cue the bridge has taken, the tick it took it |
+| `#live` | the game | 1 from a cue until it is claimed or taken over; 0 for a file |
+| `#cue_fb` | the game | 1 when the game took the cue over and played the file itself |
+| `#line_left` | the game's `say/<key>`, then the bridge's claim | ticks until `#talking` is released |
+
+* **Bridge connected** (`#bridge_hb` above 0, `#live_ok` 1): `say/<key>` sets `#cue`, `#talking 1`, `#lastspoke`, `#speaker` and `#line_left` = the
+  file's length + 3 s (**the watchdog**), and plays nothing.  The bridge claims the cue within a few tens of milliseconds and writes the REAL length of
+  what it will say into `#line_left`.  **The engine counts the line down and releases `#talking` itself**, so a bridge that dies mid-line cannot hold
+  the story: the clock ends the line when the reported length is up.  A cue that is not claimed within 14 ticks (0.7 s), or whose heartbeat has
+  stopped, is **taken over by the game**: `say/fallback` plays the pre-rendered file at once (`say/fb/root` dispatches on `#line` to `say/file/<key>`) and
+  the bridge, finding its claim refused, stays silent.
+* **No bridge:** `say/<key>` runs `say/file/<key>` -- the sound positioned at the speaker, `#talking` for the file's length -- exactly as it always
+  did.  `build_story.py` also writes `say/file/<key>` for every line, and the fight's bark wrapper (`fight/say/7_NN`) calls THAT: barks are pre-rendered,
+  instant, played by the game, never cued.  BASE lines are never cued.
+* The story's timing needs no change for a live line: a `say` step waits for `#talking 0`, the nudge clock counts silent ticks, the gap after a line
+  is a sleep.  What a scene schedules *against a line's length at build time* (`ctx.lines[..].ticks`) is another matter: those lines must be played at
+  their pre-rendered length, so they are **VERBATIM** in `characters_bridge/line_policy.py` and the bridge plays the pre-rendered take of them
+  (the checker finds such lines by watching which `Line.seconds` the scenes read while they build: `sim.check_timing_bound`).
+* Controls: `function angel:story/bridge_off` / `bridge_on` / `bridge_status`.  `--check` drives the handshake tick by tick on the generated
+  functions (`sim.check_handshake`: no bridge, a claim, no claim, a bridge dead before / after its claim, the switch, barks and BASE, the takeover
+  table for all 111 lines).
+* `build_story.py --steps FILE [--steps-only]` writes every scene's steps as JSON (kind, line, wait speaker / mode / nudges, branch targets and
+  conditions, hand-over targets, `_meta.setup_end`); the bridge reads it to look ahead.
 
 ## The speak prompt
 
@@ -209,6 +246,13 @@ and `tp`. `--extra DIR` adds scene modules from another folder (to try a scene w
 * no deadlock: a wait on a route frame beyond the current limit is an error; open-ended waits without a timeout are listed;
 * all anchors exist; all called functions exist (cast / monster / world functions are the known external ones);
 * every frame of every route sits on a surface with room above it in the built sets, with accelerations, jerk and turn rates reported.
+* **presence** (`sim.check_presence`, fed by `ctx.presence`; scene 2's Misato): at every place she is put she stands on solid ground with room for a body, within
+  3 blocks of the player when the picture comes back (6 later), inside his forward 120 degrees but 25 degrees or more off the line he looks along, clear of the
+  car's hull and turned to him; and in the commands from the blast's `after` to the drive-off every `cast/remove` of her is followed in the same tick by a
+  `cast/summon` (no gap, never two), nothing makes her invisible, and the cast's own `cast/mount` (invisible for 12 ticks) is not used on her.
+* **leftovers** (`sim.check_leftovers`, fed by `ctx.removals`): what a scene spawns and says must go (scene 2's mushroom cloud: gone within 25 s of the blast) has
+  a timed kill beside its spawn and another when the scene ends; the aircraft that break away on the ridge (`ride_air.leave_setup`: peel off 4 ticks apart, turn
+  away at 6 degrees a tick, nose up, accelerate to 8.5 blocks a tick) are 200 blocks out and removed before 2.05 has ended.
 
 ## Scenes 4 and 5: what was added to the engine
 
@@ -288,7 +332,11 @@ when the story has been in the set (`#hq.dirty`). A scene that wants the cage li
   (rewritten as the BASE lines are said; the sync rate counts to 41.3 with the rising tone); `launch_pad.py` the pad: dark shaft, ring lights from
   below, beacons, four restraint arms, all-green wave, the charge chase.  The real capsule lamps and the shaft rings are restored by
   `story/launch/restore`.
-* **Scene 2**: the white holds to the blast, then a real black room (six opaque slabs) that moves with him; he is put beside the car turned to it.
+* **Scene 2**: the white holds to the blast, then a real black room (six opaque slabs) that moves with him; he is put beside the car turned to it, and
+  Misato stands 2 to 3 blocks from him in his forward cone, turned to him (she used to be 2.4 blocks behind his shoulder: nobody found her); she walks to the
+  car's open top for the push and round to the driver's side to get in (a plain `ride`, no teleport, no 12-tick invisibility).  The aircraft peel off and
+  leave over the horizon during 2.05 (`ride_air.leave_setup`; the first version slid them 90 blocks once and left them hanging, with their tracers, in the sky);
+  the mushroom cloud thins, greys, rises and is removed in stages (`cloud_dissipation`), gone 24 s after the blast; the town's wreck burns on until the gate.
 * **Scene 1**: the girl is 12 blocks ahead of him; a street-wide jolt (`jolt_street`); bigger tracers; the wreck column.  **Scene 7**: the ending is a
   curtain call (`launch_cage.ending_spots`).
 
@@ -375,7 +423,7 @@ back-off (`#hold` 1, up to 3 times) "Close the distance again".  Nothing in the 
 | `audio.py`, `cards.py`, `cardfont.py`, `lead.py`, `hq_cage.py` | beds / music / sfx, title cards and their typeface, characters that lead, the cage's block lists |
 | `build_story.py` | entry point |
 | `core.py` | constants, writer + manifest, selectors, tree dispatch, quaternion helpers |
-| `lines.py` | script.md + durations.json + sounds.json -> `angel:say/*` |
+| `lines.py` | script.md + durations.json + sounds.json -> `angel:say/<key>`, `say/file/<key>` and the bridge handshake (`say/cue`, `claim`, `fallback`, `fb/*`) |
 | `engine.py` | `Scene` (the step API), `Cond`/`C`, the compiler |
 | `system.py` | load, tick, halt, entry points, ride lock, look check, the speak prompt, rig functions |
 | `models.py`, `movers.py`, `motion.py`, `paths.py`, `carfx.py`, `fx.py` | display models, routes, speed profiles, drivable paths, effects |

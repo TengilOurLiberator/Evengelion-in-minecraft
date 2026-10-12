@@ -15,3 +15,7 @@ gamerule minecraft:locator_bar false
 time of angel:day set 6000
 time of angel:day pause
 weather clear
+setworldspawn 37 65 128
+gamerule minecraft:immediate_respawn true
+gamerule minecraft:keep_inventory true
+gamerule minecraft:fall_damage false

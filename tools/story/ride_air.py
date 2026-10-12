@@ -304,7 +304,63 @@ def wreck_parts(x, y, z):
 def stop_cmds():
     """Take the aircraft away (used when the scene is torn down)."""
     return [sset("#fx.air", 0), "kill @e[tag=angel.cmark]"] + [f"kill @e[tag=angel.rig_ac{i + 1}]" for i in range(N_AC)] + \
-           ["kill @e[tag=angel.trc]", "kill @e[tag=angel.flash]"]
+           ["kill @e[tag=angel.rig_ac3d]", "kill @e[tag=angel.trc]", "kill @e[tag=angel.flash]", "kill @e[tag=angel.lvtmp]"]
+
+
+# --------------------------------------------------------------------------------------------------- the aircraft break off and leave
+# Scene 2, on the ridge (Misato: "Why are they pulling the planes back?").  The first version moved every aircraft once, with a single
+# interpolated `tp` 90 blocks ahead, and switched the orbit off: they slid for three seconds, then hung motionless in plain view (60 to 167 blocks
+# from the car) with their tracers and burst-flashes frozen beside them (tr_tick is part of air_tick) until a cleanup seven seconds later.
+# Now each aircraft in turn (LEAVE_DELAY ticks apart) turns away from the ridge (at most LEAVE_TURN degrees a tick, a peel-off), noses up and
+# accelerates along its own heading (LEAVE_SPEED: blocks a tick from tick-in-leave to tick-in-leave), so that the sky round the monster is
+# empty within about 3 s; whatever is left is removed at LEAVE_END.
+LEAVE_DELAY = [0, 4, 8, 12, 16]
+LEAVE_SPEED = [(0, 9, 1.8), (10, 24, 3.6), (25, 44, 5.8), (45, 9999, 7.5)]
+LEAVE_TURN = 6.0                        # degrees a tick
+LEAVE_CLIMB = 1.6                       # degrees of nose-up a tick, for LEAVE_CLIMB_TICKS ticks (about 14 degrees)
+LEAVE_CLIMB_TICKS = 9
+LEAVE_END = 64                          # ticks (3.2 s) after the first breaks off: the last aircraft is 215 blocks out, the first 340 (inside the 512 that the chunks reach)
+
+
+def leave_setup(ctx, away):
+    """Registers the functions of the departure and returns its start commands.  `away` = (x, y, z): a point far beyond the monster, seen from the
+    ridge, that every aircraft turns towards.  The tick function runs while the flag #fx.leave is 1 (cleared by halt)."""
+    ax, ay, az = away
+    R = lambda i: f"@e[tag=angel.rig_ac{i},tag=angel.rpart]"
+    F = lambda i: f"@e[tag=angel.rig_ac{i},tag=angel.pt_fuselage,limit=1]"
+    # (a salvo already under way would put three more tracers into the sky after the kill: its scheduled rounds are cleared first)
+    start = [sset("#fx.air", 0), sset("#fx.lt", 0), sset("#fx.leave", 1), f"scoreboard players set #k36000 {OBJ} 36000", sset("#fx.smoke", 0)]
+    start += [f"schedule clear {NS}:story/fx/fire{i}{sfx_}" for i in range(1, N_AC + 1) for sfx_ in ("b", "c")]
+    start += ["kill @e[tag=angel.trc]", "kill @e[tag=angel.flash]"]
+    tick = [sadd("#fx.lt")]
+    for i in range(1, N_AC + 1):
+        d = LEAVE_DELAY[i - 1]
+        # the turn each aircraft needs, in hundredths of a degree (once): the yaw of a marker made to face the far point, minus its own
+        reg(ctx, f"story/fx/leave_aim{i}", [
+            'summon minecraft:marker ~ ~ ~ {Tags:["' + TAG + '","angel.lvtmp"]}',
+            f"execute facing {num(ax)} {num(ay)} {num(az)} run tp @e[tag=angel.lvtmp,limit=1] ~ ~ ~ ~ ~",
+            f"execute store result score #fx.tg {OBJ} run data get entity @e[tag=angel.lvtmp,limit=1] Rotation[0] 100",
+            f"execute store result score #fx.cur {OBJ} run data get entity @s Rotation[0] 100",
+            f"scoreboard players operation #fx.tg {OBJ} -= #fx.cur {OBJ}",
+            f"scoreboard players operation #fx.tg {OBJ} %= #k36000 {OBJ}",
+            f"execute if score #fx.tg {OBJ} matches 18001.. run scoreboard players remove #fx.tg {OBJ} 36000",
+            f"scoreboard players operation #fx.d{i} {OBJ} = #fx.tg {OBJ}",
+            "kill @e[tag=angel.lvtmp]"])
+        start.append(f"execute as {F(i)} at @s run function {NS}:story/fx/leave_aim{i}")
+        t_turn = int(round(LEAVE_TURN * 100))
+        tick += [f"execute if score #fx.lt {OBJ} matches {d}.. if score #fx.d{i} {OBJ} matches {t_turn + 1}.. as {F(i)} at @s run tp {R(i)} ~ ~ ~ ~{num(LEAVE_TURN)} ~",
+                 f"execute if score #fx.lt {OBJ} matches {d}.. if score #fx.d{i} {OBJ} matches {t_turn + 1}.. run scoreboard players remove #fx.d{i} {OBJ} {t_turn}",
+                 f"execute if score #fx.lt {OBJ} matches {d}.. if score #fx.d{i} {OBJ} matches ..-{t_turn + 1} as {F(i)} at @s run tp {R(i)} ~ ~ ~ ~-{num(LEAVE_TURN)} ~",
+                 f"execute if score #fx.lt {OBJ} matches {d}.. if score #fx.d{i} {OBJ} matches ..-{t_turn + 1} run scoreboard players add #fx.d{i} {OBJ} {t_turn}",
+                 f"execute if score #fx.lt {OBJ} matches {d + 1}..{d + LEAVE_CLIMB_TICKS} as {F(i)} at @s run tp {R(i)} ~ ~ ~ ~ ~-{num(LEAVE_CLIMB)}"]
+        for lo, hi, v in LEAVE_SPEED:
+            tick.append(f"execute if score #fx.lt {OBJ} matches {d + lo}..{d + hi} as {F(i)} at @s run tp {R(i)} ^ ^ ^{num(v)}")
+    tick.append(f"execute if score #fx.lt {OBJ} matches {LEAVE_END}.. run function {NS}:story/fx/leave_end")
+    reg(ctx, "story/fx/leave_tick", tick)
+    reg(ctx, "story/fx/leave_end", stop_cmds() + [sset("#fx.leave", 0), sset("#fx.lt", 0)])
+    ctx.fx_tick.append(f"execute if score #fx.leave {OBJ} matches 1 run function {NS}:story/fx/leave_tick")
+    ctx.fx_flags.add("leave")
+    return start
 
 
 # --------------------------------------------------------------------------------------------------- birds off the wires

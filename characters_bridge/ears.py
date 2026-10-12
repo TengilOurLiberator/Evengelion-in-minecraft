@@ -42,7 +42,7 @@ class Ears:
     def flush(self):
         while not self.blocks.empty():
             self.blocks.get_nowait()
-        self.vad.reset_states()
+        self._reset = True          # the listening thread resets the detector itself: two threads in it at once corrupt its state
 
     def listen(self):
         import numpy as np
@@ -50,7 +50,15 @@ class Ears:
         pre, speech, silent, speaking = [], [], 0, False
         while True:
             block = self.blocks.get()
-            prob = self.vad(self.torch.from_numpy(block), MIC_SR).item()
+            if getattr(self, "_reset", False):
+                self._reset = False
+                self.vad.reset_states()
+                pre, speech, silent, speaking = [], [], 0, False
+            try:
+                prob = self.vad(self.torch.from_numpy(block), MIC_SR).item()
+            except RuntimeError:        # a corrupted detector state must not end the session
+                self.vad.reset_states()
+                continue
             if not speaking:
                 pre = (pre + [block])[-10:]
                 if prob >= self.threshold:

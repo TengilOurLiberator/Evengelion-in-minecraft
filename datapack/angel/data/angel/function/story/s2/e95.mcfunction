@@ -1,4 +1,2 @@
 scoreboard players set #force angel.story 0
-scoreboard players set #present_ritsuko angel.story 0
-scoreboard players set #step angel.story 96
-function angel:story/s2/e96
+scoreboard players set #sleep angel.story 64
