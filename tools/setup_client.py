@@ -5,6 +5,8 @@
     python tools\\setup_client.py --plain                the bare Fabric + Vivecraft set again (alias --no-shaders)
     python tools\\setup_client.py --fetch-only           only download / verify the files of tools\\client_mods.json
     python tools\\setup_client.py --reset-mod-config     write the default mod configs again (Iris, ...), also where they exist
+    python tools\\setup_client.py --shaders quality|vr|off   the shader preset (tools\\client_presets.json); default quality
+    python tools\\setup_client.py --distant-horizons    switch the Distant Horizons mod on (only useful with it on the server too; see README)
 
 What it takes from the Genesis game folder (D:\\genesis-vr\\game, read only): the mods (the Fabric jars the VR profile
 runs), config, openvr (the SteamVR manifest and input bindings), and options.txt as the starting point.
@@ -29,9 +31,10 @@ What it writes into game\\:
   servers.dat                    one entry, "Angel Attack", at localhost:<server-port from server\\server.properties>
   mods                           Genesis's jars (a jar that Genesis no longer has is removed) plus the manifest's
   config, openvr                 copied from Genesis only where the file does not exist yet (local tweaks are kept)
-  config\\iris.properties         the default shader pack, only if the file does not exist (--reset-mod-config: always)
-  shaderpacks\\<pack>.txt         the default options of the default shader pack (coloured light on), same rule
-  config\\DistantHorizons.toml    the LOD radius only (64 chunks), same rule
+  config\\iris.properties         the preset's shader pack, only if the file does not exist (--shaders or --reset-mod-config: always)
+  shaderpacks\\<pack>.txt         the preset's options of that pack (tools\\client_presets.json), same rule
+  config\\DistantHorizons.toml    only with --distant-horizons: the LOD radius (64 chunks) and the vanilla fog kept, same rule
+  options.txt                    also the preset's game_options (render distance)
   Everything else (Sodium, Continuity, ETF, EMF, Sound Physics, Flashback, Mod Menu, Vivecraft) is left at the mods' defaults.
 
 The launcher's profile list (launcher_profiles.json under %APPDATA%\\.minecraft) is changed only with --install-profile.
@@ -59,7 +62,7 @@ UA = {"User-Agent": "angel-attack-setup/1.0 (github.com/TengilOurLiberator; setu
 KIND_DIR = {"mod": "mods", "shader": "shaderpacks", "resourcepack": "resourcepacks"}
 
 # the shader pack Iris starts with (manifest slug), and its options. Everything else in the pack stays at its defaults.
-DEFAULT_SHADER_SLUG = "complementary-reimagined"
+PRESETS = os.path.join(ROOT, "tools", "client_presets.json")
 
 # the video and gameplay settings the piece wants (Genesis's values; the same for the headset)
 WANTED = {"onboardAccessibility": "false", "skipMultiplayerWarning": "true", "joinedFirstServer": "true",
@@ -141,16 +144,32 @@ def read_installed(game):
     return json.load(open(p, encoding="utf-8")) if os.path.exists(p) else []
 
 
-def entry_target(game, e):
+def load_presets():
+    need(PRESETS, "shader presets")
+    return json.load(open(PRESETS, encoding="utf-8"))
+
+
+def effective_enabled(manifest, preset, distant_horizons):
+    """{slug: bool}: the manifest's 'enabled', minus the preset's mods_off, plus --distant-horizons."""
+    off = set(preset.get("mods_off", [])) if preset else set()
+    eff = {}
+    for e in manifest["files"]:
+        eff[e["slug"]] = bool(e["enabled"]) and e["slug"] not in off
+        if distant_horizons and e["slug"] == "distanthorizons":
+            eff[e["slug"]] = True
+    return eff
+
+
+def entry_target(game, e, eff):
     """Relative path in game\\ where a manifest file goes."""
-    name = e["file"] + (".disabled" if e["kind"] == "mod" and not e["enabled"] else "")
+    name = e["file"] + (".disabled" if e["kind"] == "mod" and not eff[e["slug"]] else "")
     return os.path.join(KIND_DIR[e["kind"]], name)
 
 
-def install_manifest(game, manifest, plain):
+def install_manifest(game, manifest, plain, eff):
     """Copy the manifest's files into game\\ (or, with plain, remove what an earlier run installed)."""
     previous = read_installed(game)
-    wanted = {} if plain else {entry_target(game, e): e for e in manifest["files"]}
+    wanted = {} if plain else {entry_target(game, e, eff): e for e in manifest["files"]}
     paths = {} if plain else fetch_all(manifest)
     for rel in previous:                                    # what an earlier run installed and is no longer wanted
         if rel not in wanted:
@@ -230,7 +249,7 @@ def pack_id(entry):
     return "file/" + entry["file"]
 
 
-def write_options(genesis, game, manifest, plain):
+def write_options(genesis, game, manifest, plain, game_options=None):
     """Start from the game's own options (after the first run), else Genesis's, else the player's Minecraft options.
     Resource packs, bottom to top: vanilla, [other packs already there], the manifest's enabled packs, angel-resources."""
     base = None
@@ -241,6 +260,8 @@ def write_options(genesis, game, manifest, plain):
     lines = list(open(base, encoding="utf-8")) if base else []
     managed = {pack_id(e) for e in manifest["files"] if e["kind"] == "resourcepack"}
     switched_on = [] if plain else [pack_id(e) for e in manifest["files"] if e["kind"] == "resourcepack" and e["enabled"]]
+    wanted = dict(WANTED)
+    wanted.update(game_options or {})
     out, seen = [], set()
     for line in lines:
         key = line.split(":", 1)[0]
@@ -259,13 +280,13 @@ def write_options(genesis, game, manifest, plain):
         elif key == "incompatibleResourcePacks":
             line = "incompatibleResourcePacks:[]\n"
             seen.add(key)
-        elif key in WANTED:
-            line = f"{key}:{WANTED[key]}\n"
+        elif key in wanted:
+            line = f"{key}:{wanted[key]}\n"
             seen.add(key)
         out.append(line)
     if "resourcePacks" not in seen:
         out.append("resourcePacks:" + json.dumps(["vanilla"] + switched_on + [f"file/{PACK}"], separators=(",", ":")) + "\n")
-    out += [f"{k}:{v}\n" for k, v in WANTED.items() if k not in seen]
+    out += [f"{k}:{v}\n" for k, v in wanted.items() if k not in seen]
     path = os.path.join(game, "options.txt")
     open(path, "w", encoding="utf-8").writelines(out)
     return path, base
@@ -283,49 +304,45 @@ def write_if(path, text, force):
     return True
 
 
-def mod_configs(game, manifest, force):
-    """Iris starts with the default shader pack, with coloured block light on. Returns what was written."""
+def mod_configs(game, manifest, eff, preset, shaders, force):
+    """Iris starts with the preset's shader pack and options (shaders 'off': Iris is left with shaders switched off).
+    Distant Horizons gets its config only when it is on. Returns what was written."""
     wrote = []
     by_slug = {e["slug"]: e for e in manifest["files"]}
-    have = lambda s: s in by_slug and by_slug[s]["enabled"]
-    pack = by_slug.get(DEFAULT_SHADER_SLUG)
-    if have("iris") and pack:
+    if eff.get("iris"):
+        pack = by_slug[preset["shader"]]
+        iris = {"colorSpace": "SRGB", "disableUpdateMessage": "true", "enableDebugOptions": "false",
+                "enableShaders": "false" if shaders == "off" else "true", "maxShadowRenderDistance": "16",
+                "shaderPack": pack["file"]}
+        iris.update(preset.get("iris", {}))
         text = ("#This file stores configuration options for Iris, such as the currently active shaderpack\n"
-                "#written by tools/setup_client.py\n"
-                "colorSpace=SRGB\n"
-                "disableUpdateMessage=true\n"
-                "enableDebugOptions=false\n"
-                "enableShaders=true\n"
-                "maxShadowRenderDistance=16\n"
-                f"shaderPack={pack['file']}\n")
+                f"#written by tools/setup_client.py (preset {shaders})\n" + "".join(f"{k}={v}\n" for k, v in iris.items()))
         p = os.path.join(game, "config", "iris.properties")
         if write_if(p, text, force):
             wrote.append(p)
-        opts = SHADER_OPTIONS.get(DEFAULT_SHADER_SLUG)
-        if opts:
+        opts = preset.get("options")
+        if opts and shaders != "off":
             p = os.path.join(game, "shaderpacks", pack["file"] + ".txt")
             if write_if(p, "".join(f"{k}={v}\n" for k, v in opts.items()), force):
                 wrote.append(p)
-    if have("distanthorizons"):
-        # the key path is certain (client.advanced.graphics.quality.lodChunkRenderDistanceRadius: the mod's own language file
-        # and class nesting); the file is written only if absent, and DH fills in every other entry with its defaults
+    if eff.get("distanthorizons"):
+        # the key paths are certain (the mod's own language file and class nesting); the file is written only if absent, and
+        # Distant Horizons fills in every other entry with its defaults. Its fog is switched off in favour of the game's own
+        # fog: the Angel sets use the biome fog (the geofront's golden haze), which DH otherwise replaces.
         p = os.path.join(game, "config", "DistantHorizons.toml")
         text = ("# written by tools/setup_client.py; Distant Horizons adds every other setting at its default\n"
                 "[client.advanced.graphics.quality]\n"
-                f"\tlodChunkRenderDistanceRadius = {DH_LOD_RADIUS}\n")
+                f"\tlodChunkRenderDistanceRadius = {DH_LOD_RADIUS}\n"
+                "[client.advanced.graphics.fog]\n"
+                "\tenableDhFog = false\n"
+                "\tenableVanillaFog = true\n")
         if write_if(p, text, force):
             wrote.append(p)
     return wrote
 
 
-# Distant Horizons' LOD radius in chunks: moderate for VR (on top of the 32-chunk vanilla distance in options.txt)
+# Distant Horizons' LOD radius in chunks (only with --distant-horizons)
 DH_LOD_RADIUS = 64
-
-# option values for a shader pack (shaderpacks\<file>.txt, key=value, the names are the pack's own #define names).
-# COLORED_LIGHTING is Complementary's "Advanced Color Tracing" (off in the High profile that is the default; the values are
-# the pack's labels: 128 = "4 Chunks", 192 = "6 Chunks", 256 = "8 Chunks", 384 = "12 Chunks"; each step can cost more than
-# twice the previous one, says the pack).
-SHADER_OPTIONS = {"complementary-reimagined": {"COLORED_LIGHTING": 192}}
 
 
 # ---- servers.dat, launcher profile --------------------------------------------------------------------------------------
@@ -388,6 +405,11 @@ def main():
                     help="the bare Fabric + Vivecraft set: remove what tools\\client_mods.json installed, no extra packs")
     ap.add_argument("--fetch-only", action="store_true", help="only download and verify the manifest's files, change nothing else")
     ap.add_argument("--reset-mod-config", action="store_true", help="write the default mod configs again, also where they exist")
+    ap.add_argument("--shaders", choices=["quality", "vr", "off"],
+                    help="shader preset from tools\\client_presets.json (default: quality; 'off' keeps the mods but switches shaders off); "
+                         "giving it rewrites iris.properties and the pack's options")
+    ap.add_argument("--distant-horizons", action="store_true",
+                    help="switch the Distant Horizons mod on (it needs the same mod on the server to add anything; see README)")
     args = ap.parse_args()
     game, genesis = args.game_dir, args.genesis_game
     manifest = load_manifest()
@@ -398,20 +420,26 @@ def main():
     need(genesis, "Genesis game folder")
     os.makedirs(game, exist_ok=True)
 
+    presets = load_presets()
+    shaders = args.shaders or presets["default"]
+    preset = presets["presets"]["quality" if shaders == "off" else shaders]
+    if shaders == "off":
+        preset = dict(preset, options={})
+    eff = effective_enabled(manifest, None if args.plain else preset, args.distant_horizons)
     made = []
     made.append(copy_pack(game))
-    wanted = install_manifest(game, manifest, args.plain)     # first: nothing is changed if a download fails its hash
+    wanted = install_manifest(game, manifest, args.plain, eff)     # first: nothing is changed if a download fails its hash
     keep = {os.path.basename(r) for r in wanted if r.startswith("mods")}
     jars = copy_mods(genesis, game, keep)
     for name in ("config", "openvr"):
         n = copy_missing(genesis, game, name)
         made.append(os.path.join(game, name) + f" ({n} files added from Genesis; existing files kept)")
-    opts, opts_base = write_options(genesis, game, manifest, args.plain)
+    opts, opts_base = write_options(genesis, game, manifest, args.plain, None if args.plain else preset.get("game_options"))
     made.append(opts)
     made.append(write_servers(game, server_port()))
-    cfg = [] if args.plain else mod_configs(game, manifest, args.reset_mod_config)
+    cfg = [] if args.plain else mod_configs(game, manifest, eff, preset, shaders, args.reset_mod_config or bool(args.shaders))
 
-    print("game folder:", game, "(plain: Fabric + Vivecraft only)" if args.plain else "")
+    print("game folder:", game, "(plain: Fabric + Vivecraft only)" if args.plain else f"(shader preset: {shaders})")
     for p in made:
         print("  wrote", p)
     print("  Genesis mods:", ", ".join(jars))

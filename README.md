@@ -40,6 +40,28 @@ then you pilot the giant and fight.
 - To start the story again in the same world: `function angel:story/start`. `function angel:story/stop` stops it.
   To start the whole thing again from the beginning, close the server window and run `.\start.ps1 -NewWorld`.
 
+**Looks.** `setup_client.py` installs Sodium, Iris, Continuity, Faithful 32x and the Complementary, BSL and MakeUp shader packs
+(all from Modrinth, hash-checked; list in `tools/client_mods.json`). The shader preset is chosen with the flag, and the choice is
+kept in `game\config\iris.properties` and the pack's option file (`tools/client_presets.json` holds the values):
+`--shaders quality` (default: Complementary Reimagined tuned for the piece, render distance 24), `--shaders vr` (the same pack
+on its low profile, no coloured light, render distance 16; about a third cheaper), `--shaders off` (mods only), `--plain`
+(bare Fabric + Vivecraft again). Switch the pack by hand in Options, Video Settings, Shader Packs. Distant Horizons is installed
+but off (`--distant-horizons` switches it on): it only adds far terrain if the server runs it too (`.\tools\server.ps1
+-DistantHorizons` puts the checked jar into `server\mods`), and it replaces the biome fog of the sets.
+
+**Recording a session and re-filming it (Flashback).** Flashback records on the client, so it works on the Angel Attack server.
+
+1. In the game press Esc: the pause menu has Flashback's buttons. **Start Recording** before the story starts (or in Mod Menu,
+   Flashback, Recording Controls: *Automatically Start* / *Automatically Finish* to record every session without a click),
+   **Finish Recording** at the end, then name it in the Save Replay screen. Markers can be set while recording with the keys
+   under Controls, Flashback Keybinds. Recordings are kept in `game\flashback\replays`.
+2. To film it again: main menu, **Open Replays**, pick the recording. The replay opens in a free camera (fly with the movement
+   keys) with Flashback's editor: scrub or play the timeline, add camera keyframes where you want the shot, pick the
+   interpolation, and **Export Video** (resolution, frame rate, file; the encoder is inside the mod). The shader pack that is on
+   is used for the export, so a slow, beautiful render is possible. Watch and export replays on the desktop window (Vivecraft
+   switched to flat mode); Flashback and Vivecraft know each other, but the headset view of a replay has not been tried here.
+3. A replay needs the same mods as the recording: do not change the mod set in between.
+
 ## What is here
 
 | Path | What it is |

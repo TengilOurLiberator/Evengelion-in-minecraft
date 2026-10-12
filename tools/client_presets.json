@@ -1,0 +1,52 @@
+{
+  "_comment": "Shader presets for tools/setup_client.py (--shaders quality|vr|off). 'shader' is the manifest slug of the pack Iris starts with; 'options' are that pack's own option names (written to shaderpacks/<file>.txt); 'iris' goes into config/iris.properties; 'game_options' replace lines of options.txt (render distance is the big cost); 'mods_off' are manifest mods left disabled (.jar.disabled) in this preset. Tuned from the shader gallery (work/shots/shaders, tools/visual/plans/shaders.json): see the report of the mods phase 2.",
+  "default": "quality",
+  "presets": {
+    "quality": {
+      "description": "Complementary Reimagined, tuned for the piece: warm noon, coloured block light, no light fog or shafts",
+      "shader": "complementary-reimagined",
+      "options": {
+        "COLORED_LIGHTING": 192,
+        "COLORED_LIGHT_FOG": "false",
+        "LIGHT_COLOR_MULTS": "true",
+        "LIGHT_NOON_R": "1.10",
+        "LIGHT_NOON_G": "1.00",
+        "LIGHT_NOON_B": "0.90",
+        "LIGHT_NOON_I": "1.00",
+        "T_SATURATION": "1.10",
+        "LIGHTSHAFT_QUALI_DEFINE": 0
+      },
+      "iris": {"maxShadowRenderDistance": "16"},
+      "game_options": {"renderDistance": "24"},
+      "mods_off": ["distanthorizons"]
+    },
+    "vr": {
+      "description": "Complementary Reimagined on its LOW profile (very low shadows, no light shafts, no coloured light), same colour grade",
+      "shader": "complementary-reimagined",
+      "options": {
+        "SHADOW_QUALITY": 0,
+        "shadowDistance": "64.0",
+        "WATER_REFLECT_QUALITY": 1,
+        "BLOCK_REFLECT_QUALITY": 0,
+        "LIGHTSHAFT_QUALI_DEFINE": 0,
+        "SSAO_QUALI_DEFINE": 0,
+        "FXAA_DEFINE": -1,
+        "DETAIL_QUALITY": 0,
+        "CLOUD_QUALITY": 1,
+        "ANISOTROPIC_FILTER": 0,
+        "COLORED_LIGHTING": 0,
+        "WORLD_SPACE_REFLECTIONS": -1,
+        "ENTITY_SHADOW": -1,
+        "RAIN_PUDDLES": 0,
+        "LIGHT_COLOR_MULTS": "true",
+        "LIGHT_NOON_R": "1.10",
+        "LIGHT_NOON_G": "1.00",
+        "LIGHT_NOON_B": "0.90",
+        "T_SATURATION": "1.10"
+      },
+      "iris": {"maxShadowRenderDistance": "8"},
+      "game_options": {"renderDistance": "16"},
+      "mods_off": ["distanthorizons"]
+    }
+  }
+}

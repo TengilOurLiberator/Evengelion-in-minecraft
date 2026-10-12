@@ -1,21 +1,418 @@
-{"name": "shaders", "fov": 75, "render": 12, "width": 1600, "height": 900,
- "setup": ["gamemode spectator Tester", "execute as Tester run function angel:world/enter_outskirts"],
+{
+ "name": "shaders",
+ "fov": 75,
+ "render": 12,
+ "width": 1600,
+ "height": 900,
+ "setup": [
+  "gamemode spectator Tester",
+  "execute as Tester run function angel:world/enter_outskirts"
+ ],
  "shots": [
-  {"name": "01_outskirts_street_east", "steps": [{"clean": true}, {"enter": "outskirts"}, {"tp": "outskirts.street", "yaw": -90, "pitch": 0}], "settle": 6, "max": 25},
-  {"name": "02_outskirts_aerial", "steps": [{"tp": [8, 118, 128], "yaw": -90.0, "pitch": 30.49}], "settle": 8, "max": 25},
-  {"name": "03_outskirts_street_monster100", "steps": [{"at": "outskirts.angel_spawn", "run": "function angel:angel/summon {height:100}"}, {"wait": 3.0}, {"tp": "outskirts.street", "look_at": [228.5, 120, 128.5]}], "settle": 5, "max": 25},
-  {"name": "04_outskirts_car_ridge", "steps": [{"clean": true}, {"tp": "outskirts.car_arrive"}], "settle": 4, "max": 25},
-  {"name": "05_geofront_reveal", "steps": [{"clean": true}, {"enter": "geofront"}, {"tp": "geofront.reveal"}], "settle": 8, "max": 25},
-  {"name": "06_geofront_overview", "steps": [{"tp": [2045, 70, 160], "yaw": -90.0, "pitch": 13.79}], "settle": 8, "max": 25},
-  {"name": "07_hq_corr_2", "steps": [{"enter": "hq"}, {"tp": "hq.corr_2"}], "settle": 6, "max": 25},
-  {"name": "08_hq_dock", "steps": [{"fn": "story/hq/strips_on"}, {"tp": "hq.dock"}], "settle": 6, "max": 25},
-  {"name": "09_hq_cage_lights_off", "steps": [{"tp": "hq.face"}], "settle": 5, "max": 25},
-  {"name": "10_hq_cage_lights_on", "steps": [{"fn": "visual/cage_lights_on"}, {"wait": 1.0}, {"tp": "hq.face"}], "settle": 4, "max": 25},
-  {"name": "11_hq_cage_eyes_on", "steps": [{"fn": "story/hq/eyes_on"}, {"wait": 1.0}, {"tp": "hq.face"}], "settle": 4, "max": 25},
-  {"name": "12_hq_booth_gendo_scale2", "steps": [{"fn": "story/hq/booth_on"}, {"fn": "visual/booth_lights_on"}, {"at": "hq.booth", "run": "function angel:cast/summon {id:\"gendo\"}", "yaw": 29}, {"wait": 1.0}, {"at": "hq.booth", "run": "function angel:cast/scale {id:\"gendo\",scale:2.0}"}, {"wait": 1.2}, {"tp": "hq.face", "look_at": [3107.0, 66.2, 53.75]}], "settle": 4, "max": 25},
-  {"name": "13_city_monster30_close", "steps": [{"clean": true}, {"enter": "city"}, {"at": "city.angel_start", "run": "function angel:angel/summon {height:30}"}, {"wait": 3.0}, {"tp": [1160, 64, 70], "look_at": [1160, 76, 50]}], "settle": 5, "max": 25},
-  {"name": "14_city_giant_sees_monster30", "steps": [{"tp": "city.launch_top"}, {"scale": 16}, "execute as Tester run function angel:fight/become_giant", {"wait": 1.0}, {"tp": "city.launch_top", "look_at": [1160, 80, 50]}], "settle": 6, "max": 25, "after": ["execute as Tester run function angel:fight/become_human", {"scale": 1}]},
-  {"name": "15_card_angel_attack", "steps": [{"clean": true}, {"fn": "story/card/bg"}, {"fn": "story/card/c2"}, {"wait": 3.0}], "settle": 1.5, "max": 6, "after": [{"fn": "story/card/off"}]},
-  {"name": "16_plug_cockpit", "steps": [{"clean": true}, {"enter": "hq"}, "function angel:story/scene {n:6}", {"wait": 48.0}], "settle": 0.5, "max": 0}
- ]}
-
+  {
+   "name": "01_outskirts_street_east",
+   "steps": [
+    {
+     "clean": true
+    },
+    {
+     "enter": "outskirts"
+    },
+    {
+     "tp": "outskirts.street",
+     "yaw": -90,
+     "pitch": 0
+    }
+   ],
+   "settle": 6,
+   "max": 25
+  },
+  {
+   "name": "02_outskirts_aerial",
+   "steps": [
+    {
+     "tp": [
+      8,
+      118,
+      128
+     ],
+     "yaw": -90.0,
+     "pitch": 30.49
+    }
+   ],
+   "settle": 8,
+   "max": 25
+  },
+  {
+   "name": "03_outskirts_street_monster100",
+   "steps": [
+    {
+     "at": "outskirts.angel_spawn",
+     "run": "function angel:angel/summon {height:100}"
+    },
+    {
+     "wait": 3.0
+    },
+    {
+     "tp": "outskirts.street",
+     "look_at": [
+      228.5,
+      120,
+      128.5
+     ]
+    }
+   ],
+   "settle": 5,
+   "max": 25
+  },
+  {
+   "name": "04_outskirts_car_ridge",
+   "steps": [
+    {
+     "clean": true
+    },
+    {
+     "tp": "outskirts.car_arrive"
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "05_geofront_reveal",
+   "steps": [
+    {
+     "clean": true
+    },
+    {
+     "enter": "geofront"
+    },
+    {
+     "tp": "geofront.reveal"
+    }
+   ],
+   "settle": 8,
+   "max": 25
+  },
+  {
+   "name": "06_geofront_overview",
+   "steps": [
+    {
+     "tp": [
+      2045,
+      70,
+      160
+     ],
+     "yaw": -90.0,
+     "pitch": 13.79
+    }
+   ],
+   "settle": 8,
+   "max": 25
+  },
+  {
+   "name": "07_hq_corr_2",
+   "steps": [
+    {
+     "enter": "hq"
+    },
+    {
+     "tp": "hq.corr_2"
+    }
+   ],
+   "settle": 6,
+   "max": 25
+  },
+  {
+   "name": "08_hq_dock",
+   "steps": [
+    {
+     "fn": "story/hq/strips_on"
+    },
+    {
+     "tp": "hq.dock"
+    }
+   ],
+   "settle": 6,
+   "max": 25
+  },
+  {
+   "name": "09_hq_cage_lights_off",
+   "steps": [
+    {
+     "tp": "hq.face"
+    }
+   ],
+   "settle": 5,
+   "max": 25
+  },
+  {
+   "name": "10_hq_cage_lights_on",
+   "steps": [
+    {
+     "fn": "visual/cage_lights_on"
+    },
+    {
+     "wait": 1.0
+    },
+    {
+     "tp": "hq.face"
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "11_hq_cage_eyes_on",
+   "steps": [
+    {
+     "fn": "story/hq/eyes_on"
+    },
+    {
+     "wait": 1.0
+    },
+    {
+     "tp": "hq.face"
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "12_hq_booth_gendo_scale2",
+   "steps": [
+    {
+     "fn": "story/hq/booth_on"
+    },
+    {
+     "fn": "visual/booth_lights_on"
+    },
+    {
+     "at": "hq.booth",
+     "run": "function angel:cast/summon {id:\"gendo\"}",
+     "yaw": 29
+    },
+    {
+     "wait": 1.0
+    },
+    {
+     "at": "hq.booth",
+     "run": "function angel:cast/scale {id:\"gendo\",scale:2.0}"
+    },
+    {
+     "wait": 1.2
+    },
+    {
+     "tp": "hq.face",
+     "look_at": [
+      3107.0,
+      66.2,
+      53.75
+     ]
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "13_city_monster30_close",
+   "steps": [
+    {
+     "clean": true
+    },
+    {
+     "enter": "city"
+    },
+    {
+     "at": "city.angel_start",
+     "run": "function angel:angel/summon {height:30}"
+    },
+    {
+     "wait": 3.0
+    },
+    {
+     "tp": [
+      1160,
+      64,
+      70
+     ],
+     "look_at": [
+      1160,
+      76,
+      50
+     ]
+    }
+   ],
+   "settle": 5,
+   "max": 25
+  },
+  {
+   "name": "14_city_giant_sees_monster30",
+   "steps": [
+    {
+     "tp": "city.launch_top"
+    },
+    {
+     "scale": 16
+    },
+    "execute as Tester run function angel:fight/become_giant",
+    {
+     "wait": 1.0
+    },
+    {
+     "tp": "city.launch_top",
+     "look_at": [
+      1160,
+      80,
+      50
+     ]
+    }
+   ],
+   "settle": 6,
+   "max": 25,
+   "after": [
+    "execute as Tester run function angel:fight/become_human",
+    {
+     "scale": 1
+    }
+   ]
+  },
+  {
+   "name": "17_cast_four_in_a_line",
+   "steps": [
+    {
+     "clean": true
+    },
+    {
+     "enter": "outskirts"
+    },
+    {
+     "at": [
+      98.4,
+      64.0,
+      128.5
+     ],
+     "run": "function angel:cast/summon {id:\"misato\"}",
+     "yaw": 0
+    },
+    {
+     "at": [
+      99.8,
+      64.0,
+      128.5
+     ],
+     "run": "function angel:cast/summon {id:\"ritsuko\"}",
+     "yaw": 0
+    },
+    {
+     "at": [
+      101.2,
+      64.0,
+      128.5
+     ],
+     "run": "function angel:cast/summon {id:\"gendo\"}",
+     "yaw": 0
+    },
+    {
+     "at": [
+      102.6,
+      64.0,
+      128.5
+     ],
+     "run": "function angel:cast/summon {id:\"rei\"}",
+     "yaw": 0
+    },
+    {
+     "wait": 1.0
+    },
+    {
+     "tp": [
+      100.5,
+      64.0,
+      134.0
+     ],
+     "look_at": [
+      100.5,
+      65.0,
+      128.5
+     ]
+    },
+    {
+     "wait": 2.0
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "18_cast_misato_closeup",
+   "steps": [
+    {
+     "tp": [
+      98.9,
+      64.0,
+      130.2
+     ],
+     "look_at": [
+      98.4,
+      65.55,
+      128.5
+     ]
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "15_card_angel_attack",
+   "steps": [
+    {
+     "clean": true
+    },
+    {
+     "tp": [
+      1160.5,
+      64,
+      160.5
+     ],
+     "yaw": 0,
+     "pitch": 0,
+     "pause": 3.0
+    },
+    {
+     "fn": "story/card/bg"
+    },
+    {
+     "fn": "story/card/c2"
+    },
+    {
+     "wait": 3.0
+    }
+   ],
+   "settle": 1.5,
+   "max": 6,
+   "after": [
+    {
+     "fn": "story/card/off"
+    }
+   ]
+  },
+  {
+   "name": "16_plug_cockpit",
+   "steps": [
+    {
+     "clean": true
+    },
+    {
+     "enter": "hq"
+    },
+    "function angel:story/scene {n:6}",
+    {
+     "wait": 48.0
+    }
+   ],
+   "settle": 0.5,
+   "max": 0
+  }
+ ]
+}

@@ -76,11 +76,11 @@ else {
     $deadline = (Get-Date).AddMinutes(10)
     do {
         Start-Sleep -Seconds 2
-        $text = Read-LogSince $latest $offset
-        if ($text -match "placement stopped") { throw "The world was not placed (placement stopped). See the server window." }
+        $logText = Read-LogSince $latest $offset
+        if ($logText -match "placement stopped") { throw "The world was not placed (placement stopped). See the server window." }
         if ((Get-Date) -gt $deadline) { throw "The world was not placed within 10 minutes. See the server window." }
-    } until ($text -match "every set is placed")
-    if ($text -match "BIOME CHECK FAILED") { Write-Warning "A biome check failed (see the server log). The world is placed; look at it before you trust it." }
+    } until ($logText -match "every set is placed")
+    if ($logText -match "BIOME CHECK FAILED") { Write-Warning "A biome check failed (see the server log). The world is placed; look at it before you trust it." }
     if (-not (Test-Path $world)) { New-Item -ItemType Directory -Force $world | Out-Null }
     Set-Content -Path $placedMarker -Value ("placed " + (Get-Date).ToString("s")) -Encoding ascii
     Write-Host "The world is placed."

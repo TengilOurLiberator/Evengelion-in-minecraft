@@ -1,0 +1,167 @@
+{
+ "name": "colortest",
+ "fov": 75,
+ "render": 12,
+ "width": 1600,
+ "height": 900,
+ "setup": [
+  "gamemode spectator Tester",
+  "execute as Tester run function angel:world/enter_hq"
+ ],
+ "shots": [
+  {
+   "name": "c1_emitters_row",
+   "steps": [
+    {
+     "enter": "hq"
+    },
+    {
+     "tp": "hq.dock"
+    },
+    {
+     "at": "hq.dock",
+     "off": [
+      0,
+      0,
+      0
+     ],
+     "run": "setblock ~-10 ~ ~4 minecraft:red_candle[lit=true,candles=4]"
+    },
+    {
+     "at": "hq.dock",
+     "off": [
+      0,
+      0,
+      0
+     ],
+     "run": "setblock ~-7 ~ ~4 minecraft:redstone_block"
+    },
+    {
+     "at": "hq.dock",
+     "off": [
+      0,
+      0,
+      0
+     ],
+     "run": "setblock ~-4 ~ ~4 minecraft:sea_lantern"
+    },
+    {
+     "at": "hq.dock",
+     "off": [
+      0,
+      0,
+      0
+     ],
+     "run": "setblock ~-1 ~ ~4 minecraft:glowstone"
+    },
+    {
+     "at": "hq.dock",
+     "off": [
+      0,
+      0,
+      0
+     ],
+     "run": "setblock ~2 ~ ~4 minecraft:ochre_froglight"
+    },
+    {
+     "at": "hq.dock",
+     "off": [
+      0,
+      0,
+      0
+     ],
+     "run": "setblock ~5 ~ ~4 minecraft:verdant_froglight"
+    },
+    {
+     "at": "hq.dock",
+     "off": [
+      0,
+      0,
+      0
+     ],
+     "run": "setblock ~8 ~ ~4 minecraft:pearlescent_froglight"
+    },
+    {
+     "at": "hq.dock",
+     "off": [
+      0,
+      0,
+      0
+     ],
+     "run": "setblock ~11 ~ ~4 minecraft:shroomlight"
+    },
+    {
+     "at": "hq.dock",
+     "run": "setblock ~16 ~ ~4 minecraft:red_stained_glass"
+    },
+    {
+     "at": "hq.dock",
+     "run": "setblock ~16 ~1 ~4 minecraft:light[level=12]"
+    },
+    {
+     "at": "hq.dock",
+     "run": "setblock ~19 ~ ~4 minecraft:orange_stained_glass"
+    },
+    {
+     "at": "hq.dock",
+     "run": "setblock ~19 ~1 ~4 minecraft:light[level=12]"
+    },
+    {
+     "wait": 2.0
+    },
+    {
+     "tp": [
+      3020.0,
+      55.0,
+      150.0
+     ],
+     "look_at": [
+      3020.0,
+      54.8,
+      164.5
+     ]
+    }
+   ],
+   "settle": 6,
+   "max": 25
+  },
+  {
+   "name": "c2_emitters_left",
+   "steps": [
+    {
+     "tp": [
+      3008.0,
+      55.0,
+      154.0
+     ],
+     "look_at": [
+      3008.0,
+      54.8,
+      164.5
+     ]
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "c3_glass_lamps",
+   "steps": [
+    {
+     "tp": [
+      3033.5,
+      55.0,
+      157.0
+     ],
+     "look_at": [
+      3033.5,
+      54.8,
+      164.5
+     ]
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  }
+ ]
+}

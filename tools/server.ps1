@@ -4,7 +4,9 @@
 # The datapack (datapack\angel) is copied into the world's datapacks folder on every start, and file/angel is kept in
 # initial-enabled-packs, so a new world starts with it enabled. server.properties is otherwise left as it is
 # (generator-settings in particular, which give the void biome).
-param([switch]$NewWorld, [switch]$Offline)
+#   -DistantHorizons   opt-in: put the Distant Horizons jar (the one in tools\client_mods.json, sha512-checked, from downloads\mods\)
+#                      into server\mods, so that clients that also run it get the far terrain from the server (see README, Play)
+param([switch]$NewWorld, [switch]$Offline, [switch]$DistantHorizons)
 
 $root = Split-Path $PSScriptRoot -Parent
 $srv = Join-Path $root "server"
@@ -45,6 +47,16 @@ $out = foreach ($l in $lines) {
 }
 if (-not ($lines | Where-Object { $_ -like "initial-enabled-packs=*" })) { $out += "initial-enabled-packs=vanilla,file/angel" }
 [System.IO.File]::WriteAllLines($propsPath, [string[]]@($out), (New-Object System.Text.UTF8Encoding($false)))
+
+if ($DistantHorizons) {
+    $m = (Get-Content (Join-Path $PSScriptRoot "client_mods.json") -Raw | ConvertFrom-Json).files | Where-Object { $_.slug -eq "distanthorizons" }
+    $jar = Join-Path $root ("downloads\mods\" + $m.file)
+    if (-not (Test-Path $jar)) { throw "Distant Horizons is not downloaded: run python tools\setup_client.py --fetch-only first." }
+    if ((Get-FileHash $jar -Algorithm SHA512).Hash -ne $m.sha512.ToUpper()) { throw "$jar does not match the sha512 in client_mods.json; not installed." }
+    New-Item -ItemType Directory -Force (Join-Path $srv "mods") | Out-Null
+    Copy-Item $jar (Join-Path $srv "mods") -Force
+    Write-Host "Distant Horizons installed in server\mods ($($m.file)); delete it there to switch it off again."
+}
 
 Set-Location $srv
 & $java -Xms4G -Xmx10G -jar fabric-server-launch.jar nogui

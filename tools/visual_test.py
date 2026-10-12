@@ -12,6 +12,16 @@ client (work\\testgame, offline name Tester, master volume 0, the resource pack 
 render distance 24, clouds/vignette/bobbing off, GUI hidden with F1), runs the plan and saves each shot as PNG of the
 game window only.  At the end (or on any failure) it kills client and server and deletes the scratch server.  Every child is
 also in a Windows job object, so even a crash of this script closes them.  Plan format: tools\\visual\\plan.py.
+
+Fabric mode (the mods): --fabric --variant <name> starts the fabric-loader-0.19.5-26.3 profile (main class and libraries read
+from %APPDATA%\\.minecraft\\versions, nothing written there) in a SEPARATE test game directory, work\\testgame_mods (--gamedir to
+change), filled from a copy of the mods, config, shaderpacks and resourcepacks of --src-game (default: the game\\ folder, read
+only; the real game folder is never launched).  Vivecraft stays installed and in non-VR mode.  Variants (tools\\visual\\fabricmode.py)
+say which shader pack Iris starts with, its options, which mods are left out ("installed" = the game folder's own configs, as
+tools\\setup_client.py wrote them).  --fps reads the frame rate after every picture from the F3 overlay (tools\\visual\\fpsocr.py:
+the overlay's text is matched against the game's own font, no OCR library) and puts fps, p50, p98 and p99.9 in manifest.json;
+--server-mod <jar> puts a mod jar on the scratch server too; --render, --maxfps (260 = unlimited, vsync is always off).
+Gallery of the shader work: plan "shaders" (18 views), report: tools\\visual\\shader_report.py (FPS table, contact sheets).
 """
 import argparse
 import atexit

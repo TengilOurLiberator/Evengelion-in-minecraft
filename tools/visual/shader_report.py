@@ -69,15 +69,21 @@ def main():
     ap.add_argument("--variants", default="a_vanilla,b_mods,c_reimagined,d_reimagined_nocolor,e_bsl,f_makeup")
     ap.add_argument("--tile", default="800x450")
     ap.add_argument("--cols", type=int, default=3)
+    ap.add_argument("--sheets", default="sheets", help="sheet folder name under --root")
+    ap.add_argument("--only", help="comma-separated view names for the sheets (and no table file)")
     a = ap.parse_args()
     variants = a.variants.split(",")
     data = load(a.root, variants)
     variants = [v for v in variants if v in data]
     t = table(data, variants)
     print(t)
-    open(os.path.join(a.root, "fps_table.md"), "w", encoding="utf-8").write(t + "\n")
     tw, th = (int(x) for x in a.tile.split("x"))
-    sheets(a.root, data, variants, os.path.join(a.root, "sheets"), (tw, th), a.cols)
+    if a.only:
+        keep = set(a.only.split(","))
+        data = {v: {n: s for n, s in d.items() if n in keep} for v, d in data.items()}
+    else:
+        open(os.path.join(a.root, "fps_table.md"), "w", encoding="utf-8").write(t + "\n")
+    sheets(a.root, data, variants, os.path.join(a.root, a.sheets), (tw, th), a.cols)
 
 
 if __name__ == "__main__":

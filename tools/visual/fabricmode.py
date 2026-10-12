@@ -32,6 +32,35 @@ VARIANTS = {
     "d_reimagined_nocolor": dict(fabric=True, shader=REIMAGINED, options={"COLORED_LIGHTING": 0}, packs=[FAITHFUL]),
     "e_bsl": dict(fabric=True, shader=BSL, options={}, packs=[FAITHFUL]),
     "f_makeup": dict(fabric=True, shader=MAKEUP, options={}, packs=[FAITHFUL]),
+    # tuning trials (Distant Horizons left out: it removes the vanilla fog and costs about 0.5 ms)
+    "t1_reim": dict(fabric=True, shader=REIMAGINED, packs=[FAITHFUL], remove_mods=["DistantHorizons"], options={
+        "COLORED_LIGHTING": 192, "COLORED_LIGHT_FOG": "false", "LIGHT_COLOR_MULTS": "true", "LIGHT_NOON_R": "1.20",
+        "LIGHT_NOON_G": "1.10", "LIGHT_NOON_B": "0.80", "LIGHT_NOON_I": "1.20", "T_SATURATION": "1.10"}),
+    "t2_reim": dict(fabric=True, shader=REIMAGINED, packs=[FAITHFUL], remove_mods=["DistantHorizons"], options={
+        "COLORED_LIGHTING": 192, "COLORED_LIGHT_FOG": "false", "LIGHT_COLOR_MULTS": "true", "LIGHT_NOON_R": "1.10",
+        "LIGHT_NOON_G": "1.00", "LIGHT_NOON_B": "0.90", "LIGHT_NOON_I": "1.00", "T_SATURATION": "1.10", "LIGHTSHAFT_QUALI_DEFINE": 0}),
+    # the lighter one for the headset: the pack's LOW profile (shadows very low, no light shafts, no coloured light) and the same colour grade
+    "t3_vr": dict(fabric=True, shader=REIMAGINED, packs=[FAITHFUL], remove_mods=["DistantHorizons"], options={
+        "SHADOW_QUALITY": 0, "shadowDistance": "64.0", "WATER_REFLECT_QUALITY": 1, "BLOCK_REFLECT_QUALITY": 0,
+        "LIGHTSHAFT_QUALI_DEFINE": 0, "SSAO_QUALI_DEFINE": 0, "FXAA_DEFINE": -1, "DETAIL_QUALITY": 0, "CLOUD_QUALITY": 1,
+        "ANISOTROPIC_FILTER": 0, "COLORED_LIGHTING": 0, "WORLD_SPACE_REFLECTIONS": -1, "ENTITY_SHADOW": -1, "RAIN_PUDDLES": 0,
+        "LIGHT_COLOR_MULTS": "true", "LIGHT_NOON_R": "1.10", "LIGHT_NOON_G": "1.00", "LIGHT_NOON_B": "0.90", "T_SATURATION": "1.10"}),
+    # what tools/setup_client.py installed in game\ (--shaders quality|vr): run with --src-game <that folder> and --render 24 / 16
+    "installed": dict(fabric=True, as_installed=True),
+    # tuned Reimagined WITH Distant Horizons (client + scratch server) and its vanilla fog kept
+    "t2_dh": dict(fabric=True, shader=REIMAGINED, packs=[FAITHFUL], options={
+        "COLORED_LIGHTING": 192, "COLORED_LIGHT_FOG": "false", "LIGHT_COLOR_MULTS": "true", "LIGHT_NOON_R": "1.10",
+        "LIGHT_NOON_G": "1.00", "LIGHT_NOON_B": "0.90", "LIGHT_NOON_I": "1.00", "T_SATURATION": "1.10", "LIGHTSHAFT_QUALI_DEFINE": 0},
+        dh_toml=("[client.advanced.graphics.quality]\n\tlodChunkRenderDistanceRadius = 64\n"
+                 "[client.advanced.graphics.fog]\n\tenableDhFog = false\n\tenableVanillaFog = true\n")),
+    # does Sound Physics accept a rule for a sound that is not in the game's registry (angel:...)?
+    "x_spr": dict(fabric=True, shader=None, packs=[FAITHFUL], remove_mods=["DistantHorizons"], extra_files={
+        "sound_physics_remastered/sound_rates.properties": "angel\\:music.foo=0\nangel\\:amb.cage=0\nminecraft\\:ambient.cave=0\n"}),
+    # Distant Horizons (use with --server-mod <DH jar> to have it on the scratch server too)
+    "dh_server": dict(fabric=True, shader=None, packs=[FAITHFUL], dh_radius=64),
+    "dh_server_vfog": dict(fabric=True, shader=None, packs=[FAITHFUL], dh_toml=(
+        "[client.advanced.graphics.quality]\n\tlodChunkRenderDistanceRadius = 64\n"
+        "[client.advanced.graphics.fog]\n\tenableDhFog = false\n\tenableVanillaFog = true\n")),
     # cost / cause experiments (mods on, shaders off unless said)
     "x_no_dh": dict(fabric=True, shader=None, packs=[FAITHFUL], remove_mods=["DistantHorizons"]),
     "x_sodium_only": dict(fabric=True, shader=None, packs=[FAITHFUL], remove_mods=[
@@ -83,22 +112,32 @@ def prepare(game, variant, src_game=REAL_GAME):
     # shader packs
     sp = os.path.join(game, "shaderpacks")
     _sync_dir(os.path.join(src_game, "shaderpacks"), sp)
+    installed = variant.get("as_installed")          # use the game folder's own iris.properties, option files, packs (what setup_client.py wrote)
     for f in os.listdir(sp):
-        if f.endswith(".txt"):
+        if f.endswith(".txt") and not installed:
             os.remove(os.path.join(sp, f))
     shader = variant.get("shader")
     iris = {"colorSpace": "SRGB", "disableUpdateMessage": "true", "enableDebugOptions": "false",
             "enableShaders": "true" if shader else "false", "maxShadowRenderDistance": "16",
             "shaderPack": shader or ""}
     iris.update(variant.get("iris", {}))
-    open(os.path.join(cfg, "iris.properties"), "w", encoding="utf-8", newline="\n").write(
-        "".join(f"{k}={v}\n" for k, v in iris.items()))
-    if shader and variant.get("options"):
+    if not installed:
+        open(os.path.join(cfg, "iris.properties"), "w", encoding="utf-8", newline="\n").write(
+            "".join(f"{k}={v}\n" for k, v in iris.items()))
+    if shader and variant.get("options") and not installed:
         open(os.path.join(sp, shader + ".txt"), "w", encoding="utf-8", newline="\n").write(
             "".join(f"{k}={v}\n" for k, v in variant["options"].items()))
-    if variant.get("dh_radius") is not None:
+    if installed:
+        pass
+    elif variant.get("dh_toml"):
+        open(os.path.join(cfg, "DistantHorizons.toml"), "w", encoding="utf-8", newline="\n").write(variant["dh_toml"])
+    elif variant.get("dh_radius") is not None:
         open(os.path.join(cfg, "DistantHorizons.toml"), "w", encoding="utf-8", newline="\n").write(
             "[client.advanced.graphics.quality]\n\tlodChunkRenderDistanceRadius = %d\n" % variant["dh_radius"])
+    for rel, text in variant.get("extra_files", {}).items():        # config files the variant pre-writes (relative to config\)
+        path = os.path.join(cfg, *rel.split("/"))
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        open(path, "w", encoding="utf-8", newline="\n").write(text)
     # resource packs: the zips (copied once), the options entry
     rp = os.path.join(game, "resourcepacks")
     os.makedirs(rp, exist_ok=True)
@@ -109,4 +148,8 @@ def prepare(game, variant, src_game=REAL_GAME):
             if not (os.path.exists(d) and os.path.getsize(d) == os.path.getsize(s)):
                 shutil.copy2(s, d)
     packs = ["vanilla"] + list(variant.get("packs", [])) + ["file/angel-resources"]
+    if installed:                                        # the resource pack order the game folder's options.txt has
+        for line in open(os.path.join(src_game, "options.txt"), encoding="utf-8"):
+            if line.startswith("resourcePacks:"):
+                packs = json.loads(line.split(":", 1)[1])
     return {"resourcePacks": json.dumps(packs, separators=(",", ":"))}
