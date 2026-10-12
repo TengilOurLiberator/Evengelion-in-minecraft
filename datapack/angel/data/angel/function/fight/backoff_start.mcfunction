@@ -7,6 +7,7 @@ scoreboard players set #barp angel.fight 0
 scoreboard players set #hold angel.fight 0
 scoreboard players set #hold_t angel.fight 0
 scoreboard players set #blockcd angel.fight 0
+scoreboard players set #barsnd angel.fight 0
 function angel:angel/stop_walking
 scoreboard players set #dur angel.mon 6
 function angel:angel/pose_stagger

@@ -1,15 +1,15 @@
 scoreboard players set #force angel.story 0
 scoreboard players set #ride angel.story 0
 ride @a[limit=1] dismount
-forceload add 3072 48
 forceload add 3072 64
 forceload add 3072 80
-forceload add 3088 48
+forceload add 3072 96
 forceload add 3088 64
 forceload add 3088 80
-forceload add 3104 48
+forceload add 3088 96
 forceload add 3104 64
 forceload add 3104 80
+forceload add 3104 96
 forceload add 3056 16
 forceload add 3056 32
 forceload add 3056 48

@@ -1,6 +1,7 @@
 execute at @e[tag=angel.rei_uniform,tag=angel.char,limit=1] run particle minecraft:poof ~ ~1 ~ 0.25 0.6 0.25 0.02 10 force
 function angel:cast/remove {id:"rei_uniform"}
 kill @e[tag=angel.look_target]
+kill @e[tag=angel.gaze]
 data merge entity @e[tag=angel.bird0,limit=1] {start_interpolation:0,interpolation_duration:70,transformation:{translation:[-14.70483f,13.12956f,10.14078f],left_rotation:[0.0f,0.10097f,0.0f,0.99489f],scale:[0.5f,0.12f,0.28f],right_rotation:[0f,0f,0f,1f]}}
 data merge entity @e[tag=angel.bird1,limit=1] {start_interpolation:0,interpolation_duration:70,transformation:{translation:[-2.37334f,13.08856f,-13.90463f],left_rotation:[0.0f,-0.09209f,0.0f,0.99575f],scale:[0.5f,0.12f,0.28f],right_rotation:[0f,0f,0f,1f]}}
 data merge entity @e[tag=angel.bird2,limit=1] {start_interpolation:0,interpolation_duration:70,transformation:{translation:[3.93003f,12.74234f,2.5159f],left_rotation:[0.0f,0.10432f,0.0f,0.99454f],scale:[0.5f,0.12f,0.28f],right_rotation:[0f,0f,0f,1f]}}

@@ -1,1 +1,1 @@
-execute at @a[limit=1] run playsound angel:sfx.launch_charge master @a ~ ~ ~ 1.0 1.0 1.0
+execute as @e[tag=angel.lstat] run data merge entity @s {text:[{"text": "SYNC RATE", "color": "gold", "bold": true}, {"text": "\n"}, {"text": "0.5 %", "color": "gray"}]}

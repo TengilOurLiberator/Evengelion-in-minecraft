@@ -1,2 +1,2 @@
-function angel:story/hq/bank_off_4
-playsound angel:sfx.breaker_2 master @a 3097.5 72.69 76.422 1.5 0.85 0.4
+function angel:cast/walk {id:"medic1",x:3098.3,y:54.0,z:86.0,speed:0.1}
+function angel:cast/walk {id:"medic2",x:3094.7,y:54.0,z:86.0,speed:0.1}

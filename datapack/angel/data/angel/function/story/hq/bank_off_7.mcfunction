@@ -268,8 +268,11 @@ setblock 3097 62 59 minecraft:air
 setblock 3094 62 60 minecraft:air
 setblock 3098 62 60 minecraft:air
 setblock 3084 63 40 minecraft:air
+setblock 3108 63 40 minecraft:air
 setblock 3084 63 43 minecraft:air
+setblock 3108 63 43 minecraft:air
 setblock 3083 63 47 minecraft:air
+setblock 3109 63 47 minecraft:air
 setblock 3089 63 56 minecraft:air
 setblock 3092 63 59 minecraft:air
 setblock 3099 63 59 minecraft:air
@@ -277,9 +280,13 @@ setblock 3092 63 60 minecraft:air
 setblock 3100 63 60 minecraft:air
 setblock 3096 63 61 minecraft:air
 setblock 3084 64 38 minecraft:air
+setblock 3108 64 38 minecraft:air
 setblock 3084 64 39 minecraft:air
+setblock 3108 64 39 minecraft:air
 setblock 3084 64 43 minecraft:air
+setblock 3108 64 43 minecraft:air
 setblock 3081 64 45 minecraft:air
+setblock 3111 64 45 minecraft:air
 setblock 3090 64 59 minecraft:air
 setblock 3101 64 59 minecraft:air
 setblock 3090 64 60 minecraft:air
@@ -302,6 +309,7 @@ setblock 3100 66 61 minecraft:air
 fill 3072 66 61 3074 66 61 minecraft:gray_concrete
 fill 3118 66 61 3120 66 61 minecraft:gray_concrete
 setblock 3084 67 41 minecraft:air
+setblock 3108 67 41 minecraft:air
 setblock 3092 67 59 minecraft:air
 setblock 3095 67 59 minecraft:air
 setblock 3099 67 59 minecraft:air
@@ -310,6 +318,7 @@ setblock 3100 67 60 minecraft:air
 fill 3072 67 61 3074 67 61 minecraft:gray_concrete
 fill 3118 67 61 3120 67 61 minecraft:gray_concrete
 setblock 3082 68 43 minecraft:air
+setblock 3110 68 43 minecraft:air
 setblock 3093 68 58 minecraft:air
 setblock 3099 68 58 minecraft:air
 setblock 3089 68 59 minecraft:air
@@ -319,6 +328,7 @@ setblock 3101 68 59 minecraft:air
 fill 3072 68 61 3074 68 61 minecraft:gray_concrete
 fill 3118 68 61 3120 68 61 minecraft:gray_concrete
 setblock 3084 69 38 minecraft:air
+setblock 3108 69 38 minecraft:air
 setblock 3102 69 52 minecraft:air
 setblock 3092 69 56 minecraft:air
 setblock 3100 69 56 minecraft:air
@@ -331,8 +341,11 @@ setblock 3097 69 59 minecraft:air
 fill 3072 69 61 3074 69 61 minecraft:gray_concrete
 fill 3118 69 61 3120 69 61 minecraft:gray_concrete
 setblock 3084 70 38 minecraft:air
+setblock 3108 70 38 minecraft:air
 setblock 3081 70 40 minecraft:air
+setblock 3111 70 40 minecraft:air
 setblock 3083 70 41 minecraft:air
+setblock 3109 70 41 minecraft:air
 setblock 3090 70 51 minecraft:air
 setblock 3090 70 53 minecraft:air
 setblock 3101 70 53 minecraft:air

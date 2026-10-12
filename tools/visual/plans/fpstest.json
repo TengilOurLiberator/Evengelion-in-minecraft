@@ -1,0 +1,5 @@
+{"name": "fpstest", "fov": 75, "render": 12, "width": 1600, "height": 900,
+ "setup": ["gamemode spectator Tester", "execute as Tester run function angel:world/enter_outskirts"],
+ "shots": [
+  {"name": "outskirts_street_east", "steps": [{"enter": "outskirts"}, {"tp": "outskirts.street", "yaw": -90, "pitch": 0}], "settle": 4, "max": 25}
+ ]}

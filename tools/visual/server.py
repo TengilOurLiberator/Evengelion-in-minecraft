@@ -17,8 +17,9 @@ import rcon  # noqa: E402
 
 
 class Scratch:
-    def __init__(self, port=25604, rcon_port=25614, exclude_dirs=("story", "say"), keep=False, datapack=None):
+    def __init__(self, port=25604, rcon_port=25614, exclude_dirs=("story", "say"), keep=False, datapack=None, extra_mods=()):
         self.port, self.rcon_port, self.keep = port, rcon_port, keep
+        self.extra_mods = extra_mods      # jars copied into the scratch server's mods folder (e.g. Distant Horizons)
         self.datapack = datapack          # a datapack folder (holding pack.mcmeta) to use instead of datapack\angel
         self.exclude = exclude_dirs
         self.tmp = tempfile.mkdtemp(prefix="aa_visual_")
@@ -47,6 +48,8 @@ class Scratch:
             out.append(ln)
         out += [f"{k}={v}" for k, v in want.items() if k not in seen]
         open(pf, "w", encoding="ascii").write("\n".join(out) + "\n")
+        for jar in self.extra_mods:
+            shutil.copy2(jar, os.path.join(self.srv, "mods", os.path.basename(jar)))
         self.copy_datapack()
 
     def copy_datapack(self):

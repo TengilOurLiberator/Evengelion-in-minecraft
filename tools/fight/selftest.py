@@ -1,4 +1,4 @@
-﻿"""Live test of the Angel and the fight on a scratch copy of the server (nothing in the repo or the real server changes).
+"""Live test of the Angel and the fight on a scratch copy of the server (nothing in the repo or the real server changes).
 
     python selftest.py [--keep]
 
@@ -22,6 +22,7 @@ sys.path.insert(0, os.path.join(ROOT, "tools"))
 sys.path.insert(0, HERE)
 import rcon  # noqa: E402
 from gen_fight import CFG  # noqa: E402  (the fight's numbers: this test follows them)
+import model  # noqa: E402
 
 sys.stdout.reconfigure(encoding="utf-8")
 JAVA = os.path.join(os.environ.get("LOCALAPPDATA", ""), "Packages", "Microsoft.4297127D64EC6_8wekyb3d8bbwe", "LocalCache",
@@ -100,6 +101,118 @@ def fresh_fight():
     wait(30)
     c("function angel:fight/begin_ai")
     setv("cd", 9999)
+
+
+TALK = "scoreboard players set #talking angel.story %d"
+
+
+def talk(v):
+    """Somebody is speaking (v 1: the story's t_line counts #line_left down, so it is made very long) or not (0)."""
+    c(TALK % v)
+    c("scoreboard players set #line_left angel.story %d" % (99999 if v else 0))
+
+
+def wait_until(fn, secs, step=0.05):
+    t_end = time.time() + secs
+    while time.time() < t_end:
+        v = fn()
+        if v:
+            return v
+        time.sleep(step)
+    return fn()
+
+
+CK_STATE = []
+
+
+def to_wrap(talking=0, crack=True):
+    """A fresh fight taken to the start of the wrap (phase 3, st 7: wrapped, the countdown held or running) through the crack (checkpoint set) or not.
+    Giant 10 blocks in front of the monster, in reach.  `talking` is what #talking angel.story is when the wrap's bark is queued (1: someone is speaking)."""
+    fresh_fight()
+    place_monster(110.0)
+    giant_at(120.0)
+    wait(10)
+    if crack:
+        setv("ch", CFG["crack_at"] + 1)
+        hit()
+        wait(5)
+        CK_STATE[:] = [pos(ROOT_), pos(GIANT)]           # where they stand when the core cracks: the checkpoint
+    setv("ch", CFG["wrap_at"] + 1)
+    c("data modify storage angel:fight q set value []")
+    talk(talking)
+    setv("hitcd", 0)
+    c("function angel:fight/test/hit_core")
+    return wait_until(lambda: score("#st") == 7, 10)
+
+
+def run_hitter(offsets):
+    """A scripted hitter in GAME time: one click at each tick offset after the countdown started (#wgo 1).  Returns the countdown (ticks left) read just before
+    the last click it made."""
+    wait_until(lambda: score("#wgo") == 1, 12)
+    t0 = score("#tick")
+    last = None
+    for off in offsets:
+        while score("#tick") - t0 < off:
+            time.sleep(0.004)
+        if score("#phase") != 3:
+            break
+        last = score("#wt")
+        c("function angel:fight/test/hit_core")
+    wait(4)
+    return last
+
+
+class StoryModel:
+    """The story's polling of the fight (tools/story/scenes/s07.py), line for line: beat 70 while fighting, 81 from phase 5 until the fight runs again in phase
+    0..3, and the music: phase 1 fight, 2..3 fight_final, 4 stop, 5 defeat, 0 after a defeat re-arms.  Fed the (phase, run) pairs the scratch server shows."""
+    def __init__(self):
+        self.beat, self.mus, self.log = 70, 0, ["start"]
+
+    def poll(self, ph, run):
+        if ph == 5:
+            self.beat = 81
+        if self.beat == 81 and run == 1 and 0 <= ph <= 3:
+            self.beat = 70
+        before = self.mus
+        if ph == 1 and self.mus == 0:
+            self.mus = 1; self.log.append("fight")
+        if 2 <= ph <= 3 and self.mus in (0, 1):
+            self.mus = 2; self.log.append("final")
+        if ph == 4 and self.mus in (0, 1, 2):
+            self.mus = 3; self.log.append("stop")
+        if ph == 5 and self.mus in (0, 1, 2):
+            self.mus = 3; self.log.append("defeat")
+        if ph == 0 and self.mus == 3:
+            self.mus = 0
+
+
+def lose_and_watch(max_s=60):
+    """After a loss (phase 5): keeps the story quiet so that the defeat lines end, and records the (phase, run) sequence until the fight is running again (or the
+    time is up).  Returns (phases seen in order, StoryModel, #attempt)."""
+    story = StoryModel()
+    story.played = set()
+    seq = []
+    a0 = score("#attempt")
+    t_end = time.time() + max_s
+    n = 0
+    while time.time() < t_end:
+        ph, run = score("#phase"), score("#run")
+        if not seq or seq[-1] != ph:
+            seq.append(ph)
+        story.poll(ph, run)
+        n += 1
+        if n % 3 == 0:
+            talk(0)
+        if n % 8 == 0:
+            story.played |= set(played())
+        if score("#attempt") == a0 + 1 and run == 1:
+            break
+        time.sleep(0.05)
+    # a few more polls, as the story would
+    for _ in range(10):
+        story.poll(score("#phase"), score("#run"))
+        time.sleep(0.05)
+    return seq, story, score("#attempt")
 
 
 def main():
@@ -188,6 +301,20 @@ def run_tests(log):
     lib = {"barrier", "core_crack", "beam_charge", "beam_fire", "giant_hit", "giant_punch", "cross", "footfall_giant"}
     check("the library's fight events are used: " + ", ".join(sorted(lib)) + ", heartbeat",
           lib <= {u.split(".", 1)[1] for u in used if u.startswith("angel:sfx.")} and any("angel:sfx.heartbeat" in ln for ls in allf.values() for ln in ls))
+
+    print("== geometry: how close the monster's display model comes to the giant's eyes (%.1f up), from the pose key frames" % model.EYE_H)
+    rows = model.eye_clearance_table()
+    groups = [("idle", ("idle_a", "idle_b")), ("walk", ("walk_l", "walk_r")), ("windup", ("windup",)), ("stagger and the back-off recoil", ("stagger", "idle_a -> stagger", "idle_b -> stagger", "windup -> stagger", "walk_l -> stagger", "walk_r -> stagger")),
+              ("regenerating (the crack's pause)", ("regen_", "idle_a -> regen_0")), ("thrust (it strikes the chest)", ("thrust", "windup -> thrust")), ("charging (d 24+)", ("charge",)),
+              ("wrapping (arms round the sides)", ("wrap_",))]
+    for gname, pre in groups:
+        sel = [r for r in rows if any(r[0].startswith(p) for p in pre)]
+        worst = min(sel, key=lambda r: r[1])
+        check("eye clearance, %s: at least %.2f blocks over %d frames/ranges (closest %.2f: %s, eye %s blocks away)" % (gname, model.MIN_CLEAR, len(sel), worst[1], worst[2], worst[3]),
+              all(r[1] >= r[4] for r in sel), "; ".join(f"{r[0]} {r[1]:.2f}" for r in sel if r[1] < r[4]))
+    import gen_angel
+    tp = [e for e in model.pose_boxes(model.poses()["thrust"]) if e["name"] == "palmR"][0]["centre"] * 0.3
+    check("the arm thrust strikes the chest, not the head: the hand ends %.1f up at %.1f ahead (giant's chest about 18, eyes %.1f)" % (tp[1], tp[2], model.EYE_H), 14 <= tp[1] <= 21 and tp[2] >= 13, f"{tp}")
 
     print("== the monster")
     for H in (60, 30):
@@ -397,7 +524,17 @@ def run_tests(log):
     z_before = pos(ROOT_)[2]
     check("%d landed hits are counted and the monster has not backed off yet" % (N - 1),
           score("#bo") == N - 1 and score("#bar") == 0 and score("#st") == 0, f"bo {score('#bo')} bar {score('#bar')} st {score('#st')}")
-    hit()
+    x_before = pos(ROOT_)[0]
+    setv("hitcd", 0)
+    c("function angel:fight/test/hit_core")
+    wait(3)
+    z_3 = pos(ROOT_)[2]
+    wait(9)
+    z_12 = pos(ROOT_)[2]
+    sh = CFG["shove"] * CFG["shove_ticks"]
+    check("back-off: it is thrown straight back %.1f blocks along the avenue in the first %d ticks (interpolated), away from the giant" % (sh, CFG["shove_ticks"]),
+          0.3 < z_before - z_3 < sh - 0.6 and sh - 0.8 <= z_before - z_12 <= sh + 1.2 and abs(pos(ROOT_)[0] - x_before) < 0.5 and gz > z_before,
+          f"z {z_before:.1f} -> {z_3:.1f} (3 ticks) -> {z_12:.1f} (12 ticks), x {x_before:.1f} -> {pos(ROOT_)[0]:.1f}")
     check("the %dth landed hit makes it disengage: stagger, barrier up, counter reset" % N,
           score("#st") == 9 and score("#bar") == 1 and score("#bo") == 0 and score("#ch") == CFG["core_hp"] - N and score("#phase") == 1,
           f"st {score('#st')} bar {score('#bar')} bo {score('#bo')} ch {score('#ch')}")
@@ -492,11 +629,9 @@ def run_tests(log):
     wait(100)
     hit()
     check("wrap starts at %d hits left with the countdown bar" % CFG["wrap_at"], score("#phase") == 3, f"phase {score('#phase')} st {score('#st')}")
-    for _ in range(40):
-        if score("#st") == 7:
-            break
-        wait(10)
-    check("monster wraps round the giant and the countdown runs", score("#st") == 7 and score("#wt") < CFG["wrap_ticks"], f"st {score('#st')} wt {score('#wt')}")
+    talk(0)
+    check("monster wraps round the giant and the countdown runs", wait_until(lambda: score("#st") == 7 and score("#wgo") == 1 and score("#wt") < CFG["wrap_ticks"], 12),
+          f"st {score('#st')} wgo {score('#wgo')} wt {score('#wt')}")
     check("wrap bar visible", "visible" in c("bossbar get angel:fight/wrap visible") and "hidden" not in c("bossbar get angel:fight/wrap visible"))
     for _ in range(CFG["wrap_at"]):
         hit()
@@ -509,29 +644,147 @@ def run_tests(log):
     check("win: everything cleaned up, giant back to human scale", score("#run") == 0 and count("@e[tag=angel.fight]") == 0 and "1.0" in c("attribute @e[tag=angel.test,limit=1] minecraft:scale get"))
     check("win: all four victory lines (7.15-7.18) spoken in order", [x for x in played() if x in ("7_15", "7_16", "7_17", "7_18")] == ["7_15", "7_16", "7_17", "7_18"], str(played()))
     check("win: hand-off made (story/fight_done guarded)", "won" in c("data get storage angel:fight handoff") or os.path.isfile(os.path.join(ROOT, "datapack", "angel", "data", "angel", "function", "story", "fight_done.mcfunction")))
-    # loss by countdown, restart
+
+    # ---- the wrap's rules: the countdown waits for 7.14; a generous target; no guard; feedback; stages
+    print("== the wrap: rules")
+    to_wrap(talking=1)
+    wait(40)
+    check("the countdown does not run until the bark 7.14 has begun (someone else is speaking: bar full, held)",
+          score("#st") == 7 and score("#wgo") == 0 and score("#wt") == CFG["wrap_ticks"] and "7_14" not in played(), f"wgo {score('#wgo')} wt {score('#wt')} played {played()}")
+    check("... the bark is at the front of the queue", "7_14" in c("data get storage angel:fight q"))
+    talk(0)
+    check("... and the countdown starts once 7.14 has begun (the line is played, #wgo 1, the bar runs down)", wait_until(lambda: score("#wgo") == 1, 5) and "7_14" in played(),
+          f"wgo {score('#wgo')} played {played()}")
+    wait(12)
+    check("... the bar is running", score("#wt") < CFG["wrap_ticks"], f"wt {score('#wt')}")
+    to_wrap(talking=1)
+    wait(CFG["wrap_wait"] + 15)
+    check("... but it never waits more than wrap_wait (%d) ticks for the line" % CFG["wrap_wait"], score("#wgo") == 1 and score("#wt") < CFG["wrap_ticks"], f"wgo {score('#wgo')} wt {score('#wt')}")
+
+    # the target: the body box is the big one while wrapped (and small again otherwise); a swing in roughly the monster's direction hits it
+    def box_w():
+        m = re.search(r"([\d.]+)f", c("data get entity @e[type=minecraft:interaction,tag=angel.body,limit=1] width"))
+        return float(m.group(1)) if m else -1
+    import gen_angel
+    want = gen_angel.WRAP_BODY_W * 30
+    check("while wrapped the body box is the big target (%.1f blocks wide, %.0f tall)" % (want, gen_angel.WRAP_BODY_H * 30), abs(box_w() - want) < 0.2, f"{box_w()}")
+    # geometry: eye 25.9 up at the giant, the monster's root wrap_dist away; rays within 30 degrees sideways and from 60 below to 10 above the line to
+    # its chest, reach 18 (entity_interaction_range): all enter the box (slab test on its axis-aligned box)
+    import math
+    k30 = 30 / 100.0
+    half = gen_angel.WRAP_BODY_W * 30 / 2
+    y0 = gen_angel.WRAP_BODY_Y * 30
+    y1 = y0 + gen_angel.WRAP_BODY_H * 30
+    dd = CFG["wrap_dist"]
+    box = ((-half, y0, dd - half), (half, y1, dd + half))
+    eye = (0.0, 25.9, 0.0)
+
+    def ray_hits(yaw, pitch, reach=18.0):
+        cy_, sy_, cp_, sp_ = math.cos(math.radians(yaw)), math.sin(math.radians(yaw)), math.cos(math.radians(pitch)), math.sin(math.radians(pitch))
+        dr = (sy_ * cp_, sp_, cy_ * cp_)
+        t0, t1 = 0.0, reach
+        for i in range(3):
+            if abs(dr[i]) < 1e-9:
+                if not box[0][i] <= eye[i] <= box[1][i]:
+                    return False
+                continue
+            a, b = (box[0][i] - eye[i]) / dr[i], (box[1][i] - eye[i]) / dr[i]
+            t0, t1 = max(t0, min(a, b)), min(t1, max(a, b))
+        return t0 <= t1
+    miss = [(yw, pt) for yw in range(-30, 31, 5) for pt in range(-60, 11, 5) if not ray_hits(yw, pt)]
+    check("a swing within 30 degrees sideways and from 10 above to 60 below the direction of the wrapped monster hits the big box (reach 18)", not miss, f"misses {miss[:4]} of 13 x 15 rays")
+    check("the eye is outside the box (it would be a hit from every direction otherwise)", not (box[0][0] <= eye[0] <= box[1][0] and box[0][2] <= eye[2] <= box[1][2]),
+          f"box z from {dd - half:.1f}")
+
+    # every hit counts: no guard, no barrier, core box and body box alike; stages of damage
+    to_wrap(talking=0)
+    wait_until(lambda: score("#wgo") == 1, 12)
+    wait(30)                               # (the guard that the hit which started the wrap armed has run out by now: it must not come back)
+    ch0, g0 = score("#ch"), (score("#guarded") or 0)
+    for i in range(6):
+        c("function angel:fight/test/hit_core" if i % 2 == 0 else "function angel:fight/test/hit_body")
+        wait(2)
+    check("wrap hits are never guarded and always count: 6 clicks 2 ticks apart (core box and body box) = 6 hits",
+          ch0 - score("#ch") == 6 and (score("#guarded") or 0) == g0 and score("#hitcd") == 0, f"ch {ch0} -> {score('#ch')} guarded {score('#guarded')} hitcd {score('#hitcd')}")
+
+    def cracks():
+        return [("white_concrete" in c("data get entity @e[type=minecraft:block_display,tag=angel.crack%d,limit=1] block_state" % i)) for i in range(1, 5)]
+    check("the core cracks in visible stages: at %d hits left 3 of the 4 cracks of light are open, the 4th is not yet" % score("#ch"), cracks() == [True, True, True, False], str(cracks()))
+    setv("bar", 1)
+    c("function angel:fight/test/hit_core")
+    wait(3)
+    check("the barrier being up changes nothing in the wrap (the hit counts)", ch0 - score("#ch") == 7, f"ch {score('#ch')}")
+    setv("bar", 0)
+    setv("wt", 100)
+    c("function angel:fight/test/hit_core")
+    wait(3)
+    wt1 = score("#wt")
+    check("each landed hit gives the countdown bar %d ticks back" % CFG["wrap_bonus"], 100 + CFG["wrap_bonus"] - 6 <= wt1 <= 100 + CFG["wrap_bonus"], f"wt 100 -> {wt1} after 3 ticks")
+    check("... and the 4th crack opens with the 2nd-last hit", cracks() == [True, True, True, True] and score("#ch") == CFG["wrap_at"] - 8, f"{cracks()} ch {score('#ch')}")
+    setv("wt", CFG["wrap_tight_at"] - 20)
+    wait(14)
+    check("in the last %d ticks the monster squeezes (pose wrap_tight, stage 1)" % CFG["wrap_tight_at"], score("#wstage") == 1, f"wstage {score('#wstage')}")
+    setv("wt", 250)
+    wait(14)
+    check("... and loosens when a hit puts the time back (stage 0)", score("#wstage") == 0, f"wstage {score('#wstage')}")
+    setv("wt", 300)
+    wait(3)
+    p_hi = score("#hbp")
+    setv("wt", 40)
+    wait(3)
+    p_lo = score("#hbp")
+    check("the heartbeat quickens as time runs down: %s ticks between beats at 15 s, %s at 2 s" % (p_hi, p_lo), p_hi is not None and p_lo is not None and p_hi >= 22 and p_lo <= 10, f"{p_hi} -> {p_lo}")
+    c("function angel:fight/stop")
+
+    # the pace: a hitter at one hit per 1.5 s wins with at least 5 s to spare; a 6 s pause in all loses
+    print("== the wrap: pace")
+    to_wrap(talking=0)
+    last = run_hitter([30 * i for i in range(1, CFG["wrap_at"] + 1)])
+    check("a hitter at one hit per 1.5 s wins the wrap with at least 5 s to spare", score("#phase") == 4 and last is not None and last >= 100,
+          f"phase {score('#phase')}, {None if last is None else last / 20:.2f} s left when the last hit landed")
+    c("function angel:fight/stop")
+    to_wrap(talking=0)
+    last = run_hitter([120 + 30 * i for i in range(1, CFG["wrap_at"] + 1)])
+    check("the same hitter who stops swinging for 6 s in all loses it (self-destruct, phase 5, hits still left)", score("#phase") == 5 and score("#ch") >= 1,
+          f"phase {score('#phase')} ch {score('#ch')}")
+    seq, story, att = lose_and_watch(90)
+    check("the loss after the core has cracked restarts at the crack, NOT at the launch: phases seen 5 (lost) -> 0 (about 3 s, run 0) -> 2 (cracked)", seq == [5, 0, 2], str(seq))
+    mpos, gpos = pos(ROOT_) or [0, 0, 0], pos(GIANT) or [0, 0, 0]
+    check("checkpoint state: phase 2, core at its crack health %d, giant healed (%d), the monster and the giant where they stood at the crack, the hunched pause (st 5)" % (CFG["crack_at"], CFG["giant_hp"]),
+          score("#phase") == 2 and score("#ch") == CFG["crack_at"] and score("#gh") == CFG["giant_hp"] and score("#st") == 5 and score("#run") == 1
+          and all(abs(a - b) < 0.35 for a, b in zip(mpos, CK_STATE[0])) and all(abs(a - b) < 0.35 for a, b in zip(gpos, CK_STATE[1])),
+          f"phase {score('#phase')} ch {score('#ch')} gh {score('#gh')} st {score('#st')} monster {mpos} (was {CK_STATE[0]}) giant {gpos} (was {CK_STATE[1]})")
+    check("checkpoint state: core cracked (magma, no wrap cracks), no barrier, countdown reset and hidden, giant at scale 16, attempt +1, intro lines not repeated",
+          "magma" in c("data get entity @e[type=minecraft:block_display,tag=angel.corebody,limit=1] block_state") and cracks() == [False] * 4 and score("#bar") == 0
+          and score("#wgo") == 0 and score("#wt") == CFG["wrap_ticks"] and "hidden" in c("bossbar get angel:fight/wrap visible")
+          and "16.0" in c("attribute @e[tag=angel.test,limit=1] minecraft:scale get") and "7_01" not in played() and "7_02" not in played(),
+          f"cracks {cracks()} bar {score('#bar')} wt {score('#wt')} played {played()}")
+    check("hand-over: the story's polling (s07.py) sees beat 81 during the defeat and 70 again, music: defeat, then fight_final (not fight)", story.beat == 70 and story.log == ["start", "defeat", "final"],
+          f"beat {story.beat} music log {story.log}")
+    # a second loss in the cracked phase (health) goes back to the same checkpoint
+    talk(0)
+    setv("cd", 9999)
+    c("function angel:fight/test/hurt {dmg:60}")
+    setv("ginv", 0)
+    c("function angel:fight/test/hurt {dmg:60}")
+    check("a loss by health in the cracked phase is a loss too", score("#phase") == 5)
+    seq, story, att = lose_and_watch(90)
+    check("... and restarts at the same checkpoint: 5 -> 0 -> 2, core at %d, giant healed" % CFG["crack_at"], seq == [5, 0, 2] and score("#ch") == CFG["crack_at"] and score("#gh") == CFG["giant_hp"], f"{seq} ch {score('#ch')} gh {score('#gh')}")
+    c("function angel:fight/stop")
+
+    # a loss BEFORE the core has cracked restarts from the launch, as before (a countdown loss cannot come before the crack: the wrap follows it)
     fresh_fight()
-    giant_at(pos(ROOT_)[2] + 9)
     wait(5)
-    setv("ch", CFG["wrap_at"] + 1)
-    hit()
-    for _ in range(30):
-        if score("#st") == 7:
-            break
-        wait(10)
-    setv("wt", 30)
-    wait(60)
-    check("self-destruct countdown reaching zero is a loss", score("#phase") == 5)
+    talk(0)
+    c("function angel:fight/test/hurt {dmg:60}")
+    setv("ginv", 0)
+    c("function angel:fight/test/hurt {dmg:60}")
+    check("giant health 0 before the crack is a loss", score("#phase") == 5 and score("#ck") == 0, f"phase {score('#phase')} ck {score('#ck')}")
     a0 = score("#attempt")
-    seen = set()
-    for _ in range(80):
-        seen |= set(played())
-        if score("#attempt") == a0 + 1:
-            break
-        wait(20)
-    check("after the defeat barks the fight restarts from the launch", score("#attempt") == a0 + 1 and score("#phase") == 0 and count("@e[tag=angel.mon]") > 100)
+    seq, story, att = lose_and_watch(90)
+    check("a loss before the core cracked restarts from the launch: phases 5 -> 0 (the intro), monster rebuilt", att == a0 + 1 and {"7_19", "7_20"} <= story.played and seq == [5, 0] and score("#phase") == 0 and count("@e[tag=angel.mon]") > 100, f"{seq} attempt {a0} -> {att}")
+    check("... the story model: beat 70 again, music re-armed (defeat, then nothing until phase 1)", story.beat == 70 and story.log == ["start", "defeat"], f"{story.beat} {story.log}")
     check("restart clears the barrier, the hold and the back-off counter", score("#bar") == 0 and score("#hold") == 0 and score("#bo") == 0)
-    check("defeat lines 7.19 and 7.20 were spoken before the restart", {"7_19", "7_20"} <= seen, str(sorted(seen)))
     check("restart restores the giant: scale 16 again, health full", "16.0" in c("attribute @e[tag=angel.test,limit=1] minecraft:scale get") and score("#gh") == 100)
     # loss by health
     c("function angel:fight/begin_ai")

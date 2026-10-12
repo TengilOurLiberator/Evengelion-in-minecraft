@@ -1,2 +1,3 @@
-function angel:story/hq/bank_off_2
-playsound angel:sfx.breaker_3 master @a 3097.112 96.845 75.784 1.5 0.85 0.4
+execute at @a[limit=1] run playsound angel:sfx.jolt master @a ~ ~ ~ 2.4 0.9 1.0
+function angel:story/hq/shock_floor
+function angel:cast/dismount {id:"rei"}

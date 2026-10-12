@@ -3,6 +3,7 @@ execute if score #hitcd angel.fight matches 1.. run scoreboard players remove #h
 execute if score #cd09 angel.fight matches 1.. run scoreboard players remove #cd09 angel.fight 1
 execute if score #blockcd angel.fight matches 1.. run scoreboard players remove #blockcd angel.fight 1
 execute if score #sparkcd angel.fight matches 1.. run scoreboard players remove #sparkcd angel.fight 1
+execute if score #barsnd angel.fight matches 1.. run scoreboard players remove #barsnd angel.fight 1
 # the raised barrier (after a back-off) pulses as a wall of light
 execute if score #bar angel.fight matches 1 run scoreboard players add #barp angel.fight 1
 execute if score #barp angel.fight matches 24.. run function angel:fight/bar_pulse

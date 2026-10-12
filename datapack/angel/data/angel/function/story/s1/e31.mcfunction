@@ -25,7 +25,7 @@ summon minecraft:block_display 107.206 75.0 135.096 {Tags:["angel.story","angel.
 summon minecraft:block_display 147.601 75.0 134.859 {Tags:["angel.story","angel.bird","angel.bird23"],block_state:"minecraft:black_concrete",view_range:2.0f,interpolation_duration:70,teleport_duration:0,transformation:{translation:[-0.25f,0.0f,-0.14f],left_rotation:[0.0f,0.0f,0.0f,1.0f],scale:[0.5f,0.12f,0.28f],right_rotation:[0f,0f,0f,1f]}}
 summon minecraft:block_display 143.166 75.0 135.007 {Tags:["angel.story","angel.bird","angel.bird24"],block_state:"minecraft:black_concrete",view_range:2.0f,interpolation_duration:70,teleport_duration:0,transformation:{translation:[-0.25f,0.0f,-0.14f],left_rotation:[0.0f,0.0f,0.0f,1.0f],scale:[0.5f,0.12f,0.28f],right_rotation:[0f,0f,0f,1f]}}
 summon minecraft:block_display 125.135 75.0 121.045 {Tags:["angel.story","angel.bird","angel.bird25"],block_state:"minecraft:black_concrete",view_range:2.0f,interpolation_duration:70,teleport_duration:0,transformation:{translation:[-0.25f,0.0f,-0.14f],left_rotation:[0.0f,0.0f,0.0f,1.0f],scale:[0.5f,0.12f,0.28f],right_rotation:[0f,0f,0f,1f]}}
-summon minecraft:marker 113.5 65.2 128.5 {Tags:["angel.story","angel.look_target","angel.girl_mark"]}
+summon minecraft:marker 105.5 65.2 128.5 {Tags:["angel.story","angel.look_target","angel.girl_mark"]}
 scoreboard players set #f.seen angel.story 0
 scoreboard players set #v.away angel.story 0
 scoreboard players set #step angel.story 32

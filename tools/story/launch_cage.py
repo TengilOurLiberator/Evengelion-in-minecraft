@@ -5,6 +5,7 @@ The lists in sets/hq.py (CAGE_LIGHTS, BOOTH_LIGHTS, EYES_LEFT, EYES_RIGHT) are i
 from context import cast_look, cast_mount, cast_remove, cast_scale, cast_summon, tp_player
 from core import NS, OBJ, P, PA, TAG, fn, num, sset
 import launch_geo
+from hq_cage import booth_anchor
 
 GENDO_SCALE = 2.0                 # the commander at the front edge of the booth: twice life size (scene 5 does the same)
 DIRTY_MINE = "#l.cage"          # 1 once scenes 6 / 7 have switched the cage lights or the eyes; the restore function puts them back
@@ -58,7 +59,7 @@ def lights_on():
 def cast_for_cockpit(ctx):
     """Cage as the boy sees it from the giant's eyes: everyone gone, then Misato and Ritsuko on their marks looking up, Gendo in the booth."""
     a = ctx.anchor
-    cm, sm, bo = a("hq.captain_mark"), a("hq.scientist_mark"), a("hq.booth")
+    cm, sm, bo = a("hq.captain_mark"), a("hq.scientist_mark"), booth_anchor(ctx)
     return [fn("cast/remove_all"),
             "function angel:cast/gurney_remove",
             cast_summon("misato", cm["x"], cm["y"], cm["z"], cm["yaw"]),
@@ -67,18 +68,38 @@ def cast_for_cockpit(ctx):
             cast_look("misato", "player"), cast_look("ritsuko", "player"), cast_look("gendo", "player")]
 
 
+# THE CURTAIN CALL (the end of the story, after TO BE CONTINUED): he wakes in the cage at the south end of the bridge's last stretch, facing north;
+# in front of him, seven blocks away, stand Misato and Ritsuko with Rei on her gurney between them (her head toward him), all of them turned to him,
+# the giant's face behind them and high above, the commander in his booth up to the right, every light on.
+# (local coordinates of the hq set; `ending_spots` adds the set's origin)
+ENDING_PLAYER = (96.5, 54.0, 83.0, 180.0, -8.0)             # x, y, z, yaw (north), pitch: the head is turned in the black teleport that puts him here
+ENDING_GURNEY = (96.5, 54.0, 75.2, 180.0)                   # the middle of the gurney's floor point, yaw 180: foot end north, her head toward him
+ENDING_MISATO = (94.35, 54.0, 75.2)
+ENDING_RITSUKO = (98.65, 54.0, 75.2)
+
+
+def ending_spots(ctx):
+    """World coordinates of the curtain call: {player: (x, y, z, yaw, pitch), gurney: (x, y, z, yaw), misato: (x, y, z), ritsuko: (x, y, z)}."""
+    ox, oy, oz = ctx.probe("hq").o
+    sh = lambda p: (p[0] + ox, p[1] + oy, p[2] + oz) + tuple(p[3:])
+    return dict(player=sh(ENDING_PLAYER), gurney=sh(ENDING_GURNEY), misato=sh(ENDING_MISATO), ritsuko=sh(ENDING_RITSUKO))
+
+
 def cast_for_ending(ctx):
-    """The cage after the fight: Misato and Ritsuko on their marks, Gendo in the booth, Rei on the gurney at gurney_mark."""
+    """The cage after the fight, as the curtain call: Misato and Ritsuko either side of Rei on her gurney, seven blocks in front of the boy and turned
+    to him; Gendo in the booth looking down at him."""
     a = ctx.anchor
-    cm, sm, bo, gm = a("hq.captain_mark"), a("hq.scientist_mark"), a("hq.booth"), a("hq.gurney_mark")
+    bo = booth_anchor(ctx)
+    sp = ending_spots(ctx)
+    gx, gy, gz, gyaw = sp["gurney"]
     return [fn("cast/remove_all"),
             "function angel:cast/gurney_remove",
-            cast_summon("misato", cm["x"], cm["y"], cm["z"], cm["yaw"]),
-            cast_summon("ritsuko", sm["x"], sm["y"], sm["z"], sm["yaw"]),
+            cast_summon("misato", *sp["misato"], 0.0),
+            cast_summon("ritsuko", *sp["ritsuko"], 0.0),
             cast_summon("gendo", bo["x"], bo["y"], bo["z"], bo["yaw"]), cast_scale("gendo", GENDO_SCALE),
             # the gurney, then Rei on it: gurney, summon, mount, lie (tools/cast/README.md)
-            f"execute positioned {num(gm['x'])} {num(gm['y'])} {num(gm['z'])} rotated {num(gm['yaw'], 2)} 0 run function angel:cast/gurney {{}}",
-            cast_summon("rei", gm["x"], gm["y"] + 0.82, gm["z"], gm["yaw"]),
+            f"execute positioned {num(gx)} {num(gy)} {num(gz)} rotated {num(gyaw, 2)} 0 run function angel:cast/gurney {{}}",
+            cast_summon("rei", gx, gy + 0.82, gz, gyaw),
             cast_mount("rei", "gurney"),
             f'function angel:cast/pose {{id:"rei",pose:"lying"}}',
             cast_look("misato", "player"), cast_look("ritsuko", "player"), cast_look("gendo", "player")]

@@ -26,15 +26,16 @@ import math
 import lead as L
 from audio import sfx
 from context import cast_look, cast_mount, cast_pose, cast_remove, cast_scale, cast_summon, tp_player
-from core import OBJ, P, PA, T, blind, dir_to_yaw, fn, num, sset
+from core import CFG, OBJ, P, PA, T, blind, dir_to_yaw, fn, num, sset
 from engine import C, Cond, Nudges
-from hq_cage import N_BANKS, cage, dirty_cmd
+from hq_cage import N_BANKS, booth_anchor, cage, dirty_cmd
 import worldgen_sky
 
 N = 5
 TITLE = "The cage"
 
 SPEED = 0.15
+GURNEY_SETTLE = 0.7        # seconds the cast's gurney takes to turn to its goal and settle (the arrival score comes a few ticks after it stops)
 
 
 def walk(who, x, y, z, speed=0.13):
@@ -45,7 +46,7 @@ def build(s, ctx):
     A = ctx.anchor
     cdoor, bstart, face = A("hq.cage_door"), A("hq.bridge_start"), A("hq.face")
     cap, sci, gin, gmark = A("hq.captain_mark"), A("hq.scientist_mark"), A("hq.gurney_in"), A("hq.gurney_mark")
-    shield, d2, booth = A("hq.shield"), A("hq.debris_2"), A("hq.booth")
+    shield, d2, booth = A("hq.shield"), A("hq.debris_2"), booth_anchor(ctx)
     cg = cage(ctx)
     XC = cdoor["x"]                       # 3096.5, the centre of the catwalk, the door and the bridge
     Y = cap["y"]                          # 54, the deck
@@ -124,14 +125,22 @@ def build(s, ctx):
     s.wait_answer(speaker="ritsuko", prompt="answer Ritsuko")
 
     # ================================================================ the father
-    flick_booth = cg.flicker("booth", [], [(0, "on"), (3, "off"), (5, "on"), (9, "off"), (11, "on")], extra_off=["booth"])
+    # The eye must go to the booth without the head being turned: the cage's own lights dip a little (three of the eight banks go out for 1.3 s,
+    # a change the whole field of view feels), and in the dip ONE hard light snaps on him with its sound coming from his direction (a flare of
+    # light at his face too); Misato and Ritsuko turn and look up at him a beat later (the way they look is the second signal), and he says
+    # nothing for two full seconds more.
+    dip = cg.flicker("dip", [1, 3, 5], [(0, "off"), (26, "on")])
     gyaw = dir_to_yaw(HE_STOPS[0] - booth["x"], HE_STOPS[2] - booth["z"])
     # Gendo stands exactly on hq.booth (the front edge of the balcony, so that no pane or rail crosses him), at twice life size: a mannequin with
     # the `scale` attribute 2.0 (angel:cast/scale), looking down at the boy's stop
+    s.do(dip, note="the cage's other lights dip (banks 1, 3, 5 off for 1.3 s)")
+    s.sleep(0.4)
     s.do(cast_summon("gendo", booth["x"], booth["y"], booth["z"], gyaw), cast_scale("gendo", GENDO_SCALE), *L.face(ctx, "gendo", *HE_STOPS, ticks=8),
-         sset("#present_gendo", 1), flick_booth, sfx("sfx.booth_light", at=(booth["x"], booth["y"] + 4, booth["z"] - 1), vol=2.5, minvol=0.7),
-         note="the booth lights come on (they stutter for 0.55 s): Gendo stands at the front edge, looking down")
-    s.sleep(0.55 + 2.0, note="the lights settle, then TWO FULL SECONDS of him lit and still before he speaks")
+         sset("#present_gendo", 1), fn("story/hq/booth_on"), fn("story/hq/booth_flare"),
+         sfx("sfx.booth_light", at=(booth["x"], booth["y"] + 2.5, booth["z"]), vol=4.0, minvol=1.0),
+         note="ONE hard light snaps on him, sfx.booth_light from the booth, a flare at his face: Gendo stands at the front edge, looking down")
+    s.after(0.35, *L.face(ctx, "misato", *BOOTH_EYE), *L.face(ctx, "ritsuko", *BOOTH_EYE), note="Misato and Ritsuko both turn and look up at him")
+    s.sleep(2.0, note="TWO FULL SECONDS of him lit and still, the women staring up at him, before he speaks")
     s.do(*ctx.audio.start("music", "father"), note="music: the father")
     s.say("5.04")
     s.say("5.05")
@@ -187,16 +196,29 @@ def build(s, ctx):
     s.say("5.26")
     s.say("5.27")
     s.do(sset("#present_rei", 2), note="Rei on the intercom")
-    s.say("5.28")
-    # the hospital door opens as 5.29 begins; the gurney rolls out of the vestibule to the mark with the medics either side
+    # The gurney starts to roll as Rei says yes (5.28) and is timed to ARRIVE as 5.30 ends: nobody stands waiting for it.  While it comes, the door
+    # opens, the lamps over the hospital door blink, Misato and Ritsuko turn their heads toward it (the way they look is the cue to look west), the squeak
+    # of its wheels passes along the spur (two sounds, the second from half way), and the medics come into view through the door.
     gx, gy, gz = GURNEY_START
+    span = lambda lid: (ctx.lines[lid].ticks + T(CFG.gap)) / 20.0
+    travel = abs(gmark["x"] - gx)
+    arrive_in = span("5.28") + span("5.29") + span("5.30") - 0.4 - GURNEY_SETTLE      # seconds from this step to the end of 5.30's own recording
+    g_speed = round(travel / (arrive_in * 20.0), 4)
+    vblink = cg.flicker("vest_blink", [], [(0, "off"), (4, "on"), (8, "off"), (12, "on"), (20, "off"), (24, "on")], extra_off=["vest"])
     s.do(f"execute positioned {num(gx)} {num(gy)} {num(gz)} rotated -90 0 run function angel:cast/gurney",
          f"execute positioned {num(gx)} {num(gy)} {num(gz)} rotated -90 0 run function angel:cast/summon {{id:\"rei\"}}",
          cast_mount("rei", "gurney"), cast_pose("rei", "lying"), "function angel:cast/gurney_crew",
-         f"function angel:cast/gurney_move {{x:{num(gmark['x'])},y:{num(Y)},z:{num(gmark['z'])},speed:0.15}}",
-         sfx("sfx.gurney", at=(gx + 4.0, Y + 1.0, gz), vol=1.5, minvol=0.5), note="the gurney starts to roll")
+         f"function angel:cast/gurney_move {{x:{num(gmark['x'])},y:{num(Y)},z:{num(gmark['z'])},speed:{num(g_speed, 4)}}}",
+         sfx("sfx.gurney", at=(gx + 4.0, Y + 1.0, gz), vol=1.8, minvol=0.5),
+         note=f"the gurney starts to roll with 5.28 (speed {g_speed}: it arrives as 5.30 ends)")
     s.after(0.4, fn("story/hq/side_open"), fn("story/hq/vest_on"), sfx("sfx.door_heavy", at=(gin["x"], Y + 2.0, gin["z"]), vol=2.5, minvol=0.6),
             note="the hospital door opens")
+    s.after(0.9, *L.face(ctx, "misato", gin["x"], Y + 1.6, gin["z"]), *L.face(ctx, "ritsuko", gin["x"], Y + 1.6, gin["z"]),
+            note="Misato and Ritsuko turn toward the door and the squeak of wheels")
+    for k, at_ in enumerate((1.4, 3.6, 5.8)):
+        s.after(at_, vblink, note="the lamps over the hospital door blink" if k == 0 else "")
+    s.after(5.5, sfx("sfx.gurney", at=(gx + 0.55 * travel, Y + 1.0, gz), vol=2.2, minvol=0.6), note="the wheels again, from half way along the spur")
+    s.say("5.28")
     s.say("5.29")
     s.say("5.30")
     s.until(Cond(["if score #arrived_gurney angel.cast matches 1"], 3.0, "the gurney is at the mark"), timeout=30, est=3.0,
@@ -206,18 +228,54 @@ def build(s, ctx):
     s.say("5.31")
     s.sleep(0.8)
 
-    # ================================================================ the second impact (t = 0 here)
+    # ================================================================ the second impact (t = 0 here): the order of the shot, in ticks
+    #   0  impact; every light out; dust, rings.                                          (the player is told it is dark by every sense)
+    #  20  the lights stutter back on                      (lights_flicker hum)
+    #  36  THE RIG TEARS LOOSE above the player (rig-tear sound from overhead, sparks and dust fall past his face, fragments, a swinging shadow on the deck);
+    #      Misato, Ritsuko and the medics stare UP at it                                   (sway 36..80)
+    #  40  the wash of the hand, hand_rise (a stereo wash: it swells for 2.6 s)
+    #  64  THE HAND SURGES UP out of the coolant beside the bridge in 8 steps (to 92): spray on the west side, the palm sweeping in from the west overhead
+    #  80  the rig lets go and falls onto the palm (the falling whistle), landing at 111: it breaks on the hand over his head, the far side rained on
+    # 118  THE EYES LIGHT (sfx.eyes_on from 104): the glow falls across the bridge
+    # 121  everyone turns and looks UP at the face
+    # 128  the medics back away; 130 5.32 begins (BASE: "right arm in motion"); 134 the alarm
+    # 150  only now: the aftershock; Rei is thrown from the gurney to the deck (landing 162)
+    # after 5.35: the hand settles back down and the eyes go dark
+    FACE_EYE = (XC, Y + 8.6, 58.2)                     # the giant's eyes (the slits are at y 61..64, z 57 behind the plate at z 59)
+    RIG_UP = (XC, Y + 22.0, 77.5)                      # where the rig hangs, for everyone's eyes (they only look up as far as 30 degrees)
+    TL = dict(place=10, back=20, tear=36, stare=40, wash=40, hand=64, eyes_snd=104, eyes=118, looks=121, medics=128, say=130, alarm=134, throw=150)
+    sec = lambda tk: tk / 20.0
     s.do(sfx("sfx.impact_above_hard", at=(XC, 100.0, 72.5), vol=5.0, pitch=0.8, minvol=1.0), sfx("sfx.dust_fall", vol=0.9), fn("story/hq/all_off"), fn("story/hq/dust_heavy"),
-         fn("story/hq/rings"), *ctx.audio.start("music", "decision"), "function angel:cast/dismount {id:\"rei\"}",
-         note="HARDER: every light goes out; dust; the coolant rings; the music of the decision")
-    # Rei is thrown from the gurney onto the deck: an arc over 0.6 s, turning to lie along the bridge
+         fn("story/hq/rings"), *ctx.audio.start("music", "decision"), sfx("sfx.jolt", vol=2.0, pitch=0.8),
+         note="HARDER: every light goes out for one second; dust; the coolant rings; the music of the decision (Rei is still on the gurney)")
+    s.after(sec(TL["place"]), fn("story/hq/rig2_place"), note="in the dark: where the rig will hang (above the player, a little ahead, clamped over the hand)")
+    s.after(sec(TL["back"]), cg.flicker("hit2_back", range(N_BANKS), [(0, "on"), (2, "off"), (4, "on"), (5, "off"), (7, "on")], extra_off=["booth", "vest"]),
+            sfx("sfx.lights_flicker", vol=0.9), note="the lights stutter back")
+    s.after(sec(TL["tear"]), fn("story/hq/rig2_start"),
+            note="THE RIG TEARS LOOSE overhead: rig-tear sound from above, sparks and dust past his face, a swinging shadow; it hangs for two seconds")
+    s.after(sec(TL["stare"]), *[c for who in ("misato", "ritsuko", "medic1", "medic2") for c in L.face(ctx, who, *RIG_UP)],
+            note="everyone stares up at the rig")
+    s.after(sec(TL["wash"]), sfx("sfx.hand_rise", at=(XC - 6.0, 46.0, 70.0), vol=4.0, minvol=1.0), f"particle minecraft:splash {num(XC - 12.5)} 37.6 82 5 0.3 8 0.3 120 force",
+            note="the wash of the hand begins (a stereo wash: it swells for 2.6 s)")
+    s.after(sec(TL["hand"]), fn("story/hq/hand_surge"), note="THE HAND SURGES UP out of the coolant beside the bridge (eight steps, 1.4 s), spray on its side, the palm sweeping in overhead")
+    s.after(sec(TL["eyes_snd"]), sfx("sfx.eyes_on", at=(XC, 62.0, 58.0), vol=3.0, minvol=1.0), note="the power-up drone begins")
+    s.after(sec(TL["eyes"]), fn("story/hq/eyes_on"), fn("story/hq/eyes_fx"), note="THE EYES LIGHT: their glow falls across the bridge (for as long as the hand is up)")
+    s.after(sec(TL["looks"]), *[c for who in ("misato", "ritsuko", "medic1", "medic2") for c in L.face(ctx, who, *FACE_EYE)],
+            note="everyone turns and looks UP at the face (past the player)")
+    s.after(sec(TL["medics"]), walk("medic1", gmark["x"] + 1.8, Y, gmark["z"] + 5.5, speed=0.1), walk("medic2", gmark["x"] - 1.8, Y, gmark["z"] + 5.5, speed=0.1),
+            note="the medics back away")
+    s.after(sec(TL["alarm"]), *ctx.audio.start("loop", "klaxon"), sset("#f.alarm", 1), note="the alarm")
+    # only now is Rei seen to have been thrown from the gurney: the aftershock, then an arc of 0.6 s, turning to lie along the bridge
     rei = "@e[type=minecraft:mannequin,tag=angel.rei,limit=1]"
     end = (REI_MID[0], Y + 0.125, REI_MID[2] - 0.9)                 # her foot end (yaw 180: feet to the north)
     steps = 7
     mid = (REI_MID[0], Y, REI_MID[2])
+    t_th = sec(TL["throw"])
+    s.after(t_th - 0.05, sfx("sfx.jolt", vol=2.4, pitch=0.9), fn("story/hq/shock_floor"), "function angel:cast/dismount {id:\"rei\"}",
+            note="the aftershock: the bridge jolts, dust from the rails, the gurney's rider is let go")
     for i in range(1, steps + 1):
         u = i / float(steps)
-        t_ = 0.04 + 0.085 * i
+        t_ = t_th + 0.04 + 0.085 * i
         if i < steps:
             x = SEAT[0] + (end[0] - SEAT[0]) * u
             z = SEAT[2] + (end[2] - SEAT[2]) * u
@@ -226,20 +284,8 @@ def build(s, ctx):
         else:
             # she lands: up from the lying pose, put on the deck facing north, down again (the cast's own pose calls keep the body right)
             s.after(t_, cast_pose("rei", "standing"), f"tp {rei} {num(mid[0])} {num(mid[1])} {num(mid[2])} 180 0", cast_pose("rei", "lying"),
-                    note="Rei lands on the deck, lying along the bridge")
-    s.after(0.10, fn("story/hq/rig_fall"), sfx("sfx.rig_tear", at=(XC, 104.0, d2["z"]), vol=4.0, minvol=0.9), note="the lighting rig tears loose at debris_2 and falls")
-    s.after(0.62, fn("story/hq/hand_up"), fn("story/hq/eyes_on"), sfx("sfx.hand_rise", at=(XC - 4.0, 50.0, 76.0), vol=4.0, minvol=0.9),
-            sfx("sfx.eyes_on", at=(XC, 62.0, 58.0), vol=3.0, minvol=0.9),
-            f"particle minecraft:splash {num(XC - 8)} 38 {num(76)} 6 0.5 6 0.4 80 force",
-            f"particle minecraft:dust{{color:[1.0,0.55,0.2],scale:2.0}} {num(XC - 8)} 39 {num(76)} 5 1 5 0 40 force",
-            note="THE HAND comes up out of the coolant (cell by cell); the eyes light, for the first time, for as long as the hand is up")
-    back = cg.flicker("hit2_back", range(N_BANKS), [(0, "on"), (2, "off"), (4, "on"), (5, "off"), (7, "on")], extra_off=["booth", "vest"])
-    s.after(1.3, back, sfx("sfx.lights_flicker", vol=0.9), note="the lights come back, stuttering")
-    s.after(1.55, walk("medic1", gmark["x"] + 1.8, Y, gmark["z"] + 5.5, speed=0.1), walk("medic2", gmark["x"] - 1.8, Y, gmark["z"] + 5.5, speed=0.1),
-            note="the medics back away")
-    s.after(2.0, *L.face(ctx, "ritsuko", XC, Y + 6.0, 80.0), *L.face(ctx, "misato", XC, Y + 6.0, 80.0), note="everyone looks up at the hand")
-    s.after(3.3, *ctx.audio.start("loop", "klaxon"), sset("#f.alarm", 1), note="the alarm")
-    s.sleep(4.6, note="the rig meets the hand at about 2.9 s; the pieces fall; the room settles")
+                    sfx("sfx.dust_fall", vol=0.8), note="Rei lands on the deck, lying along the bridge")
+    s.sleep(sec(TL["say"]), note="the rig meets the hand at 111 and the eyes light at 118; 5.32 begins at 130")
     s.say("5.32")
     s.say("5.33")
     s.say("5.34")

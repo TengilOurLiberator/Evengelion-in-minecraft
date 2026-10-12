@@ -1,1 +1,1 @@
-execute as @e[tag=angel.lfluid] run data merge entity @s {block_state:"minecraft:white_stained_glass"}
+function angel:story/snd/bed_plug_flooded/start

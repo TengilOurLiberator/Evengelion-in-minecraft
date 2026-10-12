@@ -1,21 +1,4 @@
 scoreboard players set #force angel.story 0
-forceload add 1136 144
-forceload add 1136 160
-forceload add 1136 176
-forceload add 1152 144
-forceload add 1152 160
-forceload add 1152 176
-forceload add 1168 144
-forceload add 1168 160
-forceload add 1168 176
-forceload add 1136 32
-forceload add 1136 48
-forceload add 1136 64
-forceload add 1152 32
-forceload add 1152 48
-forceload add 1152 64
-forceload add 1168 32
-forceload add 1168 48
-forceload add 1168 64
+schedule function angel:story/s6/f_a38 72t
 scoreboard players set #step angel.story 87
 function angel:story/s6/e87

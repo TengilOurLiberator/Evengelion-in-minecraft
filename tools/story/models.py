@@ -11,10 +11,74 @@ every block display with it to the monster every tick (which had parked the airc
 Faces of a block display are visible from outside only (back faces are culled), so a seat or lining seen from inside the cabin is a box
 whose OUTER face points into the cabin.
 """
+import importlib.util
 import json
 import math
+import os
+import sys
 
-from core import CFG, QI, TAG, fnum, num, qaxis, qmul, qrot, vadd, vsub
+import numpy as np
+
+from core import CFG, OBJ, QI, TAG, fnum, num, qaxis, qmul, qrot, vadd, vsub
+
+# ------------------------------------------------------------------------------------------------ which models the vehicles use
+# "custom": item_display parts showing the item models of the resource pack (tools/models builds them: assets/angel/items + models/item +
+#           textures/item), the car, wagon and VTOL as designed models;
+# "boxes":  the old block_display box models (no resource pack files needed).  Switch here, or with the environment variable ANGEL_MODELS=boxes
+#           for one run; every rig tag, seat, pivot, pose (door, side-lying roll) and the part names that the scenes use work in both.
+MODELS = os.environ.get("ANGEL_MODELS", "custom").strip().lower()
+if MODELS not in ("custom", "boxes"):
+    raise SystemExit(f"models.MODELS must be 'custom' or 'boxes', not {MODELS!r}")
+
+_VM = {}
+
+
+def vm():
+    """The model-authoring package tools/models, loaded by path under the name angel_vmodels (this module is itself called `models`)."""
+    if "pkg" not in _VM:
+        root = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "models"))
+        spec = importlib.util.spec_from_file_location("angel_vmodels", os.path.join(root, "__init__.py"), submodule_search_locations=[root])
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules["angel_vmodels"] = mod
+        spec.loader.exec_module(mod)
+        _VM["pkg"] = mod
+    return _VM["pkg"]
+
+
+def _vehicle(which):
+    """Geometry of one vehicle (no painting): cached, built from tools/models/{car,wagon,vtol}.py."""
+    if which not in _VM:
+        vm()
+        _VM[which] = getattr(_vmod(which), f"build_{which}")()
+    return _VM[which]
+
+
+def _vmod(which):
+    vm()
+    import importlib
+    return importlib.import_module(f"angel_vmodels.{which}")
+
+
+def _qmat(q):
+    x, y, z, w = q
+    return np.array([[1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+                     [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+                     [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]], float)
+
+
+def _mat_quat(R):
+    t = R[0, 0] + R[1, 1] + R[2, 2]
+    if t > 0:
+        s = math.sqrt(t + 1.0) * 2
+        return ((R[2, 1] - R[1, 2]) / s, (R[0, 2] - R[2, 0]) / s, (R[1, 0] - R[0, 1]) / s, 0.25 * s)
+    if R[0, 0] > R[1, 1] and R[0, 0] > R[2, 2]:
+        s = math.sqrt(1.0 + R[0, 0] - R[1, 1] - R[2, 2]) * 2
+        return (0.25 * s, (R[0, 1] + R[1, 0]) / s, (R[0, 2] + R[2, 0]) / s, (R[2, 1] - R[1, 2]) / s)
+    if R[1, 1] > R[2, 2]:
+        s = math.sqrt(1.0 + R[1, 1] - R[0, 0] - R[2, 2]) * 2
+        return ((R[0, 1] + R[1, 0]) / s, 0.25 * s, (R[1, 2] + R[2, 1]) / s, (R[0, 2] - R[2, 0]) / s)
+    s = math.sqrt(1.0 + R[2, 2] - R[0, 0] - R[1, 1]) * 2
+    return ((R[0, 2] + R[2, 0]) / s, (R[1, 2] + R[2, 1]) / s, 0.25 * s, (R[1, 0] - R[0, 1]) / s)
 
 
 class Part:
@@ -47,6 +111,43 @@ class Part:
         t2 = vadd(vadd(c_g, qrot(q_g, vsub(t, c_g))), t_g)
         return t2, qmul(q_g, q), s
 
+    # oriented boxes (t = lower corner, R = rotation matrix, size, kind) in model space, for the first-person ray caster (ride_view.py)
+    def boxes(self, motion=None):
+        t, q, s = self.with_motion(*motion) if motion else self.with_motion()
+        kind = "glass" if (self.state and "glass" in self.state) else "car"
+        return [(np.array(t, float), _qmat(q), np.array(s, float), kind, self.name)]
+
+
+class ModelPart(Part):
+    """A part that is an item_display showing the item model `angel:<model>` of the resource pack (an `item_model` component on a paper item).
+    The model is authored in rig coordinates around `centre`; displayed at scale 1 the display's translation is simply the centre, so the model
+    stands where it was designed.  `at` places the centre elsewhere (the wheels: one model at the origin, put on four axles, the right ones
+    turned half a turn), `scale` enlarges a model authored smaller (the aircraft, which are built at 1:3.2).  `elems` are the cuboids (for boxes())."""
+
+    def __init__(self, name, model, centre, at=None, R=None, scale=1.0, elems=None, group="body", bright=None):
+        Part.__init__(self, name, None, (0, 0, 0), (1, 1, 1), QI, (0, 0, 0), bright, group, None, "paper")
+        self.model = model                                 # "car_nose": the pack's angel:car_nose
+        self.centre = tuple(float(v) for v in centre)
+        self.at = tuple(float(v) for v in (at if at is not None else [c * scale for c in centre]))
+        self.rot = _mat_quat(R) if R is not None else QI
+        self.mscale = float(scale)
+        self.elems = elems or []
+
+    def base(self):
+        return self.at, self.rot, (self.mscale, self.mscale, self.mscale)
+
+    def boxes(self, motion=None):
+        t, q, s = self.with_motion(*motion) if motion else self.with_motion()
+        Rp = _qmat(q)
+        # part frame: world = at' + Rp * (scale * (x - centre)), where `at'` is the (possibly moved) translation t
+        c = np.array(self.centre)
+        out = []
+        for e in self.elems:
+            t_e, R_e, size_e = e.box()
+            lower = np.array(t) + Rp @ (self.mscale * (np.asarray(t_e) - c))
+            out.append((lower, Rp @ np.asarray(R_e), self.mscale * np.asarray(size_e), e.kind, f"{self.name}"))
+        return out
+
 
 def _state_nbt(p):
     if p.props:
@@ -69,6 +170,9 @@ def summon_part(p, tags, tp_duration=3, motion=None, view_range=2.0, bright=None
     brs = f",brightness:{{sky:{br[0]},block:{br[1]}}}" if br else ""
     if p.state:
         head = f'summon minecraft:block_display {pos} {{Tags:[{tg}],block_state:{_state_nbt(p)}'
+    elif getattr(p, "model", None):
+        head = (f'summon minecraft:item_display {pos} {{Tags:[{tg}],item:{{id:"minecraft:paper",count:1,'
+                f'components:{{"minecraft:item_model":"angel:{p.model}"}}}},item_display:"none"')
     else:
         head = f'summon minecraft:item_display {pos} {{Tags:[{tg}],item:{{id:"minecraft:{p.item}",count:1}},item_display:"none"'
     return f"{head},teleport_duration:{tp_duration},view_range:{fnum(view_range)}{brs},{transformation_nbt(t, q, s)}}}"
@@ -111,7 +215,7 @@ def _ring(name, block, centre, radius, tilt_deg, n=8, thick=0.05, bright=None):
     return out
 
 
-def car_parts():
+def _car_parts_boxes():
     P_ = Part
     # the scuttle (the top of the bulkhead in front of the seats) is at 0.76; the bonnet is a slab that falls 9 degrees from it to the nose
     TOP = 0.72
@@ -181,6 +285,24 @@ def car_parts():
         parts.append(P_(f"hub{nm}", "light_gray_concrete", (hx0, 0.26, zc - 0.14), (hx1, 0.54, zc + 0.14)))
     return parts
 
+
+def _custom_parts(veh, specs=None, prefix="", scale=1.0):
+    """ModelParts for a tools/models Vehicle (its geometry only: painting happens in `python -m models.build`)."""
+    out = []
+    for ps in (specs if specs is not None else veh.parts):
+        m = veh.models[ps.model.name]
+        at = ps.at if ps.at is None else tuple(c * scale for c in ps.at)
+        out.append(ModelPart(prefix + ps.name, m.name, m.center, at=at, R=ps.R, scale=ps.scale * scale, elems=m.elems, group=ps.group, bright=ps.bright))
+    return out
+
+
+def car_parts():
+    """The car's display parts: custom item models (nose, wings, tub, door, dash, seats, screen, tail, four wheels ...) or the old boxes (60 parts)."""
+    if MODELS == "boxes":
+        return _car_parts_boxes()
+    return _custom_parts(_vehicle("car"))
+
+
 def door_motion(deg):
     """rigid motion for the door parts: rotate `deg` about +y through the hinge"""
     return (qaxis("y", deg), DOOR_HINGE, (0, 0, 0))
@@ -207,7 +329,7 @@ def compose(m1, m2):
 
 
 # --------------------------------------------------------------------------------------------------- the wagon
-def wagon_parts(ramp=False, low_side=None):
+def _wagon_parts_boxes(ramp=False, low_side=None):
     """The flat rail wagon (5 wide, 9 long, deck at y 0).  `low_side`: "R" or "L" (the wagon's own right/left): that side has no railing
     and no posts, only the yellow kerb, so that nothing stands between the car's seat and the view out of that side."""
     P_ = Part
@@ -243,8 +365,16 @@ def wagon_parts(ramp=False, low_side=None):
     return parts
 
 
+def wagon_parts(ramp=False, low_side=None):
+    """The rail wagon (5 wide, 9 long, deck at y 0): custom models (deck sections, bogies, couplers, rails, kerb, lamp, chocks) or the old boxes."""
+    if MODELS == "boxes":
+        return _wagon_parts_boxes(ramp, low_side)
+    veh = _vehicle("wagon")
+    return _custom_parts(veh, _vmod("wagon").parts_for(veh, ramp, low_side), prefix="w_")
+
+
 # --------------------------------------------------------------------------------------------------- the aircraft
-def aircraft_parts(scale=2.0):
+def _aircraft_parts_boxes(scale=2.0):
     """A small VTOL, nose along +z.  Scaled up so that it reads at a hundred blocks."""
     P_ = Part
     s = scale
@@ -261,6 +391,13 @@ def aircraft_parts(scale=2.0):
         ("glowR", "orange_concrete", (-2.4, -0.08, -1.05), (-2.0, 0.28, -0.9)),
     ]
     return [P_(n, b, tuple(v * s for v in lo), tuple(v * s for v in hi)) for n, b, lo, hi in raw]
+
+
+def aircraft_parts(scale=2.0):
+    """The VTOL (authored 4.2 long, shown at `scale`): custom models or the old boxes."""
+    if MODELS == "boxes":
+        return _aircraft_parts_boxes(scale)
+    return _custom_parts(_vehicle("vtol"), scale=scale)
 
 
 # --------------------------------------------------------------------------------------------------- the rig
@@ -288,6 +425,7 @@ class Rig:
         if driver_face is not None:
             self.seats.hide = ("driver",)
         self.base_motion = {}               # part name -> motion applied before anything else (the turned car inside the cartrain)
+        self.spin = False                   # True: the follow function also turns the wheel parts with the distance travelled (see spin_cmds)
 
     @property
     def tag(self):
@@ -319,6 +457,46 @@ class Rig:
         """After a spawn: bring everything to the context pose (rotation included), seats to their offsets; clear the 'new' tags."""
         return self.follow_cmds(seats) + ["tag @e[tag=angel.new] remove angel.new"]
 
+    STEPS = 32                              # wheel spin: poses per turn (the wheel is symmetric to 11.25 degrees well enough, and the display interpolates between them)
+
+    def spin_cmds(self):
+        """Wheel spin proportional to speed, cheap: every time the follow function runs (once per route frame) the rig's distance since the last
+        frame is read from the entity's position (two `data get`), turned into a wheel phase (1/65536 turn per 1/26 mm: a wheel of radius 0.40 turns
+        0.3979 per metre), and when the phase has moved on to the next of STEPS poses the four wheels get a `data merge` that turns them there over 2 ticks.
+        A jump (teleport, spawn: more than 0.9 blocks in a frame) is ignored.  Nothing runs while the rig stands still (follow is not called)."""
+        wheels = [p for p in self.parts if p.group == "wheel" and getattr(p, "model", None)]
+        if not wheels:
+            return []
+        S = f"{OBJ}"
+        tag = f"@e[tag={self.tag},tag=angel.pt_{wheels[0].name},limit=1]"
+        sc_ = lambda n: f"#wh.{n} {S}"
+        c = [f"execute store result score {sc_('x')} run data get entity {tag} Pos[0] 1000",
+             f"execute store result score {sc_('z')} run data get entity {tag} Pos[2] 1000",
+             f"scoreboard players set {sc_('m1')} -1", f"scoreboard players set {sc_('c2')} 2", f"scoreboard players set {sc_('c26')} 26",
+             f"scoreboard players set {sc_('cs')} {65536 // self.STEPS}", f"scoreboard players set {sc_('cp')} 65536"]
+        for a in ("x", "z"):
+            c += [f"scoreboard players operation {sc_('d' + a)} = {sc_(a)}", f"scoreboard players operation {sc_('d' + a)} -= {sc_('l' + a)}",
+                  f"execute if score {sc_('d' + a)} matches ..-1 run scoreboard players operation {sc_('d' + a)} *= {sc_('m1')}"]
+        c += [f"scoreboard players operation {sc_('d')} = {sc_('dx')}",
+              f"execute if score {sc_('dz')} > {sc_('d')} run scoreboard players operation {sc_('d')} = {sc_('dz')}",
+              f"scoreboard players operation {sc_('e')} = {sc_('dx')}",
+              f"execute if score {sc_('dz')} < {sc_('e')} run scoreboard players operation {sc_('e')} = {sc_('dz')}",
+              f"scoreboard players operation {sc_('e')} /= {sc_('c2')}", f"scoreboard players operation {sc_('d')} += {sc_('e')}",
+              f"scoreboard players operation {sc_('lx')} = {sc_('x')}", f"scoreboard players operation {sc_('lz')} = {sc_('z')}",
+              f"scoreboard players set {sc_('ok')} 0", f"execute if score {sc_('d')} matches ..900 run scoreboard players set {sc_('ok')} 1",
+              f"execute if score {sc_('ok')} matches 1 run scoreboard players operation {sc_('d')} *= {sc_('c26')}",
+              f"execute if score {sc_('ok')} matches 1 run scoreboard players operation {sc_('ph')} += {sc_('d')}",
+              f"scoreboard players operation {sc_('ph')} %= {sc_('cp')}",
+              f"scoreboard players operation {sc_('k')} = {sc_('ph')}", f"scoreboard players operation {sc_('k')} /= {sc_('cs')}",
+              f"scoreboard players set {sc_('upd')} 0", f"execute unless score {sc_('k')} = {sc_('pk')} run scoreboard players set {sc_('upd')} 1",
+              f"scoreboard players operation {sc_('pk')} = {sc_('k')}"]
+        for j in range(self.STEPS):
+            ang = 360.0 * j / self.STEPS
+            for p in wheels:
+                motion = self.motion_for(p, (qaxis("x", ang), p.at, (0.0, 0.0, 0.0)))
+                c.append(f"execute if score {sc_('upd')} matches 1 if score {sc_('k')} matches {j} run " + part_merge(p, self.tag, motion, 2))
+        return c
+
     def follow_cmds(self, seats=True):
         """The commands that move the whole rig to the context's position and rotation."""
         cmds = [f"tp @e[tag={self.tag},tag=angel.rpart] ~ ~ ~ ~ ~"]
@@ -332,6 +510,8 @@ class Rig:
                 cmds.append(f"execute unless score #look_misato angel.cast matches 1 if entity @e[tag=angel.misato,tag=angel.char,limit=1] "
                             f"as @e[tag={self.tag},tag=angel.seat_driver,limit=1] at @s run "
                             f"rotate @e[tag=angel.misato,tag=angel.char,limit=1] facing ^ ^-0.6 ^8")
+        if self.spin:
+            cmds += self.spin_cmds()
         return cmds
 
     def ahead_cmds(self):
@@ -351,7 +531,9 @@ class Rig:
 
 
 def car_rig(name="car"):
-    return Rig(name, car_parts(), {"driver": SEAT_DRIVER, "passenger": SEAT_PASSENGER}, driver_face=0.0)
+    r = Rig(name, car_parts(), {"driver": SEAT_DRIVER, "passenger": SEAT_PASSENGER}, driver_face=0.0)
+    r.spin = MODELS != "boxes"              # the roadster's four wheels turn while it drives (not on the wagon: the wagon rig carries the car with its wheels still)
+    return r
 
 
 def cartrain_rig(name, reversed_car=False, ramp=False, bright=None, low_side=None):

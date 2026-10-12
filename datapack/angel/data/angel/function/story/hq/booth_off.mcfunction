@@ -1,26 +1,17 @@
-setblock 3109 65 50 minecraft:air
-setblock 3113 65 50 minecraft:air
-setblock 3109 65 51 minecraft:black_stained_glass
-setblock 3113 65 51 minecraft:black_stained_glass
-setblock 3106 65 53 minecraft:air
-setblock 3109 65 53 minecraft:air
-setblock 3107 65 54 minecraft:air
-setblock 3107 66 50 minecraft:air
-setblock 3110 66 50 minecraft:air
-setblock 3112 66 50 minecraft:air
-setblock 3107 66 51 minecraft:black_stained_glass
-setblock 3110 66 51 minecraft:black_stained_glass
-setblock 3112 66 51 minecraft:black_stained_glass
-setblock 3107 66 54 minecraft:air
-setblock 3108 67 50 minecraft:air
-setblock 3111 67 50 minecraft:air
-setblock 3108 67 51 minecraft:black_stained_glass
-setblock 3111 67 51 minecraft:black_stained_glass
-setblock 3108 67 54 minecraft:air
-setblock 3106 68 55 minecraft:air
-setblock 3108 68 55 minecraft:air
-setblock 3106 69 52 minecraft:air
-setblock 3108 69 52 minecraft:air
-setblock 3109 69 54 minecraft:air
-setblock 3107 69 55 minecraft:air
-setblock 3107 70 51 minecraft:air
+fill 3106 58 59 3107 58 59 minecraft:air
+fill 3106 58 60 3107 58 60 minecraft:black_stained_glass
+fill 3103 58 62 3104 58 62 minecraft:air
+setblock 3103 59 62 minecraft:air
+setblock 3105 59 63 minecraft:air
+fill 3103 59 64 3104 59 64 minecraft:air
+setblock 3105 60 59 minecraft:air
+setblock 3107 60 59 minecraft:air
+setblock 3105 60 60 minecraft:black_stained_glass
+setblock 3107 60 60 minecraft:black_stained_glass
+fill 3103 60 62 3105 60 62 minecraft:air
+setblock 3103 61 62 minecraft:air
+fill 3103 61 63 3104 61 63 minecraft:air
+setblock 3104 62 59 minecraft:air
+setblock 3106 62 59 minecraft:air
+setblock 3104 62 60 minecraft:black_stained_glass
+setblock 3106 62 60 minecraft:black_stained_glass

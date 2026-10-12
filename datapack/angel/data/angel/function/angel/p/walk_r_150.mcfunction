@@ -134,6 +134,11 @@ data merge entity @e[type=minecraft:block_display,tag=angel.p129,limit=1] {trans
 data merge entity @e[type=minecraft:block_display,tag=angel.p130,limit=1] {transformation:{translation:[-4.337f,111.481f,56.922f],left_rotation:[0f,0.358f,0f,0.934f],scale:[0.006f,0.006f,0.006f]}}
 data merge entity @e[type=minecraft:block_display,tag=angel.p131,limit=1] {transformation:{translation:[-4.333f,111.475f,56.92f],left_rotation:[-0.01f,-0.024f,0.383f,0.924f],scale:[0.014f,0.014f,0.004f]}}
 data merge entity @e[type=minecraft:block_display,tag=angel.p132,limit=1] {transformation:{translation:[-4.03f,111.473f,50.929f],left_rotation:[0f,-0.026f,0f,1f],scale:[0.022f,0.022f,0.001f]}}
+data merge entity @e[type=minecraft:block_display,tag=angel.p133,limit=1] {transformation:{translation:[-0.632f,104.69f,16.186f],left_rotation:[-0.11f,-0.025f,0.172f,0.979f],scale:[1.35f,13.5f,1.05f]}}
+data merge entity @e[type=minecraft:block_display,tag=angel.p134,limit=1] {transformation:{translation:[-8.331f,105.388f,15.661f],left_rotation:[-0.085f,-0.075f,-0.324f,0.939f],scale:[1.2f,11.25f,1.05f]}}
+data merge entity @e[type=minecraft:block_display,tag=angel.p135,limit=1] {transformation:{translation:[3.596f,106.604f,16.769f],left_rotation:[-0.11f,0.026f,0.583f,0.804f],scale:[1.2f,9.75f,1.05f]}}
+data merge entity @e[type=minecraft:block_display,tag=angel.p136,limit=1] {transformation:{translation:[-9.436f,111.856f,14.801f],left_rotation:[-0.057f,-0.098f,-0.599f,0.793f],scale:[1.2f,10.5f,1.05f]}}
 execute as @e[type=minecraft:block_display,tag=angel.eye] run data merge entity @s {block_state:"minecraft:black_concrete"}
+data merge entity @e[type=minecraft:interaction,tag=angel.body,limit=1] {width:36f,height:84f}
 data modify storage angel:mon off set value {cx:"-2.130",cy:"97.275",cz:"18.845",bx:"0.000",by:"57.000",bz:"0.000"}
 function angel:angel/sync_hit with storage angel:mon off

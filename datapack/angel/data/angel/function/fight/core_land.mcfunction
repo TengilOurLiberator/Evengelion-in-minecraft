@@ -13,4 +13,3 @@ execute if score #st angel.fight matches 3 run function angel:fight/begin_stagge
 execute if score #phase angel.fight matches 1 if score #ch angel.fight matches ..30 run function angel:fight/core_crack
 execute if score #phase angel.fight matches 1..2 if score #ch angel.fight matches ..10 run function angel:fight/wrap_start
 execute if score #phase angel.fight matches 1..2 if score #bo angel.fight matches 8.. if score #ch angel.fight matches 1.. run function angel:fight/backoff_check
-execute if score #phase angel.fight matches 3 if score #ch angel.fight matches ..0 run function angel:fight/won_start

@@ -1,1 +1,1 @@
-tp @e[type=minecraft:mannequin,tag=angel.rei,limit=1] 3096.4 55.532 77.643
+function angel:story/hq/fl_vest_blink

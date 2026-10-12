@@ -16,7 +16,7 @@ execute in minecraft:overworld if biome 3096 -60 96 angel:hq run scoreboard play
 execute in minecraft:overworld if biome 3015 54 160 angel:hq run scoreboard players add #bp angel_world 1
 execute in minecraft:overworld if biome 3060 54 160 angel:hq run scoreboard players add #bp angel_world 1
 execute in minecraft:overworld if biome 3096 54 145 angel:hq run scoreboard players add #bp angel_world 1
-execute in minecraft:overworld if biome 3107 63 53 angel:hq run scoreboard players add #bp angel_world 1
+execute in minecraft:overworld if biome 3103 57 62 angel:hq run scoreboard players add #bp angel_world 1
 execute in minecraft:overworld if biome 3009 107 160 angel:hq run scoreboard players add #bp angel_world 1
 execute in minecraft:overworld if biome 3005 107 160 angel:hq run scoreboard players add #bp angel_world 1
 execute in minecraft:overworld if biome 3180 131 160 angel:hq run scoreboard players add #bp angel_world 1
@@ -51,6 +51,6 @@ forceload remove 2936 -64 3151 159
 forceload remove 2936 160 3151 255
 forceload remove 3152 -64 3255 159
 forceload remove 3152 160 3255 255
-say [angel] placed hq: 40 tiles, 733749 blocks
+say [angel] placed hq: 40 tiles, 733391 blocks
 scoreboard players set #all angel_world 0
 say [angel] every set is placed

@@ -1,4 +1,4 @@
-"""A driven playthrough: the whole story, played as a real client (Tester) joined to a scratch server, photographed at every cue.
+﻿"""A driven playthrough: the whole story, played as a real client (Tester) joined to a scratch server, photographed at every cue.
 
     python tools\\visual\\playthrough.py                       the whole story from `angel:story/start`, then the variants
     python tools\\visual\\playthrough.py --no-variants         only the main run
@@ -139,12 +139,19 @@ class PT(vt.Session):
         self.out = os.path.abspath(a.out)
         os.makedirs(self.out, exist_ok=True)
         self.steps = json.load(open(os.path.join(ROOT, "work", "steps.json")))
+        self.tab = build_tables(self.steps)
+        T = self.tab["T"]
+        self.fight_step = T.find(7, "the fight (its own timeline)")
+        self.end7 = max(T.all(7, "the black lifts"))
+        self.first_consent = T.find(5, "WAIT (a yes here")
+        self.t3_end = T.find(3, "the wagon stops at the terminal")
+        self.card_steps = []
         self.tl = open(os.path.join(self.out, "timeline.log"), "a", encoding="utf-8", buffering=1)
         self.events = []
         self.snaps = []
         self.t0 = time.time()
         self.cnt = {}
-        self.base = 0
+        self.base = a.snap_base
         self.sched = []                     # [(due, what, forced)]
         self.last_snap = 0.0
         self.last_auto = 0.0
@@ -194,8 +201,9 @@ class PT(vt.Session):
         return int(m.group(1)) if m else None
 
     def count(self, selector):
-        m = re.search(r"count: (\d+)", self.c(f"execute if entity {selector}"))
-        return int(m.group(1)) if m else 0
+        self.c(f"execute store result score #vt.n vt if entity {selector}")
+        m = re.search(r"has (-?\d+)", self.c("scoreboard players get #vt.n vt"))
+        return int(m.group(1)) if m else -1
 
     def epos(self, selector):
         out = self.c(f"data get entity {selector} Pos")
@@ -258,6 +266,12 @@ class PT(vt.Session):
         if st["step"] != old["step"] or st["scene"] != old["scene"]:
             self.step_since = t
             kind, text, line = self.desc(st["scene"], st["step"])
+            if st["scene"] == old["scene"] and st["step"] > old["step"] + 1:
+                for j in range(old["step"] + 1, st["step"]):          # steps that ran between two polls: their cues count
+                    k2, t2, l2 = self.desc(st["scene"], j)
+                    self.log_tl(f"(passed) {t2}")
+                    for delay, what in self.tab["force"].get((st["scene"], j), []):
+                        self.later(delay, what, True)
             self.log_tl(text)
             self.on_step(kind, text, line)
         if st["wait"] != old["wait"]:
@@ -273,7 +287,8 @@ class PT(vt.Session):
                 self.log_tl("line ends")
         if st["beat"] != old["beat"]:
             self.log_tl(f"beat {old['beat']} -> {st['beat']}")
-        if t - self.last_poslog >= 6.0:
+        near_handover = (st["scene"] == 3 and st["step"] >= self.t3_end) or (st["scene"] == 4 and st["step"] <= 12)
+        if t - self.last_poslog >= (1.0 if near_handover else 6.0):
             self.last_poslog = t
             p = self.player_pos()
             if p:
@@ -319,11 +334,11 @@ class PT(vt.Session):
         sc, i = st["scene"], st["step"]
         if st["ride"] == 1:
             return True
-        return any(s == sc and lo <= i <= hi for s, lo, hi in AUTO)
+        return any(s == sc and lo <= i <= hi for s, lo, hi, iv in self.tab["auto"])
 
     def auto_interval(self, st):
         sc, i = st["scene"], st["step"]
-        for s, lo, hi, iv in FAST:
+        for s, lo, hi, iv in self.tab["auto"]:
             if s == sc and lo <= i <= hi:
                 return iv
         return 5.0
@@ -335,13 +350,15 @@ class PT(vt.Session):
         self.scene_log.setdefault(b, [t, t])
         self.scene_since = time.time()
         self.ev("scene", f"scene {a} -> {b}")
-        counts = {tag: self.count(f"@e[tag={tag}]") for tag in ("angel.story", "angel.cast", "angel.mon", "angel.prompt", "angel.card",
-                                                              "angel.gate", "angel.rig_car", "angel.part", "angel.seat_passenger")}
+        counts = {tag: self.count(f"@e[tag={tag}]") for tag in ("angel.story", "angel.cast", "angel.mon", "angel.part", "angel.rpart", "angel.prompt",
+                                                              "angel.card", "angel.gate", "angel.seat_passenger", "angel.seat_driver",
+                                                              "angel.gaze", "angel.look_target", "angel.ia_car", "angel.ia_phone", "angel.ia_push",
+                                                              "angel.fight", "angel.gurney")}
         self.ev("entities", "at scene change: " + ", ".join(f"{k}={v}" for k, v in counts.items()))
 
     def on_step(self, kind, text, line):
         sc, i = self.st["scene"], self.st["step"]
-        for delay, what in FORCE.get((sc, i), []):
+        for delay, what in self.tab["force"].get((sc, i), []):
             self.later(delay, what, True)
         if kind == "say":
             self.later(0.8, f"say {line}")
@@ -363,6 +380,7 @@ class PT(vt.Session):
         json.dump([self.srv.proc.pid], open(vt.PIDFILE, "w"))
         mark = len(self.srv.log())
         self.srv.cmd("function angel:world/place_all")
+        self.srv.cmd("scoreboard objectives add vt dummy")
         self.srv.wait_log(r"every set is placed", 1500, since=mark)
         vt.log("sets placed; client")
         cl.prepare(vt.GAME, os.path.join(ROOT, "pack", "angel-resources"), a.fov, a.render, 0.5)
@@ -383,7 +401,10 @@ class PT(vt.Session):
         vleft = winutil.user32.GetSystemMetrics(76)
         if vleft < 0:
             winutil.move_window(self.hwnd, vleft + 10, 10)
-        winutil.post_key(self.hwnd, winutil.VK_F1, winutil.SC_F1)
+        else:
+            winutil.keep_visible(self.hwnd)
+        winutil.SHOT_DIR = os.path.join(vt.GAME, "screenshots")
+        winutil.press(self.hwnd, winutil.VK_F1, winutil.SC_F1)
         time.sleep(2)
 
     def nav(self, set_name):
@@ -495,7 +516,7 @@ class PT(vt.Session):
         if p:
             self.pos = p
         want = None
-        for s, lo, hi, kind, arg in WALK:
+        for s, lo, hi, kind, arg in self.tab["walk"]:
             if s == sc and lo <= i <= hi:
                 want = (kind, arg, (s, lo, hi))
                 break
@@ -525,7 +546,7 @@ class PT(vt.Session):
         if pos is None:
             return
         eye = (pos[0], pos[1] + 1.62, pos[2])
-        for s, lo, hi, fn in LOOKS:
+        for s, lo, hi, fn in self.tab["looks"]:
             if s == sc and lo <= i <= hi:
                 r = fn(self, st)
                 if r is not None:
@@ -575,7 +596,7 @@ class PT(vt.Session):
                 self.c("function angel:story/answered")
                 self.wait_quiet_since = None
         elif w == 2:
-            if st["scene"] == 5 and st["step"] < 130:
+            if st["scene"] == 5 and st["step"] == self.first_consent:
                 if quiet >= 4.0:
                     if self.early_yes:
                         self.ev("answer", "EARLY YES: angel:story/consented at the wait after 5.24")
@@ -600,8 +621,8 @@ class PT(vt.Session):
     # ------------------------------------------------------------ stalls
     def check_stall(self, st):
         sc, i = st["scene"], st["step"]
-        limit = STALL.get((sc, i), 150.0)
-        if sc == 7 and i == 8:
+        limit = self.tab["stall"].get((sc, i), 150.0)
+        if sc == 7 and i == self.fight_step:
             return
         el = time.time() - self.step_since
         if el > limit and not st["wait"]:
@@ -630,7 +651,7 @@ class PT(vt.Session):
         st = self.observe()
         self.handle_wait(st)
         self.check_stall(st)
-        if st["scene"] == 7 and st["step"] == 8 and self.fight is None:
+        if st["scene"] == 7 and st["step"] == self.fight_step and self.fight is None:
             self.fight = FightDriver(self)
         if self.fight is not None:
             self.fight.step(dt)
@@ -672,7 +693,7 @@ class PT(vt.Session):
                 self.c("function angel:story/start")
                 self.ev("start", "angel:story/start")
                 self.run_until(lambda st: st["scene"] == 1, 40, "scene 1 starts")
-            self.run_until(lambda st: st["scene"] == 7 and st["step"] >= 32, a.max_minutes * 60, "the story to reach the end (7.32)")
+            self.run_until(lambda st: st["scene"] == 7 and st["step"] >= self.end7, a.max_minutes * 60, "the story to reach the end")
             self.run_until(lambda st: False, 12, "the cage after the ending")
             self.snap("end_state")
             self.final_report("main")
@@ -686,12 +707,12 @@ class PT(vt.Session):
         self.early_yes = True
         self.fight_plan = "lose_first"
         self.cnt = {}
-        self.base = 100                                     # the variant's pictures are numbered from 101 in each scene
+        self.base = self.a.snap_base + 300                  # the variant's pictures are numbered from base + 301 in each scene
         self.c("function angel:story/stop")
         time.sleep(3)
         self.c("function angel:story/scene {n:5}")
         self.run_until(lambda st: st["scene"] == 5, 30, "scene 5 jump")
-        self.run_until(lambda st: st["scene"] == 7 and st["step"] >= 32, a.max_minutes * 60, "the variant to reach the end")
+        self.run_until(lambda st: st["scene"] == 7 and st["step"] >= self.end7, a.max_minutes * 60, "the variant to reach the end")
         self.run_until(lambda st: False, 10, "end")
         self.snap("variant_end_state")
 
@@ -738,9 +759,9 @@ def push_spot(pt):
 
 
 def girl_cycle(pt, st):
-    """Look at the girl for 2.5 s, then turn away (the story lets her vanish when he looks away)."""
+    """Keep looking down the street for 2.5 s after she is there, then turn away (she goes when he has looked away for 0.7 s)."""
     if time.time() - pt.step_since < 2.5:
-        return (133.5, 65.6, 128.5)
+        return (-90.0, 0.0)
     return (90.0, 0.0)
 
 
@@ -749,77 +770,212 @@ def monster_look(pt, st):
     return (p[0], p[1] + 62.0, p[2]) if p else None
 
 
-LOOKS = [
-    (1, 29, 29, girl_cycle),
-    (1, 43, 61, monster_look),
-    (5, 36, 60, lambda pt, st: (3096.5, 71.0, 58.0)),
-]
-WALK = [
-    # (scene, first step, last step, kind, argument)
-    (1, 16, 16, "goto", anc("outskirts.phone_use")),
-    (1, 27, 27, "goto", anc("outskirts.street")),
-    (1, 68, 68, "goto", interaction_door("angel.ia_car", lambda pt: A("outskirts.car_arrive")["yaw"])),
-    (2, 46, 46, "goto", push_spot),
-    (2, 64, 64, "goto", interaction_door("angel.ia_car", lambda pt: 100.0)),
-    (4, 8, 90, "follow", "misato"),
-    (4, 124, 124, "goto", anc("hq.elevator_in")),
-    (4, 136, 177, "follow", "ritsuko"),
-    (5, 6, 32, "follow", "ritsuko"),
-    (5, 33, 33, "goto", anc("hq.face")),
-    (5, 172, 172, "goto", lambda pt: (3096.0, 54.0, 76.2)),
-    (5, 196, 207, "follow", "ritsuko"),
-]
-# steps for which the picture is taken often (scene, first, last) / how often (scene, first, last, seconds)
-AUTO = [(1, 54, 61), (2, 28, 38), (5, 161, 161), (6, 22, 33), (6, 34, 48), (6, 70, 73), (6, 88, 99), (7, 9, 18)]
-FAST = [(2, 28, 38, 0.7), (6, 88, 99, 1.2), (5, 147, 161, 1.0), (1, 54, 61, 2.5), (6, 22, 33, 3.0), (6, 34, 48, 2.0), (7, 9, 18, 2.5)]
-# pictures taken at (scene, step) after a delay, whatever the spacing
-FORCE = {
-    (1, 11): [(0.6, "card A.D. 2015")], (1, 16): [(1.5, "wake on the platform")], (1, 24): [(0.1, "hang up click")], (1, 26): [(0.7, "silence after the call")],
-    (1, 28): [(0.6, "the girl")], (1, 29): [(1.5, "the girl looked at")], (1, 30): [(0.4, "the girl is gone")], (1, 31): [(0.2, "the jolt")],
-    (1, 37): [(0.7, "card ANGEL ATTACK")], (1, 62): [(0.6, "door opens")],
-    (2, 38): [(0.4, "the dark after the blast"), (2.2, "the picture comes back")],
-    (3, 8): [(1.0, "car rolls onto the wagon"), (3.0, "gate closing"), (6.0, "gate shut")],
-    (3, 50): [(1.0, "the wall opens")], (3, 52): [(1.0, "the cavern revealed"), (4.0, "the cavern, bloom")],
-    (4, 112): [(0.3, "alert red"), (1.6, "alert red pulse")], (4, 124): [(1.0, "the lift")], (4, 173): [(1.0, "cage door opens")],
-    (5, 20): [(0.0, "door closed behind them")], (5, 37): [(2.0, "three seconds of nothing")],
-    (5, 61): [(0.5, "booth lights Gendo"), (2.0, "Gendo in the glass")],
-    (5, 111): [(0.3, "first impact"), (1.5, "first impact dust")], (5, 136): [(0.5, "hospital door")], (5, 141): [(1.5, "gurney rolling")],
-    (5, 143): [(0.6, "Rei on the gurney")],
-    (5, 147): [(0.2, "second impact lights out"), (0.8, "rig falls"), (1.6, "hand rises"), (2.6, "hand eyes lit"), (3.6, "rig meets hand"), (5.0, "alarm")],
-    (5, 161): [(1.0, "after the second impact")], (5, 171): [(0.5, "hand sinks")], (5, 173): [(0.8, "he lifts her")],
-    (5, 185): [(0.3, "yes everything stops")], (5, 194): [(0.5, "hold on Gendo")], (5, 195): [(0.7, "booth lights out")],
-    (5, 197): [(0.8, "the cage goes dark"), (3.0, "banks off")], (5, 208): [(0.5, "the last light")], (5, 216): [(0.6, "card EVANGELION UNIT 01")],
-    (6, 6): [(0.5, "hatch closes")], (6, 8): [(0.8, "sealed dark")], (6, 17): [(0.5, "dim instrument light")],
-    (6, 22): [(2.0, "amber begins"), (5.0, "amber at the eyes"), (8.0, "amber full")],
-    (6, 34): [(0.4, "contact"), (1.5, "contact shimmer"), (3.2, "cockpit white"), (3.6, "cockpit")],
-    (6, 47): [(1.0, "cockpit 6.07")], (6, 60): [(0.5, "bolts and bridge")], (6, 70): [(0.4, "to black")], (6, 73): [(1.2, "the pad")],
-    (6, 88): [(0.0, "THE KICK"), (0.8, "up the shaft"), (1.6, "up the shaft later"), (2.5, "up the shaft white")],
-    (6, 95): [(0.3, "the cut")], (6, 99): [(1.0, "the surface, the lift locks")],
-    (7, 10): [(0.5, "dawn begins")], (7, 18): [(0.5, "dawn")], (7, 25): [(0.6, "card TO BE CONTINUED")], (7, 30): [(0.0, "back in the cage")],
-    (7, 32): [(1.5, "the cage, lights on")],
-}
-# unusually long legitimate waits
-STALL = {(3, 18): 60, (3, 47): 120, (3, 50): 60, (3, 59): 160, (3, 61): 60, (2, 22): 80, (2, 85): 120, (6, 93): 30, (4, 10): 120, (4, 12): 60}
+def window_look(pt, st):
+    """On the wagon the boy's window (the LEFT side of the car) faces the cavern: look out of it."""
+    out = pt.c("data get entity @e[tag=angel.seat_passenger,limit=1] Rotation")
+    v = [float(x) for x in num(out.split("data:")[-1])] if "data" in out else []
+    return (v[0] - 70.0, -6.0) if v else None
+
+
+class Tables:
+    """What the driver does at which step, found by the notes of the steps (steps.json) so that a rebuilt story does not shift it."""
+
+    def __init__(self, steps):
+        self.s = steps
+        self.skipped = []
+
+    def all(self, sc, text, start=0):
+        out = []
+        for e in self.s[str(sc)]:
+            if e["i"] < start:
+                continue
+            if text.startswith("say "):
+                hit = e["kind"] == "say" and e["line"] == text[4:]
+            else:
+                hit = text in (e.get("note") or "")
+            if hit:
+                out.append(e["i"])
+        return out
+
+    def find(self, sc, text, start=0, nth=0):
+        m = self.all(sc, text, start)
+        if len(m) <= nth:
+            raise KeyError((sc, text, nth))
+        return m[nth]
+
+    def R(self, sc, a, b=None, nth=0):
+        lo = self.find(sc, a, 0, nth)
+        if b is None:
+            return sc, lo, lo
+        return sc, lo, self.find(sc, b, lo + 1) - 1
+
+
+def build_tables(steps):
+    T = Tables(steps)
+    walk, looks, auto, force, stall = [], [], [], {}, {}
+    skipped = []
+
+    def safe(fn):
+        try:
+            fn()
+        except KeyError as e:
+            skipped.append(str(e))
+
+    def W(a, b, kind, arg, sc, nth=0):
+        safe(lambda: walk.append((*T.R(sc, a, b, nth), kind, arg)))
+
+    def L(a, b, fn, sc):
+        safe(lambda: looks.append((*T.R(sc, a, b), fn)))
+
+    def AU(a, b, iv, sc):
+        safe(lambda: auto.append((*T.R(sc, a, b), iv)))
+
+    def F(sc, text, items, nth=0):
+        def go():
+            force.setdefault((sc, T.find(sc, text, 0, nth)), []).extend(items)
+        safe(go)
+
+    def ST(sc, text, limit):
+        for i in T.all(sc, text):
+            stall[(sc, i)] = limit
+
+    # --- walking
+    W("walk to the payphone", "he lifts the handset", "goto", lambda pt: (65.5, 64.5, 118.0), 1)
+    W("walk out into the street", "he looks down the street", "goto", anc("outskirts.street"), 1)
+    W("get in (door", "-> scene 2", "goto", interaction_door("angel.ia_car", lambda pt: A("outskirts.car_arrive")["yaw"]), 1)
+    W("the boy pushes", "beat 22", "goto", push_spot, 2)
+    W("get back in (walk", "the door shuts (sfx.car_door)", "goto", interaction_door("angel.ia_car", lambda pt: 100.0), 2)
+
+    def w4():
+        lo = T.find(4, "misato reaches the stop")
+        walk.append((4, lo, T.find(4, "the player steps into the lift") - 1, "follow", "misato"))
+        i = T.find(4, "the player steps into the lift")
+        walk.append((4, i, i, "goto", anc("hq.elevator_in")))
+        lo2 = T.find(4, "the doors are open on the dock") + 1
+        walk.append((4, lo2, T.find(4, "the cage door opens onto darkness") - 1, "follow", "ritsuko"))
+    safe(w4)
+
+    def w5():
+        lo = T.find(5, "ritsuko walks to through the cage door")
+        hi = T.find(5, "the player reaches hq.face")
+        walk.append((5, lo, hi - 1, "follow", "ritsuko"))
+        walk.append((5, hi, hi, "goto", anc("hq.face")))
+        j = T.find(5, "the player comes within 2 blocks of Rei")
+        walk.append((5, j, j, "goto", lambda pt: (3096.0, 54.0, 76.2)))
+        lo3 = T.find(5, "he follows Ritsuko")
+        walk.append((5, lo3, T.find(5, "card 'EVANGELION") - 1, "follow", "ritsuko"))
+    safe(w5)
+
+    # --- looking
+    L("he lifts the handset", "walk out into the street", lambda pt, st: (65.5, 66.2, 113.5), 1)
+    L("he looks down the street", "she is gone when", lambda pt, st: (-90.0, 0.0), 1)
+    L("she is gone when", "the ground jumps", girl_cycle, 1)
+    L("a jet goes over the street", "the car slides sideways", monster_look, 1)
+    L("the wagon passes wall_opens", "the wagon stops at the terminal", window_look, 3)
+    L("say 5.01", "the booth lights come on", lambda pt, st: (3096.5, 70.0, 59.0), 5)
+
+    # --- how often pictures are taken in a stretch
+    AU("a jet goes over the street", "the car slides sideways", 2.5, 1)
+    AU("the car slides sideways", "say 1.04", 1.5, 1)
+    AU("say 2.06", "say 2.07", 0.7, 2)
+    AU("the car starts to go over", "say 2.10", 0.7, 2)
+    AU("the wagon waits in the hall", "the car and the wagon become one rig", 1.5, 3)
+    AU("the wagon passes wall_opens", "the wagon stops at the terminal", 3.0, 3)
+    AU("first-stage alert", "say 4.12", 0.8, 4)
+    AU("the lift goes down", "the doors are open on the dock", 2.0, 4)
+    AU("bank 0 on", "say 5.02", 0.6, 5)
+    AU("a deep blow from above", "say 5.21", 0.8, 5)
+    AU("the gurney starts to roll", "say 5.31", 2.0, 5)
+    AU("Rei is thrown from the gurney", "say 5.32", 0.8, 5)
+    AU("6.04: the amber fluid begins", "6.07: sfx.contact", 3.0, 6)
+    AU("6.07: sfx.contact", "say 6.08", 1.2, 6)
+    AU("THE KICK", "say 6.20", 1.0, 6)
+    AU("the dawn begins", "silence for the card", 2.5, 7)
+
+    # --- pictures at a cue: (delay after the step is reached, name)
+    F(1, "card: held in silence", [(0.8, "card A.D. 2015")], 0)
+    F(1, "card: held in silence", [(0.8, "card ANGEL ATTACK")], 1)
+    F(1, "walk to the payphone", [(1.5, "wake on the platform")])
+    F(1, "he lifts the handset", [(1.2, "the phone")])
+    F(1, "he looks down the street", [(1.5, "looking down the street")])
+    F(1, "a girl in a school", [(0.6, "the girl appears"), (2.0, "the girl standing")])
+    F(1, "she is gone when", [(3.2, "girl looked away")])
+    F(1, "the ground jumps", [(0.3, "the jolt")])
+    F(1, "a jet goes over the street", [(1.0, "jet"), (3.0, "aircraft"), (6.0, "aircraft later")])
+    F(1, "one of the aircraft comes down burning", [(1.5, "crash"), (3.5, "the wreck")])
+    F(1, "the blue car out of the smoke", [(1.5, "car out of the smoke")])
+    F(1, "the door opens", [(1.0, "door opens")])
+    F(2, "the dark lifts", [(0.4, "dark after the blast"), (2.8, "picture comes back")])
+    F(3, "the car rolls onto the flat wagon", [(1.0, "car rolls onto wagon"), (3.0, "gate closing"), (6.0, "gate shut")])
+    F(3, "the wagon passes wall_opens", [(1.0, "wall opens")])
+    F(3, "say 3.08", [(1.0, "the cavern reveal"), (3.5, "the cavern reveal later")])
+    F(4, "first-stage alert", [(0.3, "alert red"), (1.6, "alert red pulse")])
+    F(4, "the player steps into the lift", [(1.0, "the lift")])
+    F(4, "the cage door opens onto darkness", [(1.0, "cage door opens")])
+    F(5, "the cage door shuts behind them", [(0.3, "door closed behind them")])
+    F(5, "say 5.01", [(2.0, "stand there")])
+    F(5, "bank 7 on", [(0.8, "the face bank"), (2.4, "the face lit")])
+    F(5, "the booth lights come on", [(0.3, "booth lights stutter"), (1.0, "Gendo lit"), (2.8, "Gendo still")])
+    F(5, "a deep blow from above", [(0.3, "first impact"), (1.3, "first impact dust")])
+    F(5, "the gurney starts to roll", [(1.2, "gurney rolling")])
+    F(5, "the hospital door opens", [(0.5, "hospital door")])
+    F(5, "Rei is thrown from the gurney", [(0.2, "second impact"), (0.8, "rig falls"), (1.6, "hand rises"), (2.6, "hand eyes lit"),
+                                           (3.6, "rig meets hand"), (5.0, "alarm")])
+    F(5, "the hand sinks back", [(0.6, "hand sinks")])
+    F(5, "he lifts her", [(0.9, "he lifts her")])
+    F(5, "beat 54", [(0.4, "yes everything stops")])
+    F(5, "the booth lights go out", [(0.8, "booth lights out")])
+    F(5, "the cage goes dark behind them", [(1.0, "cage dark behind"), (3.5, "banks off")])
+    F(5, "card: held in silence", [(0.8, "card EVANGELION UNIT 01")])
+    F(6, "the hatch closes", [(0.6, "hatch closes")])
+    F(6, "DARK: opaque black", [(0.8, "sealed dark")])
+    F(6, "dim instrument light", [(0.6, "dim instrument light")])
+    F(6, "6.04: the amber fluid begins", [(2.0, "amber begins"), (5.0, "amber at the eyes"), (8.0, "amber full")])
+    F(6, "6.07: sfx.contact", [(0.4, "contact"), (1.6, "shimmer"), (3.2, "cockpit white"), (3.8, "cockpit")])
+    F(6, "say 6.07", [(1.0, "cockpit 6.07")])
+    F(6, "say 6.12", [(1.0, "bolts and bridge")])
+    F(6, "the black lifts", [(1.2, "the pad looking up")])
+    F(6, "THE KICK", [(0.0, "THE KICK"), (0.8, "up the shaft"), (1.8, "up the shaft later"), (2.8, "up the shaft white")])
+    F(6, "THE CUT", [(0.3, "the cut")])
+    F(6, "the lift locks, wind", [(1.0, "the surface")])
+    F(7, "the dawn begins", [(0.5, "dawn begins")])
+    F(7, "card: held in silence", [(0.8, "card TO BE CONTINUED")])
+    F(7, "the cage at human size", [(1.0, "back in the cage")])
+
+    # --- legitimate long waits (seconds before a step counts as stuck)
+    for text, sc, lim in (("the wagon is at rest at the holding point", 3, 120), ("the wagon passes wall_opens", 3, 60),
+                          ("the ride goes on in quiet", 3, 160), ("the wagon stops at the terminal", 3, 60), ("the car is on the wagon", 3, 60),
+                          ("the car reaches the ridge", 2, 80), ("the car reaches the gate", 2, 120), ("misato reaches the stop", 4, 120),
+                          ("ritsuko reaches the stop", 4, 120), ("the player reaches the lobby", 4, 120)):
+        ST(sc, text, lim)
+    T.skipped = skipped
+    return dict(walk=walk, looks=looks, auto=auto, force=force, stall=stall, skipped=skipped, T=T)
 
 
 # ------------------------------------------------------------------------------------------------ the fight
 class FightDriver:
-    """Plays the fight with the fight's own test helpers: walks the giant up to the Angel, lands core hits at a human pace, photographs each
-    phase.  Heals the giant (test/set gh) when it is low so the whole fight can be seen, unless the plan says lose."""
+    """Plays the fight with the fight's own test helpers, more like a person: it walks the giant up to the Angel, clicks the core about once a second
+    (the guard swallows every other click), and after each back-off (the monster falls back 30 blocks behind its raised barrier) it closes the distance
+    over about 8 s before it hits again.  Photographs the back-off, the raised barrier (a click on it), the beam, the guarded-hit sparks, the phases.
+    Heals the giant (test/set gh) when it is low so the whole fight can be seen, unless the plan says lose."""
 
     def __init__(self, pt):
         self.pt = pt
         self.finished = False
         self.t0 = time.time()
         self.hits = 0
+        self.clicks = 0
         self.last_hit = 0.0
         self.st = None
-        self.blocked_demo = False
+        self.bar = 0
+        self.guarded = 0
+        self.last_guard_snap = 0.0
         self.healed = 0
         self.lost_done = False
         self.plan = pt.fight_plan
         self.seen = set()
-        self.last_pos_check = 0.0
+        self.barrier_click_done = False
+        self.backoffs = 0
         pt.ev("fight", f"the fight driver starts (plan {self.plan})")
         pt.later(1.0, "fight intro", True)
         pt.later(5.0, "fight intro monster walks", True)
@@ -842,14 +998,15 @@ class FightDriver:
     def step(self, dt):
         pt = self.pt
         st = pt.st
-        if st["scene"] != 7 or st["step"] != 8:
+        if st["scene"] != 7 or st["step"] != pt.fight_step:
             self.finished = True
-            pt.ev("fight", f"the fight is over (hits landed {self.hits}, healed {self.healed}x)")
+            pt.ev("fight", f"the fight is over (clicks {self.clicks}, landed about {self.hits}, back-offs {self.backoffs}, healed {self.healed}x)")
             return
         el = time.time() - self.t0
         phase, stt, ch, gh = self.fscore("#phase"), self.fscore("#st"), self.fscore("#ch"), self.fscore("#gh")
+        bar, guarded = self.fscore("#bar") or 0, self.fscore("#guarded") or 0
         if (phase, stt) != self.st:
-            pt.log_tl(f"fight phase {phase} state {stt} core hits left {ch} giant hp {gh}")
+            pt.log_tl(f"fight phase {phase} state {stt} core hits left {ch} giant hp {gh} barrier {bar}")
             self.st = (phase, stt)
             if stt == 1:
                 pt.later(0.5, "beam charge", True)
@@ -871,6 +1028,13 @@ class FightDriver:
                 pt.later(0.8, "wrapped", True)
                 pt.later(3.0, "wrapped countdown", True)
                 pt.later(6.0, "wrapped countdown late", True)
+            elif stt == 9:
+                self.backoffs += 1
+                pt.later(0.4, f"back-off {self.backoffs} the stagger", True)
+                pt.later(1.6, f"back-off {self.backoffs} barrier flares", True)
+            elif stt == 10:
+                pt.later(1.0, f"back-off {self.backoffs} falls back", True)
+                pt.later(3.0, f"back-off {self.backoffs} far", True)
             if phase == 4:
                 pt.later(0.3, "won", True)
                 pt.later(2.0, "won cross of light", True)
@@ -878,41 +1042,56 @@ class FightDriver:
             if phase == 5:
                 pt.later(0.3, "lost", True)
                 pt.later(2.5, "lost fade", True)
+        if bar != self.bar:
+            pt.log_tl(f"barrier {self.bar} -> {bar}")
+            if bar == 1:
+                pt.later(0.3, "barrier raised", True)
+            self.bar = bar
+        if guarded > self.guarded:
+            self.guarded = guarded
+            if time.time() - self.last_guard_snap > 3.0:
+                self.last_guard_snap = time.time()
+                pt.later(0.1, "guarded hit sparks", True)
         if gh is not None and gh < 40 and self.plan != "lose_now" and phase in (1, 2, 3):
             pt.c("function angel:fight/test/set {name:\"gh\",value:100}")
             self.healed += 1
             pt.ev("fight", f"giant hp was {gh}: healed to 100 (test/set gh)")
+        pos = pt.pos or pt.player_pos()
         if phase == 0:
-            pos = pt.pos or pt.player_pos()
             if pos and el > 4 and pos[2] > 150:
                 pt.tp(pos[0], pos[1], pos[2] - 4.5 * dt)
             return
         if phase in (4, 5):
             return
-        pos = pt.pos or pt.player_pos()
         mp = self.monster_pos()
+        pt.pos = pos = pt.player_pos() or pos
         if pos is None or mp is None:
             return
-        pt.pos = pos = pt.player_pos() or pos
         dz, dx = pos[2] - mp[2], pos[0] - mp[0]
         horiz = math.hypot(dx, dz)
         yaw, pitch = angles((pos[0], pos[1] + 25.9, pos[2]), (mp[0], mp[1] + 20.0, mp[2]))
         pt.turn_to(yaw, pitch, dt, rate=220.0)
+        backing = bar == 1 or stt in (9, 10)
         near_goal = 8.5 if stt in (6, 7) else 9.5
         if horiz > near_goal + 1.5:
-            step = min(12.0 * dt, horiz - near_goal)
+            speed = 30.0 / 8.0 if backing else 12.0           # after a back-off: the 30 blocks over about 8 s
+            step = min(speed * dt, horiz - near_goal)
             f = step / max(horiz, 0.01)
             pt.tp(pos[0] - dx * f, pos[1], pos[2] - dz * f)
-        if not self.blocked_demo and phase == 1 and el > 8:
-            self.blocked_demo = True
-            if horiz > 12.5 + 5:
-                pt.ev("fight", "click on the core from afar (blocked by the barrier)")
-                pt.c("function angel:fight/test/hit_core")
-                pt.later(0.35, "barrier block", True)
-                pt.later(1.2, "barrier block fade", True)
-                return
+        # a click on the raised barrier: once per back-off, a second after it flares
+        if backing and stt == 10 and not self.barrier_click_done and time.time() - pt.step_since >= 0:
+            self.barrier_click_done = True
+            pt.ev("fight", "click on the core behind the raised barrier")
+            pt.c("function angel:fight/test/hit_core")
+            pt.later(0.3, "barrier click blocked", True)
+        if not backing:
+            self.barrier_click_done = False
         now = time.time()
-        if now - self.last_hit >= pt.a.hit_interval and self.in_range():
+        # a person mashes the button while the countdown runs and between guards; calmer in the open phase
+        iv = 0.35 if stt in (6, 7) else (0.55 if phase in (2, 3) else pt.a.hit_interval)
+        if now - self.last_hit >= iv and (horiz <= near_goal + 4.0 or self.in_range()):
+            if not self.in_range() and not backing:
+                return
             self.last_hit = now
             if self.plan == "lose_first" and not self.lost_done and self.hits >= 4:
                 self.lost_done = True
@@ -921,20 +1100,28 @@ class FightDriver:
                 pt.later(0.4, "defeat", True)
                 self.plan = "lose_now"
                 return
+            if backing:
+                return
             pt.c("function angel:fight/test/hit_core")
-            self.hits += 1
-            if self.hits in (1, 2):
-                pt.later(0.3, f"first hit lands {self.hits}", True)
+            self.clicks += 1
+            if ch is not None and (self.last_ch is None or ch < self.last_ch):
+                self.hits += 1
+            self.last_ch = ch
+            if self.clicks in (1, 2):
+                pt.later(0.3, f"first click {self.clicks}", True)
             if ch is not None:
-                for mark, label in ((30, "30 hits left"), (21, "21 hits left"), (12, "12 hits left"), (5, "5 hits left"), (2, "2 hits left")):
+                for mark, label in ((50, "50 hits left"), (40, "40 hits left"), (30, "30 hits left"), (20, "20 hits left"), (10, "10 hits left"),
+                                    (5, "5 hits left"), (2, "2 hits left")):
                     if ch == mark:
                         self.note(("ch", mark), label)
-            if self.hits % 6 == 3:
-                pt.later(0.2, "hit", False)
+            if self.clicks % 8 == 3:
+                pt.later(0.2, "click", False)
         if phase == 2 and "crack" not in self.seen:
             self.seen.add("crack")
             pt.later(0.4, "core cracked", True)
             pt.later(2.0, "core cracked later", True)
+
+    last_ch = None
 
 
 def main():
@@ -946,10 +1133,11 @@ def main():
     ap.add_argument("--skip-main", action="store_true", help="only the variants chain (from scene 5)")
     ap.add_argument("--early-yes", action="store_true")
     ap.add_argument("--start-scene", type=int, default=1, help="jump to this scene with angel:story/scene instead of starting at 1")
+    ap.add_argument("--snap-base", type=int, default=0, help="number the pictures from this value + 1 in each scene (to add to an earlier run's folder)")
     ap.add_argument("--keep-server", action="store_true")
     ap.add_argument("--max-minutes", type=float, default=45)
     ap.add_argument("--spacing", type=float, default=1.6, help="least seconds between two ordinary pictures")
-    ap.add_argument("--hit-interval", type=float, default=0.95, help="seconds between two core hits (a human pace)")
+    ap.add_argument("--hit-interval", type=float, default=0.95, help="seconds between two core clicks (a human pace)")
     a = ap.parse_args()
     a.plan = None
     a.only = None

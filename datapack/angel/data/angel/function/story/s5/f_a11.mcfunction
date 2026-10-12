@@ -1,2 +1,2 @@
-function angel:story/hq/rig_fall
-playsound angel:sfx.rig_tear master @a 3096.5 104.0 78.5 4.0 1.0 0.9
+function angel:story/hq/fl_hit2_back
+execute at @a[limit=1] run playsound angel:sfx.lights_flicker master @a ~ ~ ~ 0.9 1.0 1.0

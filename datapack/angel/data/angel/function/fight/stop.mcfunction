@@ -3,3 +3,4 @@ execute as @e[tag=angel.giant] run function angel:fight/become_human
 function angel:fight/stop_quiet
 scoreboard players set #test angel.fight 0
 kill @e[tag=angel.test]
+scoreboard players set #ck angel.fight 0

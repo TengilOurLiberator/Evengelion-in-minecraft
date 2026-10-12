@@ -1,4 +1,2 @@
 scoreboard players set #force angel.story 0
-function angel:cast/look {id:"misato",mode:"player"}
-scoreboard players set #step angel.story 95
-function angel:story/s2/e95
+scoreboard players set #sleep angel.story 8

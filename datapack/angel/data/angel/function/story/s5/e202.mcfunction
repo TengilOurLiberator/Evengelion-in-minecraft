@@ -1,2 +1,4 @@
 scoreboard players set #force angel.story 0
-function angel:say/5_44
+scoreboard players set #present_rei angel.story 2
+scoreboard players set #step angel.story 203
+function angel:story/s5/e203

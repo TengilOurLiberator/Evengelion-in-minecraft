@@ -39,3 +39,5 @@ scoreboard players set #c5 angel.story 5
 scoreboard players set #c20 angel.story 20
 execute unless score #running angel.story matches 1 run kill @e[tag=angel.story]
 execute unless score #running angel.story matches 1 if score #hq.dirty angel.story matches 1 run function angel:story/hq/reset_all
+execute unless score #running angel.story matches 1 if score #l.plug angel.story matches 1 if loaded 3030 12 11 run function angel:story/launch/plug_lit
+execute unless score #running angel.story matches 1 if score #f.shaft angel.story matches 1 if loaded 3009 50 9 run function angel:story/launch/shaft_reset

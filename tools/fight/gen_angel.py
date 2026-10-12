@@ -24,14 +24,21 @@ for a, b in zip(HEIGHTS, HEIGHTS[1:]):
 SNAP.append((10 ** 6, HEIGHTS[-1]))
 
 POSE_FILES = ["idle_a", "idle_b"] + [f"regen_{i}" for i in range(8)] + ["charge", "charge_2", "charge_3", "windup", "thrust", "stagger", "wrap_open",
-              "wrap_close", "die_1", "die_2", "die_3", "walk_l", "walk_r"]
+              "wrap_close", "wrap_tight", "wrap_hit", "die_1", "die_2", "die_3", "walk_l", "walk_r"]
 
 BRIGHT = model.BRIGHT
 BLOCK_TAGS = {"eye": "angel.eye", "core": "angel.corebody", "halo": "angel.corebody", "jaw": "angel.jaw",
-              "coreglow": "angel.coreglow", "veil": "angel.veil", "eyeglow": "angel.eyeglow", "gather": "angel.gather"}
+              "coreglow": "angel.coreglow", "veil": "angel.veil", "eyeglow": "angel.eyeglow", "gather": "angel.gather",
+              "crack1": "angel.crack1", "crack2": "angel.crack2", "crack3": "angel.crack3", "crack4": "angel.crack4"}
+# the four crack slivers in front of the core are summoned as air; the wrap's landed hits reveal them one by one (fight/core_crack_N)
+HIDDEN_AT_SUMMON = ("crack1", "crack2", "crack3", "crack4")
 
 CORE_BOX = 0.15          # core hit box edge as a fraction of the height
 BODY_W, BODY_H = 0.24, 0.56
+WRAP_POSES = ("wrap_open", "wrap_close", "wrap_tight", "wrap_hit")
+# the body box while it runs in and while it is wrapped round the giant: a generous target (fractions of the height; 14 x 30 blocks at height 30),
+# so that any swing roughly toward the monster is a core hit during the wrap (fight/body_hit counts it)
+WRAP_BODY_W, WRAP_BODY_H, WRAP_BODY_Y = 0.47, 1.0, 0.03
 CORE_FWD = 8.0           # the core hit box sits this many model units in front of the core centre
 
 
@@ -120,14 +127,17 @@ def foot_offsets(k):
     return (fl[0] * k, fl[2] * k), (fr[0] * k, fr[2] * k)
 
 
-def pose_hit_offsets(pose, k):
-    """Offsets (left, up, forward) in blocks of the two interaction boxes' feet (their bottom centre) for a pose."""
+def pose_hit_offsets(pose, k, wrapped=False):
+    """Offsets (left, up, forward) in blocks of the two interaction boxes' feet (their bottom centre) for a pose.
+    `wrapped`: the body box is the big one."""
     bs = model.pose_boxes(pose)
     core = [e for e in bs if e["name"] == "coreA"][0]["centre"]
     ch = CORE_BOX * k * 100
     c = (core[0] * k, core[1] * k - ch / 2, (core[2] + CORE_FWD) * k)
     bh = BODY_H * k * 100
     body = (0.0, 0.66 * k * 100 - bh / 2, 0.0)
+    if wrapped:
+        body = (0.0, WRAP_BODY_Y * k * 100, 0.0)
     return c, body
 
 
@@ -155,11 +165,12 @@ def gen(F, add_block_tag=None):
         lines.append(f'summon minecraft:interaction ~ ~ ~ {{Tags:["angel.mon","angel.body","angel.new"],width:{f(BODY_W * H)},height:{f(BODY_H * H)},response:1b}}')
         for i, (p, e) in enumerate(zip(P, bs0)):
             bl, sk = BRIGHT.get(p["block"], (15, 15))
+            blockname = "minecraft:air" if p["tag"] in HIDDEN_AT_SUMMON else p["block"]
             if p["light"]:
                 bl, sk = p["light"] if isinstance(p["light"], tuple) else (p["light"], p["light"])
             tags = part_tags(i, p) + ["angel.new"]
             lines.append(
-                f'summon minecraft:block_display ~ ~ ~ {{Tags:{snbt_list(tags)},block_state:"{p["block"]}",'
+                f'summon minecraft:block_display ~ ~ ~ {{Tags:{snbt_list(tags)},block_state:"{blockname}",'
                 f'transformation:{transform_nbt(e, k, True)},interpolation_duration:0,teleport_duration:2,'
                 f'view_range:8f,shadow_radius:0f,brightness:{{block:{bl},sky:{sk}}}}}')
         lines += ["tp @e[tag=angel.new] ~ ~ ~ ~ 0",
@@ -182,7 +193,10 @@ def gen(F, add_block_tag=None):
                 lines.append(f"data merge entity @e[type=minecraft:block_display,tag=angel.p{i},limit=1] {{transformation:{transform_nbt(e, k)}}}")
             eye = model.EYE_ON if pose.get("eyes") else model.EYE_OFF
             lines.append(f'execute as @e[type=minecraft:block_display,tag=angel.eye] run data merge entity @s {{block_state:"{eye}"}}')
-            c, b = pose_hit_offsets(pose, k)
+            wr = pn in WRAP_POSES
+            c, b = pose_hit_offsets(pose, k, wr)
+            bw_, bh_ = (WRAP_BODY_W, WRAP_BODY_H) if wr else (BODY_W, BODY_H)
+            lines.append(f"data merge entity @e[type=minecraft:interaction,tag=angel.body,limit=1] {{width:{f(bw_ * H)},height:{f(bh_ * H)}}}")
             lines.append(f'data modify storage angel:mon off set value {{cx:"{c[0]:.3f}",cy:"{c[1]:.3f}",cz:"{c[2]:.3f}",bx:"{b[0]:.3f}",by:"{b[1]:.3f}",bz:"{b[2]:.3f}"}}')
             lines.append("function angel:angel/sync_hit with storage angel:mon off")
             put(f"p/{pn}_{H}", lines)
@@ -313,6 +327,8 @@ def gen(F, add_block_tag=None):
     one_shot("stagger", "stagger", 6)
     one_shot("wrap_open", "wrap_open", 10)
     one_shot("wrapping", "wrap_close", 8)
+    one_shot("wrap_tight", "wrap_tight", 10)      # the squeeze of the last seconds of the countdown
+    one_shot("wrap_hit", "wrap_hit", 2)           # the shudder of a landed hit while wrapped (the fight returns to wrapping / wrap_tight after 4 ticks)
     one_shot("dying_1", "die_1", 30)
     one_shot("dying_2", "die_2", 40)
     one_shot("dying_3", "die_3", 30)
@@ -335,9 +351,16 @@ def gen(F, add_block_tag=None):
         "# function angel:angel/core_stage {stage:0|1|2}   0 whole, 1 cracked (magma texture), 2 dead (dark)",
         "$function angel:angel/core_stage_$(stage)",
     ])
-    put("core_stage_0", [f'execute as @e[type=minecraft:block_display,tag=angel.corebody] unless entity @s[tag=angel.halo] run data merge entity @s {{block_state:"{model.CORE}"}}'])
-    put("core_stage_1", [f'execute as @e[type=minecraft:block_display,tag=angel.corebody] unless entity @s[tag=angel.halo] run data merge entity @s {{block_state:"{model.CORE_CRACKED}"}}'])
-    put("core_stage_2", ['execute as @e[type=minecraft:block_display,tag=angel.coreglow] run data merge entity @s {block_state:"minecraft:black_concrete"}',
+    hide_cracks = ['execute as @e[type=minecraft:block_display,tag=angel.crack1] run data merge entity @s {block_state:"minecraft:air"}',
+                   'execute as @e[type=minecraft:block_display,tag=angel.crack2] run data merge entity @s {block_state:"minecraft:air"}',
+                   'execute as @e[type=minecraft:block_display,tag=angel.crack3] run data merge entity @s {block_state:"minecraft:air"}',
+                   'execute as @e[type=minecraft:block_display,tag=angel.crack4] run data merge entity @s {block_state:"minecraft:air"}']
+    put("core_stage_0", [f'execute as @e[type=minecraft:block_display,tag=angel.corebody] unless entity @s[tag=angel.halo] run data merge entity @s {{block_state:"{model.CORE}"}}'] + hide_cracks)
+    put("core_stage_1", [f'execute as @e[type=minecraft:block_display,tag=angel.corebody] unless entity @s[tag=angel.halo] run data merge entity @s {{block_state:"{model.CORE_CRACKED}"}}'] + hide_cracks)
+    # the wrap's visible stages of damage: a white-hot sliver of light across the core per stage (fight/wrap_hit reveals them as the hits left fall)
+    for i in range(1, 5):
+        put(f"core_crack_{i}", [f'execute as @e[type=minecraft:block_display,tag=angel.crack{i}] run data merge entity @s {{block_state:"{model.CRACK}"}}'])
+    put("core_stage_2", hide_cracks + ['execute as @e[type=minecraft:block_display,tag=angel.coreglow] run data merge entity @s {block_state:"minecraft:black_concrete"}',
                          'execute as @e[type=minecraft:block_display,tag=angel.veil] run data merge entity @s {block_state:"minecraft:air"}',
                          'execute as @e[type=minecraft:block_display,tag=angel.corebody] unless entity @s[tag=angel.halo] run data merge entity @s {block_state:"minecraft:black_concrete"}',
                          'execute as @e[type=minecraft:block_display,tag=angel.halo] run data merge entity @s {block_state:"minecraft:gray_stained_glass"}'])

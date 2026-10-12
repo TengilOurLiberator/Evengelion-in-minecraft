@@ -1,1 +1,1 @@
-execute at @a[limit=1] run playsound angel:sfx.sync_rise master @a ~ ~ ~ 1.0 1.0 1.0
+execute as @e[tag=angel.lfluid] run data merge entity @s {block_state:"minecraft:white_concrete"}

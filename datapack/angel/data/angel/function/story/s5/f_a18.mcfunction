@@ -1,2 +1,8 @@
-function angel:story/hq/bank_off_5
-playsound angel:sfx.breaker_3 master @a 3097.724 65.534 71.724 1.5 0.85 0.4
+function angel:cast/look {id:"misato",mode:"ahead"}
+scoreboard players set #f.turn_19 angel.story 16
+function angel:cast/look {id:"ritsuko",mode:"ahead"}
+scoreboard players set #f.turn_20 angel.story 16
+function angel:cast/look {id:"medic1",mode:"ahead"}
+scoreboard players set #f.turn_21 angel.story 16
+function angel:cast/look {id:"medic2",mode:"ahead"}
+scoreboard players set #f.turn_22 angel.story 16

@@ -1,2 +1,1 @@
-function angel:story/hq/bank_off_1
-playsound angel:sfx.breaker_2 master @a 3095.819 95.362 77.302 1.5 0.85 0.4
+tp @e[type=minecraft:mannequin,tag=angel.rei,limit=1] 3097.2 55.479 79.929

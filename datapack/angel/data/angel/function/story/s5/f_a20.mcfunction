@@ -1,2 +1,2 @@
-function angel:story/hq/bank_off_3
-playsound angel:sfx.breaker_1 master @a 3095.414 86.836 69.052 1.5 0.85 0.4
+function angel:story/snd/loop_klaxon/start
+scoreboard players set #f.alarm angel.story 1

@@ -42,10 +42,12 @@ TITLE = "The road"
 
 LIE_YAW = 100.0
 BLAST = 48                  # ticks from the start of sfx.mine to the blast (2.400 s)
-WHITE_VEIL = 1.0            # seconds: the white thins to a veil (still silent)
-WHITE_OFF = 1.7             # seconds: the white is gone, the silent fireball is in view
+WHITE_VEIL = 1.0            # seconds: the white thins to a veil (still silent); the veil holds until the blast (it is no longer taken away early)
 YAW_BLEND = 6.0              # seconds the car takes to swing from the way it lay to the way the road goes
-BLACK_FOR = 4               # seconds of blindness from the blast: dark for three, back over the last (clear at tick 128)
+BLACK_HOLD = 24             # ticks of REAL black from the blast: a black room of six opaque slabs round his head (blindness alone leaves the near blocks
+                            # visible: the first playthrough saw a bright grey room), moved with him when he is put beside the car
+BLACK_FADE = 20             # ticks in which the black comes back: blindness for the last second (clear at tick 48 + 24 + 20 = 92)
+MISATO_BACK = 2.4           # blocks further from the car than the boy, and behind him: she is not in his first view of the car on its side
 GLOW_COLOUR = 16744448      # 0xFF7F00, the outline of the Angel in the crater
 
 
@@ -100,6 +102,15 @@ def build(s, ctx):
 
     player_spot, misato_spot = carfx.lie_stand_spots(lie_pose, side_blocks=6.3, fwd=(-0.8, 1.6))
     py_ = probe.surface(player_spot[0], player_spot[1], by) or by
+    # Misato stands further out and a little behind the boy (when he is turned to the car she is behind his shoulder), where the ground is flat
+    # and at the boy's height; if there is no such place she keeps her old spot
+    cand = local_to_world((lie_pose[0], lie_pose[1], lie_pose[2]), lie_pose[3], 0.0, -(6.3 + MISATO_BACK), 0.0, -1.2)
+    cand_y = probe.surface(cand[0], cand[2], by)
+    if cand_y is not None and abs(cand_y - py_) <= 0.6:
+        misato_spot = (cand[0], cand[2])
+        ctx.warn(f"scene 2: Misato stands behind the boy at ({cand[0]:.1f}, {cand[2]:.1f}), ground {cand_y:.1f} (his {py_:.1f})")
+    else:
+        ctx.warn(f"scene 2: no flat ground for Misato behind the boy (ground {cand_y}): she keeps her old place beside him")
     my_ = probe.surface(misato_spot[0], misato_spot[1], by) or by
     cx_, cz_ = lie_pose[0], lie_pose[2]
     face_car = math.degrees(math.atan2(-(cx_ - misato_spot[0]), (cz_ - misato_spot[1])))
@@ -184,10 +195,14 @@ def build(s, ctx):
     # ---------------------------------------------------------------- THE MINE (everything below is relative to this tick, T0)
     spawn_cloud, cloud_sched = fx.mushroom(ctx, (mine[0], mine[1], mine[2]), scale=MON_H / 60.0)
     ctx.extra_functions["story/s2/whiteout"] = sh.box_shell("angel.mwhite", "white_concrete", None, (4.0, 4.0, 4.0), bright=15)
+    ctx.extra_functions["story/s2/blackout"] = sh.box_shell("angel.mblack", "black_concrete", None, (4.0, 4.0, 4.0), bright=0)
     at_eyes = f"execute at {P()} anchored eyes positioned ^ ^ ^ run "
+    # put beside the car, in the black, and turned to it (a teleport through black: the one place his head may be turned): the car on its side is
+    # what he sees when the picture comes back, Misato is behind his shoulder.  The black room is built again round his eyes where he now is.
+    to_spot = f"tp {P()} {num(player_spot[0])} {num(py_)} {num(player_spot[1])} facing {num(lie_centre[0])} {num(py_)} {num(lie_centre[2])}"       # (tp ... facing aims from the FEET: the car's middle at feet level is a level gaze)
     lie_cmds = [sset("#ride", 0), f"ride {P()} dismount", cast_remove("misato"), "kill @e[tag=angel.rig_car]",
                 *ctx.rig_spawn(car, "side", lie_pose, carfx.roll_motions(car, 90.0)),
-                tp_player(player_spot[0], py_, player_spot[1]),
+                "kill @e[tag=angel.mblack]", to_spot, at_eyes + fn("story/s2/blackout"),
                 cast_summon("misato", misato_spot[0], my_, misato_spot[1], face_car), cast_look("misato", "player"),
                 sset("#beat", 21),
                 f"function angel:angel/pose {{pose:\"regenerating\"}}",
@@ -198,18 +213,26 @@ def build(s, ctx):
          at_eyes + fn("story/s2/whiteout"), *fx.flash_burst(), *spawn_cloud, *cloud_sched,
          note="T0: SILENCE (stopsound everything), sfx.mine, the white-out begins with the whine, the fireball and cloud are built behind it")
     s.quiet(0.4, 2.4, note="sfx.mine: digital silence from 0.4 s to 2.4 s; the checker proves nothing else is scheduled to sound in it")
-    s.after(WHITE_VEIL, sh.set_block("angel.mwhite", "white_stained_glass"), note="tick 20: the white thins to a veil (still silent)")
-    s.after(WHITE_OFF, sh.kill("angel.mwhite"), note="tick 34: the white is gone: the fireball over the monster, in silence")
-    s.after(BLAST / 20.0, blind(BLACK_FOR),
+    s.after(WHITE_VEIL, sh.set_block("angel.mwhite", "white_stained_glass"), note="tick 20: the white thins to a veil (still silent), the fireball dim behind it; it holds")
+    s.after(BLAST / 20.0, sh.kill("angel.mwhite"), at_eyes + fn("story/s2/blackout"),
             f"execute at {P()} run particle minecraft:dust_plume ~ ~0.5 ~ 5 1 5 0.03 80 force",
             f"execute at {P()} run particle minecraft:falling_dust{{block_state:\"minecraft:dirt\"}} ~ ~5 ~ 6 2 6 0.0 60 force",
-            note="tick 48: THE BLAST arrives (sfx.mine at 2.400 s): black at once, the shock wave's dust; the car goes over")
+            note="tick 48: THE BLAST arrives (sfx.mine at 2.400 s): from the white to a REAL black room at once (six opaque black slabs round his head), the shock wave's dust")
     s.after((BLAST + 2) / 20.0, *lie_cmds, sfx("sfx.car_roll", at=(lie_centre[0], by + 1.0, lie_centre[2]), vol=1.5),
-            note="tick 50, in the dark: the car lies on its side, the boy and Misato beside it; sfx.car_roll (the car goes over twice)")
+            note="tick 50, in the black: the car lies on its side, the boy beside it TURNED TO IT, Misato behind his shoulder; sfx.car_roll (the car goes over twice); the black room moves with him")
     s.after((BLAST + 4) / 20.0, *fx.dust_at(lie_centre[0], by + 0.3, lie_centre[2], 60, 3.0))
-    s.after(5.4, sfx("sfx.ears_ringing", vol=1.0), note="tick 108: the ringing begins as the picture comes back (8 s, under 2.07)")
+    t_back = (BLAST + BLACK_HOLD) / 20.0
+    s.after(t_back, sh.kill("angel.mblack"), "effect clear @a minecraft:blindness", blind(BLACK_FADE / 20.0),
+            note="tick 72: after a second of black the room goes and the picture comes back over one second (blindness for its last second)")
+    # dust in the air as it comes back: three more bursts round the car and round him
+    for k, tk in enumerate((BLAST + BLACK_HOLD - 4, BLAST + BLACK_HOLD + 8, BLAST + BLACK_HOLD + 22, BLAST + BLACK_HOLD + 40)):
+        s.after(tk / 20.0, *fx.dust_at(lie_centre[0], by + 0.6, lie_centre[2], 70, 3.4),
+                f"execute at {P()} run particle minecraft:dust_plume ~ ~1.0 ~ 4 1.5 4 0.02 50 force",
+                f"execute at {P()} run particle minecraft:falling_dust{{block_state:\"minecraft:dirt\"}} ~ ~4 ~ 4 1.5 4 0 30 force",
+                note="dust in the air over the car and round him" if k == 0 else "")
+    s.after(t_back + 0.5, sfx("sfx.ears_ringing", vol=1.0), note="tick 82: the ringing begins as the picture comes back (8 s, under 2.07)")
     s.after(9.0, *ctx.audio.start("bed", "town_empty", fade=6.0), note="tick 180: the blast's tail has ended: the town's air comes back slowly (6 s); no music")
-    s.sleep((BLAST + BLACK_FOR * 20) / 20.0, note="the dark lifts (clear at tick 128)")
+    s.sleep((BLAST + BLACK_HOLD + BLACK_FADE) / 20.0 + 0.3, note="the picture is back (clear at tick 92)")
 
     # ================================================================ on the ground
     s.say("2.07")

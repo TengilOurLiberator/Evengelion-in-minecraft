@@ -273,6 +273,22 @@ builds a flicker. `angel:story/hq/reset_all` puts the whole set back as built; `
 when the story has been in the set (`#hq.dirty`). A scene that wants the cage lit after scene 5 must switch the lights on itself
 (`angel:story/hq/lights_on`, `booth_on`).
 
+## Staging added after the second playthrough (scenes 1, 2, 5, 6, 7)
+
+* **Scene 5, the second impact** (`s05.py`, `hq_cage.py`): impact 0 -> every light out -> 20 stutter back -> 36 the rig tears loose over the player
+  (`rig2_place` puts a marker 2.5 blocks ahead of him, clamped over the raised hand, or over the hand when he is more than 11 blocks from the shield;
+  `rig2_start`: rig-tear sound from there, sparks, dust and fragments past his face, a swinging shadow on the deck, a sway for 44 ticks) -> 64 the hand
+  surges up in 8 steps (`hand_surge`) -> 80 the rig falls on the palm (landing 111, debris to the far side) -> 118 the eyes -> 121 everyone looks up
+  at the face -> 130 5.32 -> 150 the aftershock and Rei is thrown.  Gendo: the cage dips, one hard light snaps on him, both women look up, 2 s, then 5.04.
+  The gurney is timed to arrive as 5.30 ends.  `booth_anchor(ctx)` reads the commander's stand from the set module, not from anchors.json.
+* **Scene 6**: the plug is turned to the front on entry (through the black); `launch_plug.py` builds the capsule interior and the status strip / HUD
+  (rewritten as the BASE lines are said; the sync rate counts to 41.3 with the rising tone); `launch_pad.py` the pad: dark shaft, ring lights from
+  below, beacons, four restraint arms, all-green wave, the charge chase.  The real capsule lamps and the shaft rings are restored by
+  `story/launch/restore`.
+* **Scene 2**: the white holds to the blast, then a real black room (six opaque slabs) that moves with him; he is put beside the car turned to it.
+* **Scene 1**: the girl is 12 blocks ahead of him; a street-wide jolt (`jolt_street`); bigger tracers; the wreck column.  **Scene 7**: the ending is a
+  curtain call (`launch_cage.ending_spots`).
+
 ## What the engine keeps out of the picture
 
 * **Vanilla toasts**: `datapack/angel/pack.mcmeta` has a `filter` block that hides every vanilla advancement and recipe from the packs below ours

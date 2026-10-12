@@ -32,7 +32,7 @@ def options(fov=90, render=24, gamma=0.5, extra=None):
         "soundCategory_voice": "0.0",
         "onboardAccessibility": "false", "skipMultiplayerWarning": "true", "joinedFirstServer": "true",
         "tutorialStep": "none", "lang": "en_us", "autoJump": "false",
-        "resourcePacks": f'["vanilla","file/{PACK}"]', "incompatibleResourcePacks": "[]",
+        "resourcePacks": ('["vanilla"]' if os.environ.get("ANGEL_NOPACK") else f'["vanilla","file/{PACK}"]'), "incompatibleResourcePacks": "[]",
         "fullscreen": "false", "overrideWidth": "0", "overrideHeight": "0",
     }
     o.update(extra or {})
@@ -54,12 +54,30 @@ def prepare(game, pack_src, fov, render, gamma, extra=None):
         shutil.rmtree(os.path.join(game, d), ignore_errors=True)
 
 
-def command(game, port, width, height, xmx="6G"):
+FABRIC_PROFILE = "fabric-loader-0.19.5-26.3"        # read-only: its main class and libraries; nothing under %APPDATA% is written
+
+
+def maven_path(name):
+    """'org.ow2.asm:asm:9.10.1' -> libraries\\org\\ow2\\asm\\asm\\9.10.1\\asm-9.10.1.jar"""
+    group, art, ver = name.split(":")[:3]
+    return os.path.join(MC, "libraries", *group.split("."), art, ver, f"{art}-{ver}.jar")
+
+
+def command(game, port, width, height, xmx="6G", fabric=False):
+    """The java command line. fabric=True: the Fabric Loader profile (its main class KnotClient and libraries on top of 26.3's),
+    the way the launcher starts it, but with this game directory."""
     v = json.load(open(os.path.join(MC, "versions", VERSION, VERSION + ".json")))
     ok = lambda lib: all(r.get("os", {}).get("name") in (None, "windows") and "arch" not in r.get("os", {})
                          for r in lib.get("rules", [{}]) if r.get("action") == "allow")
     cp = [os.path.join(MC, "libraries", *lib["downloads"]["artifact"]["path"].split("/"))
           for lib in v["libraries"] if ok(lib) and "artifact" in lib.get("downloads", {})]
+    fj = None
+    if fabric:
+        fj = json.load(open(os.path.join(MC, "versions", FABRIC_PROFILE, FABRIC_PROFILE + ".json")))
+        cp = [maven_path(lib["name"]) for lib in fj["libraries"]] + cp
+        for p in cp:
+            if not os.path.exists(p):
+                raise FileNotFoundError(p)
     cp.append(os.path.join(MC, "versions", VERSION, VERSION + ".jar"))
     natives = os.path.join(game, "natives")
     jvm = []
@@ -72,16 +90,19 @@ def command(game, port, width, height, xmx="6G"):
            "${classpath}": os.pathsep.join(cp)}
     for k, val in sub.items():
         jvm = [a.replace(k, val) for a in jvm]
+    if fj:
+        jvm += [a for a in fj.get("arguments", {}).get("jvm", []) if isinstance(a, str)]
     return [JAVA, f"-Xmx{xmx}"] + jvm + [
-        v["mainClass"], "--username", NAME, "--version", VERSION, "--gameDir", game,
+        fj["mainClass"] if fj else v["mainClass"], "--username", NAME, "--version", FABRIC_PROFILE if fj else VERSION,
+        "--gameDir", game,
         "--assetsDir", os.path.join(MC, "assets"), "--assetIndex", v["assetIndex"]["id"],
         "--accessToken", "0", "--userType", "legacy", "--width", str(width), "--height", str(height),
         "--quickPlayMultiplayer", f"localhost:{port}"]
 
 
-def launch(game, port, width, height):
+def launch(game, port, width, height, fabric=False):
     log = open(os.path.join(game, "client.log"), "w")
-    proc = subprocess.Popen(command(game, port, width, height), cwd=game, stdout=log, stderr=subprocess.STDOUT,
+    proc = subprocess.Popen(command(game, port, width, height, fabric=fabric), cwd=game, stdout=log, stderr=subprocess.STDOUT,
                             creationflags=0x08000000)               # CREATE_NO_WINDOW: no console window
     winutil.adopt(proc)
     return proc

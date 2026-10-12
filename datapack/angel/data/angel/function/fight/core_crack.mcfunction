@@ -2,6 +2,8 @@ scoreboard players set #phase angel.fight 2
 scoreboard players set #st angel.fight 5
 scoreboard players set #t angel.fight 0
 scoreboard players set #sl angel.fight 80
+# the checkpoint: a loss from here on restarts the fight at this point (start_ck), not at the launch
+function angel:fight/ck_save
 function angel:angel/stop_walking
 function angel:angel/core_stage {stage:1}
 function angel:angel/pose_regenerating

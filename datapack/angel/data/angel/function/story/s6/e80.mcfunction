@@ -1,4 +1,2 @@
 scoreboard players set #force angel.story 0
-execute as @a[limit=1] run function angel:fight/become_giant
-scoreboard players set #step angel.story 81
-function angel:story/s6/e81
+scoreboard players set #sleep angel.story 8

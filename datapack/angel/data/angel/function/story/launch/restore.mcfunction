@@ -21,3 +21,5 @@ execute if score #l.cage angel.story matches 1 if loaded 3096 60 100 run functio
 kill @e[tag=angel.launch]
 execute as @a if entity @s[x=3000,y=8,z=0,dx=20,dy=148,dz=20] run tp @s 3009.0 4.0 9.0
 execute as @a if entity @s[x=3088,y=57,z=56,dx=18,dy=22,dz=16] run tp @s 3096.5 54.0 72.5
+execute if score #l.plug angel.story matches 1 if loaded 3030 12 11 run function angel:story/launch/plug_lit
+execute if score #f.shaft angel.story matches 1 if loaded 3009 50 9 run function angel:story/launch/shaft_reset

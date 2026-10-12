@@ -1,4 +1,2 @@
 scoreboard players set #force angel.story 0
-function angel:story/snd/stop_music
-scoreboard players set #step angel.story 197
-function angel:story/s5/e197
+scoreboard players set #sleep angel.story 8

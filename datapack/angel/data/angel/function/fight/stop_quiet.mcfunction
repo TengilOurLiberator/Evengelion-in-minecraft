@@ -9,6 +9,8 @@ stopsound @a * angel:sfx.beam_charge
 schedule clear angel:fight/fx_fade
 schedule clear angel:fight/fx_clear
 schedule clear angel:fight/restart_go
+schedule clear angel:fight/restart_ck_go
+stopsound @a * minecraft:entity.warden.heartbeat
 function angel:angel/remove
 kill @e[tag=angel.fight]
 bossbar set angel:fight/giant players

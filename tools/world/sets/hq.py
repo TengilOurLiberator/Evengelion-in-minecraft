@@ -10,9 +10,10 @@ PLAN (top view, x ->, z v; bottom-left of the box is the north-west corner)
                             crown y 72, horn tip y 75), z 40..62, its face plane z 59, eyes y 61..64;
                             the umbilical bridge deck y 53, x 94..98 (rails on 93 and 99), z 71..137, ending in a hazard lip (no end
                             rail, no grating; invisible barriers at z 70); the player stops at z 72.5, 13.5 from the face plane;
-                            the commander's booth is an open balcony beside the head's right cheek, level with the east catwalk: x 105..114,
-                            z 49..54, y 62..71 (no glass; a one-block parapet on the south side), he stands at (107.0, 63, 53.75): 23 blocks from
-                            the stop, 23 degrees up, 29 degrees to the right
+                            the commander's gantry is an open command platform thrust out beside the head's right jaw, 3 blocks proud of the face
+                            plane: floor x 102..107, z 59..63, y 56 (no glass, no roof; a waist-high parapet on the south side, a dark rear screen),
+                            on a box-girder arm to the east wall (x 108..128, z 60..61); he stands at (103.5, 57, 62.25): 13.0 blocks from the
+                            stop's eye to his chest, 17 degrees up, 34 degrees to the right, the 3.6 tall figure fills 15.5 degrees
     z 142..188   x  9..150  B: THE FLOODED CHAMBER  y 33..79, lake surface y 50, catwalk deck y 53, dock west, cage door north
     z 142..188   x  0..189  A: THE CORRIDORS  two levels: U (floor y 130) and L (floor y 106), tall escalator void between
 
@@ -62,7 +63,11 @@ WHITE = "white_concrete"
 YELLOW = "yellow_concrete"
 IRON = "iron_block"
 EYE_OFF = "minecraft:black_concrete"
-EYE_ON = "minecraft:sea_lantern"               # cold white, emits 15, the brightest block there is (glowstone is mottled tan, ochre froglight a pale cream brick)
+# The lit eye.  Measured from the 26.3 client's own textures: sea_lantern is a busy teal-framed lamp (channel std 41..59, a dark teal rim on
+# every cube: a row of them reads as a row of lamps), glowstone a brown mottle, shroomlight orange, pearlescent and verdant froglight pale but
+# tinted at their rims (lilac, green: they merge with the giant's purple and lime).  ochre_froglight with axis=z shows its END texture on the
+# north and south faces: a flat pale cream (251, 245, 206), std 6 / 16 / 37 only in a soft yellow vignette at the rim, no lines, and it emits 15.
+EYE_ON = "minecraft:ochre_froglight[axis=z]"
 LAMP_OFF = "minecraft:gray_concrete"           # dead lamp panel
 LAMP_ON = "minecraft:sea_lantern"
 LIQUID = "orange_stained_glass"
@@ -155,7 +160,7 @@ _RGB = {
 }
 _EXACT = {
     "amethyst_block": (134, 97, 191), "obsidian": (10, 7, 17), "magma_block": (140, 60, 20), "sea_lantern": (172, 200, 205),
-    "ochre_froglight": (240, 220, 140), "glowstone": (255, 205, 100), "verdant_froglight": (200, 240, 170), "iron_block": (205, 205, 205),
+    "ochre_froglight": (250, 243, 200), "glowstone": (255, 205, 100), "verdant_froglight": (200, 240, 170), "iron_block": (205, 205, 205),
     "polished_blackstone": (45, 43, 49), "blackstone": (42, 38, 44), "deepslate_tiles": (51, 52, 52), "polished_deepslate": (70, 70, 75),
     "chiseled_polished_blackstone": (50, 46, 54), "smooth_quartz": (235, 230, 222), "quartz_block": (235, 230, 222),
     "copper_grate": (180, 105, 75), "weathered_copper": (100, 150, 120), "cut_copper": (190, 110, 80),
@@ -623,17 +628,26 @@ HC = 10
 HW, HH, HD = 21, 40, 28
 EYE_IZ = 5                      # the lit eye block sits in cell iz 5, flush with the face plate (it was iz 6, a one-deep recess: the sill and
                                 # the brow hid 16 to 64 percent of each eye from the stop, which looks up at the slits at 20 to 30 degrees)
-EYE_K = (2, 3, 4, 5, 6)         # |ix - HC| of the cells of one eye: five long and ONE high, stepping up towards the temple
+# THE EYES.  An eye is a short staircase of lit cells (EYES_LEFT / EYES_RIGHT, EYE_OFF <-> EYE_ON, all in cell iz EYE_IZ) sunk in a black
+# socket: every plate cell that touches a lit cell (sides, above, below, corners: one cell larger all round) is black concrete, so the
+# lit shape has a dark surround under the brow's lime edge.  EYE_LIT lists (k, iy) for the viewer's right eye (k = |ix - HC|, the outer
+# end has the larger k); the left eye is its mirror.  The plate falls away at the temples, so the cells climb outwards with the face
+# edge: an angry glare, the nose end lowest.  EYE_LIDS lists lit cells that wear a black slab lid (top slab, same row, one cell nearer: iz
+# EYE_IZ - 1, so it touches the lit face): it hides exactly the upper half of that cell from any place below it, and the cell shows as a
+# half-high sliver, the tail of the slit.  The lit block is a flat pale emitter, see EYE_ON.
+EYE_LIT = [(3, 16), (4, 16), (5, 17), (6, 18)]
+EYE_LIDS = [(3, 16)]
+EYE_LID_BLOCK = "minecraft:black_concrete_slab[type=top]"
+EYE_SOCKET = "minecraft:black_concrete"
+EYE_K = tuple(k for k, _ in EYE_LIT)
 NOSE_PROUD = 1.8
 HALF_W = 7.4                    # half width of the face at the brow: fifteen blocks
 HORN_TOP = 30.5                  # v of the horn tip (the stop sees chin tip to horn tip in about 100 degrees)
 
 
 def eye_low(k):
-    """Row (iy) of the eye slit at |ix - HC| = k.  The slit is one row high, climbs outwards (an angry glare) and sits in the
-    top row of the old two-row socket, so the brow's overhang roofs it.  The player looks up at it from 5 to 9 blocks below, so
-    the one-deep recess and the sill cut the lit face down to well under a block of glow."""
-    return int(math.floor(17.0 + 0.5 * (k - 1.5))) - 1
+    """Row (iy) of the lit eye cell at |ix - HC| = k."""
+    return dict(EYE_LIT)[k]
 
 
 def _hsub():
@@ -677,9 +691,10 @@ def head_field(horn_on=True):
     hx = np.where(hv < 0.45, 1.5, 0.4 + 1.1 * ((1.0 - hv) / 0.55) ** 1.5)   # three wide at the root, one wide above
     horn = (V >= 19.5) & (V <= HORN_TOP) & (S >= lead) & (S <= trail) & (U <= hx)
     carve = np.zeros(base.shape, bool)
-    for k in EYE_K:
-        lo = eye_low(k)
+    for (k, lo) in EYE_LIT:
         carve |= (np.abs(U - k) < 0.5) & (V >= lo) & (V < lo + 1) & (S < EYE_IZ)
+    for (k, lo) in EYE_LIDS:                                        # a lid stands in the cell in front of its lit cell
+        carve |= (np.abs(U - k) < 0.5) & (V >= lo) & (V < lo + 1) & (S >= EYE_IZ - 1) & (S < EYE_IZ)
     return (base | brow | nose | cheek | (horn if horn_on else False)) & ~carve
 
 
@@ -689,13 +704,19 @@ def head_blocks():
     occ = head_field()
     cand = quantize(occ[:, :, ::-1])[:, :, ::-1]                 # to world orientation and back
     eyes_l, eyes_r = [], []
-    for k in EYE_K:
-        for r in (0,):
-            for sgn in (-1, 1):
-                ix, iy = HC + sgn * k, eye_low(k) + r
-                cand[ix, iy, EYE_IZ] = 1
-                (eyes_l if sgn < 0 else eyes_r).append((ix, iy, EYE_IZ))
+    for (k, lo) in EYE_LIT:
+        for sgn in (-1, 1):
+            ix, iy = HC + sgn * k, lo
+            cand[ix, iy, EYE_IZ] = 1
+            (eyes_l if sgn < 0 else eyes_r).append((ix, iy, EYE_IZ))
+    for (k, lo) in EYE_LIDS:
+        for sgn in (-1, 1):
+            cand[HC + sgn * k, lo, EYE_IZ - 1] = 1
     occc = cand > 0
+    plate = occc[:, :, EYE_IZ].copy()                              # the face plate's cells beside the eyes (before the socket is cut)
+    for (k, lo) in EYE_LIT:
+        for sgn in (-1, 1):
+            plate[HC + sgn * k, lo] = False
     full = cand == 1
     below = np.zeros_like(occc)
     below[:, 1:, :] = occc[:, :-1, :]
@@ -754,6 +775,19 @@ def head_blocks():
     names = np.full(cand.shape, "", dtype=object)
     for ix, iy, iz in zip(*np.nonzero(occc)):
         names[ix, iy, iz] = shape_block(mat[ix, iy, iz], cand[ix, iy, iz])
+    lit = {(k, lo) for (k, lo) in EYE_LIT}
+    for (k, lo) in EYE_LIT:                                          # the black socket: the plate cells in the 8-neighbourhood of a lit cell
+        for dk in (-1, 0, 1):
+            for dr in (-1, 0, 1):
+                kk, rr = k + dk, lo + dr
+                if (kk, rr) in lit or kk < 1:
+                    continue
+                for sgn in (-1, 1):
+                    if plate[HC + sgn * kk, rr]:
+                        names[HC + sgn * kk, rr, EYE_IZ] = EYE_SOCKET
+    for (k, lo) in EYE_LIDS:
+        for sgn in (-1, 1):
+            names[HC + sgn * k, lo, EYE_IZ - 1] = EYE_LID_BLOCK
     for (ix, iy, iz) in eyes_l + eyes_r:
         names[ix, iy, iz] = EYE_OFF
     return names, (eyes_l, eyes_r), cand
@@ -766,7 +800,7 @@ def head_stats():
     ch = quantize(head_field(True)[:, :, ::-1])[:, :, ::-1] > 0
     xs, ys, zs = np.nonzero(c)
     _, ysh, _ = np.nonzero(ch)
-    ey = [HEAD_Y0 + iy for (_, iy, _) in [(0, eye_low(k) + r, 0) for k in EYE_K for r in (0,)]]
+    ey = [HEAD_Y0 + iy for (_, iy) in EYE_LIT]
     return dict(width=int(xs.max() - xs.min() + 1), height=int(ys.max() + 1), height_horn=int(ysh.max() + 1), depth=int(zs.max() - zs.min() + 1),
                 eye_lo=min(ey) + 0.0, eye_hi=max(ey) + 1.0)
 
@@ -1150,8 +1184,11 @@ def build_bridge(w):
                     # the last four rows at the giant's end have an invisible rail (barrier): bars there would stand across the lines
                     # from the people on the marks (z 76.5) to the giant's left and right flank
                     w.set(x, y, z, "iron_bars" if z >= BRIDGE_END + 4 else "barrier")
+                    if x == 99 and z in (BRIDGE_END + 3, BRIDGE_END + 4) and y == BRIDGE_Y + 2:
+                        w.set(x, y, z, AIR)                 # the rail is one high on these two rows: the line from the scientist's mark (0.5 off the rail)
+                        #                                     to the commander's waist grazes the top of the second cell (still a one-high rail)
     for x in range(93, 100):
-        for y in (BRIDGE_Y + 1, BRIDGE_Y + 2, BRIDGE_Y + 3):
+        for y in (BRIDGE_Y + 1, BRIDGE_Y + 2):              # two high is enough (a jump clears 1.25) and keeps the line from the stop to the gantry open
             w.set(x, y, z0 - 1, "barrier")
     # under-girder and pillars into the coolant
     box(w, 95, BRIDGE_Y - 3, z0, 97, BRIDGE_Y - 1, CAGE["z2"], "gray_concrete")
@@ -1327,80 +1364,98 @@ def build_roof(w):
         box(w, 94, 105, dz + 1, 98, 105, dz + 1, "iron_bars")
 
 
-# The commander's booth: an OPEN command balcony hanging beside the giant's right cheek (east of the head), its floor level with
-# the east wall catwalk (y 62) and joined to it by a short gangway.  No glass anywhere: a dark cantilevered platform, a solid
-# one-block parapet along the front (it hides his legs from the stop below: the stop looks up at him at 23 to 27 degrees, so a
-# one-block parapet hides everything under about 1.8 blocks of a figure standing 1.25 behind it), a dark back wall with a few dim
-# amber instrument lights, side walls and a roof plate, and eight blocks of headroom for a figure shown at scale 2.0 (3.6 blocks).
-# He is lit by hidden light blocks above and in front of him (BOOTH_LIGHTS), so with the booth lit he is a bright figure against
-# darkness and with it off the balcony is a dark shape.  From the stop (13.5 from the face plane) he is 23 blocks away, 23 to 27
-# degrees up and 28 degrees to the right of straight ahead: face and booth are in one view.
-BOOTH = dict(x1=105, x2=114, z1=49, z2=54, y0=62)
-BOOTH_STAND = (107.0, 53.75)      # where the commander stands (x, z), feet on the floor row Y0 + 1, 1.25 behind the parapet's front face (z 55)
-BOOTH_H = 8                       # clear height under the roof plate (rows Y0 + 1 .. Y0 + 8)
+# The commander's gantry: a dark cantilevered command platform thrust out over the bridge end, beside the giant's right jaw, carried on a
+# slim box-girder arm that runs back east to the wall (hung from the east catwalk by chains, braced to the wall mount plate by two
+# diagonal struts).  A waist-high parapet along the front (a block and a slab: 1.5 high, the waist of a figure shown at scale 2.0), a dark
+# rear screen with a few dim amber instruments, no roof and no glass.  He is lit by hidden light blocks in his own cells and above and in front
+# of him (BOOTH_LIGHTS): with the booth lit he is a bright figure against darkness, with it off the platform is a dark shape.
+# Where it stands: the stop's eye is (96.5, 55.62, 72.5); his chest (feet y 57 + 2.4) is 13.0 blocks from it, 17 degrees above the
+# horizontal and 34 degrees to the right of straight ahead; a 3.6 tall figure fills 15.5 degrees there (from the marks behind the stop he is
+# 15 to 20 blocks away and fills 10 to 13 degrees).  The face plane is at z 59 and the right eye's outer corner at x 103, so the platform's
+# front stands 5 blocks proud of the face plane, level with the jaw, and everything on it is kept clear of the cones from the five marks to
+# the face (platform west edge x 102, screen x >= 104, no wall on the face side: see verify).  The lines to his waist, chest and head from all five
+# marks are strictly clear (air and light blocks only); for that the invisible barrier at the bridge end is two high (was three) and the east rail
+# is one high on two rows (z 74, 75), see build_bridge.
+BOOTH = dict(x1=102, x2=107, z1=59, z2=63, y0=56)      # the platform: floor row y0, x 102..107, z 59..63
+BOOTH_STAND = (103.5, 62.25)      # where the commander stands (x, z), feet on the floor's top (y0 + 1), 1.75 behind the parapet's front face (z 64)
+BOOTH_H = 8                       # clear height above the floor (rows Y0 + 1 .. Y0 + 8)
 BOOTH_SCALE = 2.0                 # the story shows him at twice human size: 3.6 blocks tall, 1.8 wide with the arms
-INSTRUMENTS = ((107, 66), (108, 67), (110, 66), (111, 67), (112, 66), (113, 65), (109, 65))   # (x, y) of the dim amber instrument lights
+BOOTH_ARM = dict(x1=108, x2=128, z1=60, z2=61)         # the arm to the east wall, deck row y0
+INSTRUMENTS = ((104, 62), (106, 62), (105, 60), (107, 60), (107, 58), (106, 58))   # (x, y) of the dim amber instrument lights
+
+
+def in_gantry_air(c):
+    """True for a cell in the open air of the commander's platform (over its floor, a block beyond its edges): permanent light must not be
+    put there, it would light him with the booth switched off."""
+    return (BOOTH["x1"] - 1 <= c[0] <= BOOTH["x2"] + 1 and BOOTH["y0"] + 1 <= c[1] <= BOOTH["y0"] + BOOTH_H + 1
+            and BOOTH["z1"] - 1 <= c[2] <= BOOTH["z2"] + 2)
 
 
 def build_booth(w):
     X1b, X2b, Zb1, Zb2, Y0 = BOOTH["x1"], BOOTH["x2"], BOOTH["z1"], BOOTH["z2"], BOOTH["y0"]
-    H = BOOTH_H
-    roof = Y0 + H + 1
-    DARK, MID = "polished_blackstone", "gray_concrete"
-    # floor plate, a hazard lip on its front edge, cross beams and chains hanging it from the roof truss
+    DARK, MID, BLK = "polished_blackstone", "gray_concrete", "black_concrete"
+    # ---- the platform: floor plate, a hazard lip on its front edge, cross beams and a front beam under it
     box(w, X1b, Y0, Zb1, X2b, Y0, Zb2, DARK)
     for x in range(X1b, X2b + 1):
-        w.set(x, Y0, Zb2, MID if x % 2 else "black_concrete")
-    for x in range(X1b, X2b + 1, 3):
+        w.set(x, Y0, Zb2, MID if x % 2 else BLK)
+    for x in (X1b, (X1b + X2b) // 2, X2b):
         box(w, x, Y0 - 1, Zb1, x, Y0 - 1, Zb2, MID)
     box(w, X1b, Y0 - 1, Zb2, X2b, Y0 - 1, Zb2, MID)
-    # the parapet (front), side walls and the back wall, two thick so that the instrument pockets have a back
-    box(w, X1b, Y0 + 1, Zb2, X2b, Y0 + 1, Zb2, MID)
-    box(w, X1b, Y0 + 1, Zb1, X1b, Y0 + H, Zb2 - 2, DARK)                     # west wall (towards the head: keeps its floodlight off the balcony); stops 2 short of
-    box(w, X1b, Y0 + 1, Zb2 - 1, X1b, Y0 + 1, Zb2, MID)                      # the front, so that the stop sees his left shoulder over the parapet
-    box(w, X2b, Y0 + 1, Zb1, X2b, Y0 + H, Zb2, DARK)                         # east wall
-    box(w, X1b, Y0 + 1, Zb1, X2b, Y0 + H, Zb1 + 1, DARK)                     # back wall z 49..50
-    box(w, X1b, Y0 + H + 1, Zb1, X2b, Y0 + H + 1, Zb2, MID)                  # roof plate
-    for x in range(X1b, X2b + 1):                                            # its front lip: a dark hazard band
-        w.set(x, Y0 + H + 1, Zb2, MID if (x // 2) % 2 else "black_concrete")
-    # a low console along the back wall (the instruments stand above it)
-    box(w, X1b + 2, Y0 + 1, Zb1 + 2, X2b - 2, Y0 + 2, Zb1 + 3, MID)
-    box(w, X1b + 2, Y0 + 3, Zb1 + 2, X2b - 2, Y0 + 3, Zb1 + 3, "black_concrete")
-    # amber instrument lights: a pocket in the back wall holds a hidden light block, a glass pane (dark until lit) stands in front of it
+    # ---- the parapet: a block and a bottom slab on top (1.5 high, a figure's waist at scale 2.0), except for a one-high bay in front of him:
+    # the lines from below to his waist cross the parapet's top edge 1.75 in front of him, and over a 1.5 parapet they would hit it
+    for x in range(X1b, X2b + 1):
+        w.set(x, Y0 + 1, Zb2, MID if (x // 2) % 2 else BLK)
+        if x >= 104:
+            w.set(x, Y0 + 2, Zb2, bs("polished_blackstone_slab", type="bottom"))
+    # ---- the rear screen, x 104..108, y 57..63, with a hazard cap; a pocket in it holds each instrument's hidden light, the dark glass
+    # (it turns amber when lit) stands in front of the pocket
+    xs0 = X1b + 2
+    box(w, xs0, Y0 + 1, Zb1, X2b, Y0 + 7, Zb1, DARK)
+    for x in range(xs0, X2b + 1):
+        w.set(x, Y0 + 7, Zb1, MID if (x // 2) % 2 else BLK)
     for (x, y) in INSTRUMENTS:
-        w.set(x, y, Zb1 + 1, AIR)
-        w.set(x, y, Zb1 + 2, "black_stained_glass")
-        BOOTH_LIGHTS.append((x, y, Zb1 + 1, bs("light", level=8)))
-        BOOTH_LIGHTS.append((x, y, Zb1 + 2, "orange_stained_glass"))
-    # the key light on him: hidden light blocks above and in front of the standing place (the figure stands at BOOTH_STAND, feet y0 + 1,
-    # 3.6 tall: up to y0 + 4.6), the strongest above-front, a softer fill from the side and low
-    sx = int(BOOTH_STAND[0])
-    for (x, y, z, lvl) in ((sx, Y0 + 7, Zb2 + 1, 15), (sx - 1, Y0 + 6, Zb2 + 1, 15), (sx + 1, Y0 + 6, Zb2 + 1, 15), (sx, Y0 + 4, Zb2, 15), (sx, Y0 + 3, Zb2, 15), (sx + 1, Y0 + 5, Zb2, 15),
-                           (sx + 2, Y0 + 7, Zb2, 14), (sx - 1, Y0 + 7, Zb2 - 2, 14), (sx + 1, Y0 + 7, Zb2 - 2, 14), (sx, Y0 + 8, Zb2 - 3, 13),
-                           (sx + 2, Y0 + 3, Zb2 - 1, 12), (sx - 1, Y0 + 3, Zb2 - 1, 12)):
+        w.set(x, y, Zb1, AIR)
+        w.set(x, y, Zb1 + 1, "black_stained_glass")
+        BOOTH_LIGHTS.append((x, y, Zb1, bs("light", level=8)))
+        BOOTH_LIGHTS.append((x, y, Zb1 + 1, "orange_stained_glass"))
+    # ---- the key light.  An entity is lit by the light at its eye cell (the eye of a figure at scale 2.0 is 3.2 above his feet: y 60),
+    # so level 15 stands in the cells of his body and above and in front of him; kept to the x >= 104 side, away from the face
+    sx, sz = int(BOOTH_STAND[0]), int(BOOTH_STAND[1])
+    for (x, y, z, lvl) in ((sx, Y0 + 4, sz, 15), (sx, Y0 + 3, sz, 15), (sx, Y0 + 5, sz, 15), (sx, Y0 + 2, sz, 14),
+                           (sx + 1, Y0 + 4, sz, 15), (sx + 1, Y0 + 2, sz, 13), (sx, Y0 + 5, sz + 1, 15), (sx + 1, Y0 + 5, sz + 1, 15),
+                           (sx, Y0 + 3, sz + 2, 14), (sx + 1, Y0 + 3, sz + 2, 14), (sx + 2, Y0 + 4, sz, 13), (sx + 2, Y0 + 3, sz + 1, 12)):
         BOOTH_LIGHTS.append((x, y, z, bs("light", level=lvl)))
     for l in BOOTH_LIGHTS:
         CAGE_LIGHTS.append(l)
-    # door in the east wall onto a short gangway to the catwalk at x 126..128 (its rail has a gap there)
-    carve(w, X2b, Y0 + 1, 51, X2b, Y0 + 3, 53)
-    for x in range(X2b + 1, 126):
-        for z in (51, 52, 53):
-            w.set(x, Y0, z, "gray_concrete" if z == 52 else hazard(x, 0))
-        for z in (50, 54):
-            w.set(x, Y0, z, "iron_block")
-            w.set(x, Y0 + 1, z, "iron_bars")
-            w.set(x, Y0 + 2, z, "iron_bars")
-    for z in (51, 52, 53):
-        for y in (Y0 + 1, Y0 + 2):
-            w.set(126, y, z, AIR)
-    # hangers: chains from the roof truss to the roof plate's corners, and two braces under the gangway down into the east wall
-    for (x, z) in ((X1b, Zb1), (X2b, Zb1), (X1b, Zb2), (X2b, Zb2)):
-        for y in range(Y0 + H + 2, 109):
-            w.set(x, y, z, bs("iron_chain", axis="y"))
-    for z in (50, 54):
-        for x in range(X2b + 1, 129):
-            w.set(x, Y0 - 1 - int(round(5.0 * (x - X2b - 1) / (128 - X2b - 1))), z, MID)
-    ddx, ddz = BOOTH_STAND[0] - 96.5, FACE_Z - BOOTH_STAND[1]                     # he faces the stop on the bridge and looks down at it
+    # ---- the arm: a three wide deck at the platform's level from the platform's east edge to the wall, rails of bars, a girder and ribs under it,
+    # chains up to the east catwalk, two diagonal struts down to the wall's mount plate, a bulkhead hatch where it meets the wall
+    A = BOOTH_ARM
+    for x in range(A["x1"], A["x2"] + 1):
+        for z in range(A["z1"], A["z2"] + 1):
+            w.set(x, Y0, z, MID if z == A["z1"] else hazard(x, 0))
+        for z in (A["z1"] - 1, A["z2"] + 1):
+            if w.get(x, Y0, z) == AIR:
+                w.set(x, Y0, z, MID)
+                w.set(x, Y0 + 1, z, "iron_bars")
+                w.set(x, Y0 + 2, z, "iron_bars")
+        w.set(x, Y0 - 1, (A["z1"] + A["z2"]) // 2, MID)
+        if x % 4 == 0:
+            for z in range(A["z1"], A["z2"] + 1):
+                w.set(x, Y0 - 1, z, MID)
+    for z in (A["z1"] - 1, A["z2"] + 1):                      # hangers at the rail lines, struts under them
+        for y in range(Y0 + 1, Y0 + 6):
+            w.set(126, y, z, bs("iron_chain", axis="y"))
+        for x in range(116, 128):
+            if w.get(x, Y0 - 1 - (x - 116), z) == AIR:
+                w.set(x, Y0 - 1 - (x - 116), z, MID)
+    for z in range(A["z1"], A["z2"] + 1):                      # the hatch
+        for y in range(Y0 + 1, Y0 + 5):
+            w.set(A["x2"], y, z, MID)
+    for y in range(Y0 + 1, Y0 + 4):
+        w.set(A["x2"], y, (A["z1"] + A["z2"]) // 2, BLK)
+    w.set(A["x2"], Y0 + 4, (A["z1"] + A["z2"]) // 2, hazard(0, 0))
+    # ---- the anchor: he faces the stop on the bridge and looks down at it
+    ddx, ddz = BOOTH_STAND[0] - 96.5, FACE_Z - BOOTH_STAND[1]
     yaw = math.degrees(math.atan2(ddx, ddz))
     pitch = math.degrees(math.atan2(Y0 + 1 + 1.62 * BOOTH_SCALE - (BRIDGE_Y + 1 + 1.62), math.hypot(ddx, ddz)))
     w.anchor("booth", BOOTH_STAND[0], Y0 + 1, BOOTH_STAND[1], yaw=round(yaw, 1), pitch=round(pitch, 1))
@@ -2314,7 +2369,8 @@ def cage_lights_baseline(w):
             hlight(w, CX + sgn * dx, y, z, lvl)
     # a dim wash on the front of the face from far in front of it (6 to 8 blocks): 2 to 4 on the plate, the lights-off reading
     for (x, y, z, lvl) in FACE_WASH:
-        hlight(w, x, y, z, lvl)
+        if not in_gantry_air((x, y, z)):          # (a wash light inside the commander's platform would light him with the booth off)
+            hlight(w, x, y, z, lvl)
     # red emergency lamps along the north wall behind the giant: the head stands against a faintly lit wall and reads as a shape
     for x in range(72, 121, 6):
         for y in (50, 58, 66, 74):
@@ -2508,6 +2564,11 @@ def cage_floods(w):
     if not _DESIGN[0]:
         for (x, y, z) in FLOOD_FACE + FLOOD_CROWN:
             CAGE_LIGHTS.append((x, y, z, bs("light", level=15)))
+        # the top and inner face of the east fin were hidden from the stop by the old commander's booth when the floodlight was baked, so
+        # nothing lights them; the gantry stands elsewhere now and they show: they get the west fin's lights, mirrored (x -> 192 - x)
+        for (x, y, z) in FLOOD_FACE:
+            if x <= 84 and y >= 62 and z <= 50 and (192 - x, y, z) not in FLOOD_FACE and w.get(192 - x, y, z) == AIR:
+                CAGE_LIGHTS.append((192 - x, y, z, bs("light", level=15)))
     deck_floods()
     wall_floods(w)
     # under the raised hand (it is placed by the story over the shield column; its palm is at y 61, z 74..80)
@@ -2741,15 +2802,18 @@ def verify_light(w, out=print):
             len(last), len(flood & last), res["flood_in_last_bank"], len(early), where,
             not any(c[1] > 70 or c[2] > 66 or abs(c[0] - 96) > 26 for c in last)))
     # the eyes: their front faces seen from the stop
-    pts, per = [], []
+    pts, per, per_lid = [], [], []
+    lid_cells = {(HEAD_X0 + HC + sg * k, HEAD_Y0 + lo) for (k, lo) in EYE_LIDS for sg in (-1, 1)}
     for cells in (EYES_LEFT, EYES_RIGHT):
         for (x, y, z) in cells:
             ps = [(x + (i + 0.5) / 5, y + (j + 0.5) / 5, z + 1.02) for i in range(5) for j in range(5)]
             v = visible_points(w, tab, EYES_VIEW[0], ps, strict=True)
-            per.append(float(v.mean()))
+            (per_lid if (x, y) in lid_cells else per).append(float(v.mean()))
     res["eye_visible_fraction"] = (min(per), float(np.mean(per)))
-    out("  eyes: the front face of each eye cell is seen from the stop (strict line of sight, 25 samples): min %.0f%%, mean %.0f%% of the face" % (
-        100 * min(per), 100 * float(np.mean(per))))
+    res["eye_lid_fraction"] = per_lid
+    out("  eyes: the front face of each eye cell is seen from the stop (strict line of sight, 25 samples): the %d cells without a lid min %.0f%%, mean "
+        "%.0f%% of the face; the %d lidded cells (by design only their lower half) %s" % (
+            len(per), 100 * min(per), 100 * float(np.mean(per)), len(per_lid), ["%.0f%%" % (100 * f) for f in per_lid]))
     # strict lines from the stop: nothing but the head itself may stand between the stop and the face, the eyes or the commander
     fs = face_sets(w)
     head_cells = {f[0] for f in fs["head_vis"]} | {f[0] for f in fs["head_south"]}
@@ -2806,6 +2870,32 @@ def seal_skylight(w):
     cells = (w.a == 0) & near
     w.a[cells] = w._id(WALLM)
     return int(cells.sum())
+
+
+def strict_los(w, p, q, step=0.04):
+    """Line of sight from p to q that only air and `light` blocks let through: every other block - bars, chains, panes, barriers - is a crossing,
+    and so is a filled part of a slab or stair.  Returns (clear, first blocking cell or None)."""
+    pm = partial_masks(w)
+    openid = np.array([b is not None and b.split("[")[0].replace("minecraft:", "") in ("air", "light") for b in w.palette])
+    p = np.array(p, float)
+    q = np.array(q, float)
+    d = q - p
+    L = float(np.linalg.norm(d))
+    d /= L
+    for i in range(1, int(L / step)):
+        s_ = p + d * (i * step)
+        c = tuple(int(v) for v in np.floor(s_))
+        if not all(0 <= c[k] < w.a.shape[k] for k in range(3)):
+            return False, c
+        pid = int(w.a[c])
+        if openid[pid]:
+            continue
+        if pid and not pm[pid].all():
+            o = np.clip(np.floor((s_ - np.array(c)) * 2).astype(int), 0, 1)
+            if not pm[pid][o[0], o[1], o[2]]:
+                continue
+        return False, c
+    return True, None
 
 
 def verify(w, out=print):
@@ -2875,39 +2965,58 @@ def verify(w, out=print):
             eyes_ok.append(okk)
     res["eyes_visible"] = (sum(eyes_ok), len(eyes_ok))
     out("eyes in line of sight from face: %d of %d cells" % res["eyes_visible"])
-    # ---- the commander, shown at BOOTH_SCALE (3.6 tall, 1.8 wide with the arms): clear lines from the stop and the marks to his waist, chest
-    # and head, each at three sideways offsets.  STRICT: only air and light blocks let a line through - a chain, a bar or a pane is a
-    # crossing (the plain `sees` lets thin things through).
+    # ---- the commander, shown at BOOTH_SCALE (3.6 tall, 1.8 wide with the arms): clear lines from the stop and the four marks to his waist,
+    # chest and head, each at three sideways offsets.  STRICT: only air and light blocks let a line through - not a chain, a bar, a pane, nor
+    # an invisible barrier (strict_los below; the plain `sees` lets thin things through)
     bx_, by_, bz_ = A("booth")
     res["booth"] = {}
     parts = []
     heights = (("waist", 0.53 * 3.6), ("chest", 0.67 * 3.6), ("head", 0.92 * 3.6))
-    for nm in ("face", "captain_mark", "scientist_mark", "shield"):
+    marks = ("face", "captain_mark", "scientist_mark", "shield", "gurney_mark")
+    for nm in marks:
         a = A(nm)
         e = (a[0], a[1] + 1.62, a[2])
         for lab, dy in heights:
             for off in (-0.6, 0.0, 0.6):
-                ok, blk = sees(w.a, tab, e, (bx_ + off, by_ + dy, bz_), masks=pm, transparent_kinds=(0,))
+                ok, blk = strict_los(w, e, (bx_ + off, by_ + dy, bz_))
                 res["booth"]["%s_%s_%+.1f" % (nm, lab, off)] = ok
                 if not ok:
                     parts.append("%s->%s%+.1f blocked by %s at %s" % (nm, lab, off, w.get(*blk) if blk else None, blk))
-    out("commander (waist, chest, head; 3 offsets) in strict line of sight from face / captain_mark / scientist_mark / shield: %s%s" % (
-        all(res["booth"].values()), "" if all(res["booth"].values()) else "  " + "; ".join(parts[:6])))
-    # the booth's place in the view from the stop: distance, elevation, bearing from straight ahead (north), to the middle of the figure
-    hd = (bx_, by_ + 0.5 * 3.6, bz_)
-    dx_, dy_, dz_ = hd[0] - eye[0], hd[1] - eye[1], eye[2] - hd[2]
-    res["booth_dist"] = math.sqrt(dx_ * dx_ + dy_ * dy_ + dz_ * dz_)
-    res["booth_elev"] = math.degrees(math.atan2(dy_, math.hypot(dx_, dz_)))
-    res["booth_bearing"] = math.degrees(math.atan2(dx_, dz_))
-    out("commander from the stop: %.1f blocks line of sight, %.1f deg above the horizontal, %.1f deg to the right of straight ahead "
-        "(want 18..24 blocks, 20..30 deg up, <= 30 deg)" % (res["booth_dist"], res["booth_elev"], res["booth_bearing"]))
-    res["booth_dist_ok"] = 18.0 <= res["booth_dist"] <= 24.0 and 20.0 <= res["booth_elev"] <= 30.0 and res["booth_bearing"] <= 30.0
-    out("booth distance / elevation / bearing within the brief: %s" % res["booth_dist_ok"])
+    out("commander (waist, chest, head; 3 offsets) in strict line of sight (air and light blocks only) from face / captain_mark / scientist_mark / shield / "
+        "gurney_mark: %s%s" % (all(res["booth"].values()), "" if all(res["booth"].values()) else "  " + "; ".join(parts[:6])))
+    # the gantry's place in the view from each mark: distance and bearing of his chest, elevation, the angle the 3.6 tall figure fills
+    res["booth_view"] = {}
+    for nm in marks:
+        a = A(nm)
+        e = (a[0], a[1] + 1.62, a[2])
+        dx_, dy_, dz_ = bx_ - e[0], by_ + 0.67 * 3.6 - e[1], e[2] - bz_
+        el_ = lambda y: math.degrees(math.atan2(y - e[1], math.hypot(dx_, dz_)))
+        res["booth_view"][nm] = dict(dist=math.sqrt(dx_ * dx_ + dy_ * dy_ + dz_ * dz_), elev=el_(by_ + 0.67 * 3.6), bearing=math.degrees(math.atan2(dx_, dz_)),
+                                     fills=el_(by_ + 3.6) - el_(by_))
+    for nm in marks:
+        v = res["booth_view"][nm]
+        out("  commander's chest from %-14s %5.1f blocks, %4.1f deg above the horizontal, %4.1f deg right of straight ahead; the 3.6 figure fills %4.1f deg" % (
+            nm, v["dist"], v["elev"], v["bearing"], v["fills"]))
+    v = res["booth_view"]["face"]
+    res["booth_dist"], res["booth_elev"], res["booth_bearing"] = v["dist"], v["elev"], v["bearing"]
+    out("commander from the stop (the brief: 11..14 blocks, 12..22 deg up, 20..35 deg right, 15..18 deg filled)")
+    res["booth_dist_ok"] = 11.0 <= v["dist"] <= 14.0 and 12.0 <= v["elev"] <= 22.0 and 20.0 <= v["bearing"] <= 35.0 and 15.0 <= v["fills"] <= 18.0
+    out("booth distance / elevation / bearing / size within the brief: %s" % res["booth_dist_ok"])
     w_r = hand_swapped(w, True)
-    ok_r = all(sees(w_r.a, tab, (A(n)[0], A(n)[1] + 1.62, A(n)[2]), (bx_ + off, by_ + dy, bz_), masks=pm, transparent_kinds=(0,))[0]
-               for n in ("face", "captain_mark", "shield") for _, dy in heights for off in (-0.6, 0.0, 0.6))
+    ok_r = all(strict_los(w_r, (A(n)[0], A(n)[1] + 1.62, A(n)[2]), (bx_ + off, by_ + dy, bz_))[0]
+               for n in marks for _, dy in heights for off in (-0.6, 0.0, 0.6))
     res["booth_raised_hand"] = ok_r
     out("... and with the hand raised: %s" % ok_r)
+    # nothing of the gantry stands in the hand's volume or on the falling rig's way (debris_1..3 down to the shield point: x 94..98 and a block each side)
+    hand_all_ = set(hand_cells(True, (CX, BRIDGE_Y, SHIELD_Z))) | set(hand_cells(False, (CX, BRIDGE_Y, SHIELD_Z)))
+    gx1, gx2, gz1, gz2, gy1, gy2 = BOOTH["x1"], BOOTH_ARM["x2"], BOOTH["z1"] - 1, BOOTH["z2"] + 1, BOOTH["y0"] - 2, BOOTH["y0"] + BOOTH_H + 2
+    gantry = [(x, y, z) for x in range(gx1, gx2 + 1) for y in range(gy1, gy2 + 1) for z in range(gz1, gz2 + 1) if w.get(x, y, z) not in (None, AIR)]
+    hit_hand = [c for c in gantry if c in hand_all_]
+    rig = [c for c in gantry if 93 <= c[0] <= 99 and c[2] >= 72]
+    res["booth_clear_of_hand_and_rig"] = not hit_hand and not rig
+    out("gantry cells %d (x %d..%d, z %d..%d, y %d..%d): in a hand version %d, on the falling rig's way (x 93..99, z >= 72) %d; nearest hand cell %.1f blocks away" % (
+        len(gantry), gx1, gx2, gz1, gz2, gy1, gy2, len(hit_hand), len(rig),
+        min(math.dist(c, h) for c in gantry[::7] for h in list(hand_all_)[::5])))
     # how much of him the stop sees over the parapet: samples over the figure's whole body, strict
     vis = []
     for dy in np.arange(0.2, 3.6, 0.2):
@@ -3399,14 +3508,23 @@ def render_all(w, outdir, quick=False):
     shot("cage_booth_view_banks_on", canvas_with(w_s, allc, True), tables(canvas_with(w_s, allc, True)), light_map(canvas_with(w_s, allc, True), tables(canvas_with(w_s, allc, True))), eye, ctr, fov=60)
     shot("cage_booth_view_on", w_b, t_b, L_b, eye, ctr, fov=60)
     shot("cage_booth_standin_zoom_on", w_b, t_b, L_b, eye, ctr, fov=25)
-    shot("cage_face_and_booth_on", w_b, t_b, L_b, eye, (100.5, 61.0, 62.0), fov=75)
+    shot("cage_face_and_booth_on", w_b, t_b, L_b, eye, (102.1, 61.5, 54.5), fov=75)             # the stop looking between the face and the commander
+    shot("cage_face_and_booth_wide", w_b, t_b, L_b, eye, (101.5, 62.5, 52.0), fov=90)
     shot("cage_booth_from_marks_on", w_b, t_b, L_b, (94.5, 55.62, 76.5), ctr, fov=60)
-    shot("cage_booth_close_front", w_b, t_b, L_b, (107.0, 62.5, 69.0), (107.0, 65.0, 53.0), fov=60)
-    shot("cage_booth_side", w_b, t_b, L_b, (121.0, 62.0, 72.0), (107.0, 65.0, 53.0), fov=60)
+    shot("cage_booth_close_front", w_b, t_b, L_b, (101.0, 57.5, 71.0), (104.0, 59.5, 62.0), fov=60)
+    shot("cage_booth_side", w_b, t_b, L_b, (124.0, 60.0, 76.0), (106.0, 58.0, 61.0), fov=70)
+    shot("cage_booth_arm", w_b, t_b, L_b, (100.0, 57.5, 68.0), (118.0, 56.0, 60.5), fov=75)
+    shot("cage_booth_from_east_catwalk", w_b, t_b, L_b, (125.0, 63.0, 90.0), (108.0, 57.0, 61.0), fov=70)
+    e5, _ = gaze(w, "scientist_mark")
+    shot("cage_booth_from_scientist", w_b, t_b, L_b, e5, (102.5, 60.0, 56.0), fov=75)
+    eg_, _ = gaze(w, "gurney_mark")
+    shot("cage_booth_from_gurney", w_b, t_b, L_b, eg_, (102.0, 60.0, 56.0), fov=75)
     e2, _ = gaze(w, "shield")
     shot("cage_shield_view_on", w_b, t_b, L_b, e2, ctr, fov=75)
     e3, a3 = gaze(w, "captain_mark")
-    shot("cage_captain_view_on", w_b, t_b, L_b, e3, (100.0, 66.0, 50.0), fov=75)
+    shot("cage_captain_view_on", w_b, t_b, L_b, e3, (101.5, 61.0, 57.0), fov=75)
+    shot("cage_eyes_close_captain", w_b, t_b, L_b, e3, (96.5, 62.5, 58.5), fov=40)
+    shot("cage_eyes_close_gurney", w_b, t_b, L_b, gaze(w, "gurney_mark")[0], (96.5, 62.5, 58.5), fov=40)
     eg, _ = gaze(w, "gurney_mark")
     for nm, (cv, tb, LL) in (("off", S_off), ("on", S_on)):
         shot("cage_gurney_mark_head_%s" % nm, cv, tb, LL, eg, (96.5, 62.0, 50.0), fov=75)
@@ -3506,7 +3624,7 @@ def main():
         ok_c = all(sees(w.a, tab, eye, (bst[0], bst[1] + dy, bst[2]), transparent_kinds=(0,))[0] for dy in (1.9, 2.4, 3.3))
         print("  commander (waist, chest, head at scale 2) in strict line of sight from the bridge at z=%d: %s" % (zz, ok_c))
     for nm, pt in (("front of head", (96, 60, 61)), ("chin", (96, 54, 61)), ("bridge_start", (96, 54, 134)), ("bridge_mid", (96, 54, 100)),
-                   ("face stop", (96, 54, 72)), ("booth floor", (111, 63, 55)), ("commander", (111, 64, 55)), ("chin front", (96, 50, 62)), ("shield", (96, 54, 78)), ("dock", (15, 54, 160)),
+                   ("face stop", (96, 54, 72)), ("gantry floor", (104, 57, 61)), ("commander", (103, 60, 62)), ("chin front", (96, 50, 62)), ("shield", (96, 54, 78)), ("dock", (15, 54, 160)),
                    ("crossing", (60, 54, 160)), ("corridor", (160, 131, 160)), ("escalator mid", (55, 120, 160)), ("plug seat", (30, 12, 11)),
                    ("shaft pad", (9, 5, 9)), ("shaft mid", (9, 80, 9))):
         print("  light %-18s off %2d  on %2d" % (nm, L_off[pt], L_on[pt]))

@@ -1,1 +1,1 @@
-execute as @e[tag=angel.lflash] run data merge entity @s {block_state:"minecraft:white_stained_glass"}
+execute as @e[tag=angel.lstat] run data merge entity @s {text:[{"text": "SYNC RATE", "color": "gold", "bold": true}, {"text": "\n"}, {"text": "9.8 %", "color": "gray"}]}

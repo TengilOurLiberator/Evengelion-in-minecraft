@@ -6,7 +6,7 @@ boss fight in the night city (`angel:fight/...`).  Run with the voice-assistant 
     python build_fight.py            # writes functions + a block tag into datapack\angel, removes what the last build wrote
     python build_fight.py --check    # only the checks (command tree check of every line, every called function exists)
     python build_fight.py --previews # also renders preview\*.png
-    python selftest.py               # live test on a scratch copy of the server (ports 25608/25618), about 6 minutes
+    python selftest.py               # live test on a scratch copy of the server (ports 25608/25618), about 10 minutes (also checks the model geometry: model.eye_clearance_table())
     python estimate.py               # how long the fight takes, from CFG, for a scripted attacker and a first-time player
 
 Files: `model.py` (the skeleton of boxes and the poses), `preview.py` (a z-buffer renderer of the same boxes),
@@ -27,7 +27,7 @@ Public functions (all at the executor's position/rotation where position matters
 | `function angel:angel/summon {height:60}` | builds it (removes any earlier one first). `height` is snapped to the nearest generated height: 20, 30, 40, 50, 60, 80, 100, 150 |
 | `function angel:angel/remove` | kills every entity of it, stops its loops |
 | `function angel:angel/walk {x:..,y:..,z:..,speed:0.15}` | walks (blocks per tick) to the point, turning at 80 degrees/s (8 per 2 ticks; it turns on the spot while more than 16 degrees off the target, so it never circles one), one stride animation per step, a footfall (sound, dust, smoke) when each foot lands. `scoreboard players get #arrived angel.walk` is 0 while walking and 1 on arrival; it then settles into `idle` |
-| `function angel:angel/pose {pose:"idle"}` | `idle` (breathing loop), `regenerating` (hunched, pulsing loop), `charging` (eyes glow, chest out, jaw open), `dying` (about 4 s: knees buckle, folds back, core goes dark). Also: `windup`, `thrust`, `stagger`, `wrap_open`, `wrapping` |
+| `function angel:angel/pose {pose:"idle"}` | `idle` (breathing loop), `regenerating` (hunched, pulsing loop), `charging` (eyes glow, chest out, jaw open), `dying` (about 4 s: knees buckle, folds back, core goes dark). Also: `windup`, `thrust`, `stagger`, `wrap_open`, `wrapping`, `wrap_tight`, `wrap_hit` |
 | `function angel:angel/core_stage {stage:0}` | core look: 0 whole, 1 cracked (magma texture), 2 dead |
 
 Entities: 133 `block_display` parts (tag `angel.part`, `angel.p<N>`; plus `angel.eye`, `angel.corebody`, `angel.jaw`), a `marker`
@@ -49,6 +49,21 @@ Night look (changed after the first in-game screenshots): `warped_planks` skin (
 at display brightness 8/10, bone-white parts at 15, thin pale `white_concrete` rim strips on the upper edges (chest, hump, hips, outer edge of arms
 and thighs), emissive red strips around the core socket and a soft red `red_stained_glass` veil over the chest and the inner side of
 the upper arms (they go dark / vanish when the core dies). Torso pose angles: **negative = leaning forward** (positive leans back).
+**Eye clearance** (added after the first in-game playthrough, where the camera ended up inside the staggering monster's arm): `model.eye_clearance_table()`
+measures, for every pose family, the distance from the giant's eye (25.9 up, straight ahead of the monster; the stagger also 0 to 6 blocks to the side) to
+the nearest visible box, over the distances at which the pose is seen and over the in-between frames of each interpolation (the client lerps translation and
+scale and slerps rotation; `model.boxes_between` does the same).  The selftest requires 2.75 blocks ("about 3") everywhere:
+
+| Pose (distance of the eye from the monster's feet) | Before | After |
+|---|---|---|
+| idle (9 to 17, the close range: from where the core is hit to the AI's stand-off) | 2.81 (the beak hook) | 2.98 |
+| walk / windup (9 to 17) | 3.13 / 5.14 | 3.13 / 5.14 |
+| stagger of the back-off (9 to 17; and 4 to 17, up to 6 blocks to the side) | 2.80 (0.0 at 4 blocks: inside its skull/pauldron) | 9.68 (4.8 at 4 blocks), and 4.67 on the worst in-between frame |
+| regenerating, the crack's pause (9 to 17) | 0.40 (the crest of the hump) | 3.00 |
+| arm thrust (14.1 to 23.1: where its zone reaches the giant) | 3.12, the hand at head height (25.7 up) | 5.56, the hand strikes the chest (17.9 up, 14.7 ahead) |
+| charging (24 and more: the beam is only chosen beyond the thrust range) | 11.7 | 11.7 |
+| wrapped (10 blocks; 8 before) | 8.9 (it leaned away, the arms folded across itself) | 4.0 close, 3.05 tight, 6.6 hit; 3.2 on the worst in-between frame |
+
 `charging` is three stages (0, 10, 24 ticks in): the eye holes blaze (extra glowstone boxes + orange glass that grow with the key `eyeg`, tags
 `angel.eyeglow`), the body leans forward, the arms are drawn back and out and a glow gathers in front of the mask (key `gather`, tag
 `angel.gather`, on the hips frame). `regenerating` is an 8-frame loop of 10 ticks (slow breathing, flickering core, plates askew:
@@ -102,7 +117,7 @@ Keep the player's own VR World Scale setting at 1: it multiplies.
    `angel:sfx.giant_punch`, counter -1; this is the only thing that arms the guard `#hitcd` for `hit_cd` = 24 ticks and counts toward the
    back-off), *guarded* (in reach, inside the guard: a small burst of electric sparks and smoke at the core and a dull clank,
    `block.iron_trapdoor.close` at pitch 0.5; nothing else happens, the guard keeps running down; the test counter `#guarded` goes up) and
-   *blocked* (beyond reach, or the barrier is raised: the octagon, rate-limited to one per 6 ticks; does not touch the guard).  A body hit
+   *blocked* (beyond reach, or the barrier is raised: the octagon, rate-limited to one per 6 ticks, its 3.6 s tone to one per 2 s; does not touch the guard).  A body hit
    only sparks (crit + electric spark + anvil tap) and never touches the guard.
    Why the clank is a vanilla sound: the server only sends a `playsound` to players within 16 x volume blocks of the origin, measured from
    the player's feet, and the core is about 22 blocks above a giant's feet, so the volume must be at least 1.4; a 3.6 s tone such as
@@ -116,7 +131,9 @@ Keep the player's own VR World Scale setting at 1: it multiplies.
    away avoids it; a core hit during the windup staggers it); advance along the avenue toward the plaza (the giant itself when
    within 75 blocks; kept on x 1152..1168, never farther south than z 140), stopping 17 blocks away.
 4. **Back-off** (`backoff_*` in CFG): after every `backoff_hits` (8) LANDED core hits in phases 1 and 2 (the wrap phase is not counted) the monster
-   disengages.  `backoff_start`: it staggers (`stagger` pose, 30 ticks), the barrier goes up (`#bar` = 1: every click on the core is blocked,
+   disengages.  `backoff_start`: it is shoved 4.8 blocks (`shove` 0.8 x `shove_ticks` 6, interpolated: the parts teleport with duration 2) straight back
+   toward the retreat point (along the avenue, away from the giant) in the first 6 ticks, while the `stagger` pose RECOILS (torso thrown back, arms flung up
+   and out and behind, a step back; see the eye clearance table: nothing comes toward the giant) for 30 ticks, the barrier goes up (`#bar` = 1: every click on the core is blocked,
    even in reach; the octagon flares, then pulses every 1.2 s), it turns its back (8 degrees per tick) and walks `backoff_dist` (30) blocks
    along the avenue **away from the giant** at 0.45 blocks/tick, never past the avenue's far end (z 50 = `city.angel_start`, or z 140 the
    other way).  With less than `backoff_min` (10) blocks of room it steps to the other side of the avenue instead (x 1153 if it is on the
@@ -127,11 +144,30 @@ Keep the player's own VR World Scale setting at 1: it multiplies.
    nor during the pause after it (the player's window): it follows on the next landed hit.  States 9 (stagger) and 10 (retreat); scores
    `#bo` (landed hits since the last back-off), `#bar`, `#hold`.
 5. Stages: whole core -> at 30 hits left it cracks (magma texture, roar + `sfx.core_crack`, 80 ticks hunched and pulsing = `regenerating`: a window
-   to hit it; phase B is faster) -> at 10 hits left it runs at the giant (0.9 blocks/tick), wraps (8 blocks in front of the giant,
-   arms folded round, the giant is slowed) and the self-destruct countdown starts (20 s, bar, bell beeps that speed up in the
-   last 5 s).  The remaining 10 core hits in that time break it (at best one per 1.2 s, the guard); at 0 -> `won`.
-6. `angel:fight/lost` (`lost_start`): giant health 0 or the countdown at 0 -> blindness fade, lines 7.19/7.20, then back
-   to the launch at human size and a fresh `start` (barks reset, attempt counter +1).  `won`: the Angel dies (three-stage fold), a
+   to hit it; phase B is faster; **this is the checkpoint**, see 6) -> at 10 hits left it runs at the giant (0.9 blocks/tick) and wraps itself round it.
+   **The wrap (phase 3; `wrap_*` in CFG)**, designed so that a first-time player who keeps swinging wins it on the first or second try:
+   * **No guard, no reach, no barrier.** While phase 3 runs every click that connects counts (`wrap_hit`; `core_hit` and `body_hit` both route there before any
+     other test).  The body box is made the big target while the monster runs in and is wrapped (14 x 30 blocks, the monster's root 10 blocks in front of the
+     giant): any swing within 30 degrees to the side and from 10 above to 60 below the line to it hits (checked by the selftest with a slab test, reach 18), the eye
+     is outside the box.  (A click on the core box counts as well, of course.)
+   * **The numbers**: 10 hits, a 16 s bar (`wrap_ticks` 320), +0.5 s on the bar for every landed hit (`wrap_bonus` 10, never above the start).  One hit per 1.5 s:
+     the last of the ten lands at 15 s with 5.5 s on the bar (needs at least 5); a player who stops swinging for 6 s in all loses (-0.5 s); the scripted clicker
+     (0.95 s) wins with 11 s to spare; one hit every 2 s wins with 0.5 s (the edge of "fair").
+   * **The tell and the wait**: on wrapping, the title "BREAK LOOSE / hit the core - keep swinging", the action bar, the core flares and the bark 7.14 goes to
+     the FRONT of the queue.  The countdown (`#wgo` 0 -> 1) does not run until 7.14 has begun (`bark_play` sets `#began_7_14`), or `wrap_wait` (100 ticks) if the line
+     is stuck behind another one; hits count during the wait.
+   * **Feedback per hit**: flash, crits, sparks, red dust and `sfx.giant_punch` at the core, the wrap shudders (pose `wrap_hit`, 4 ticks), the bar jumps back, the hits left
+     on the action bar, and the core shows crack 1, 2, 3, 4 (white slivers of light across it, `angel:angel/core_crack_N`) at 8, 6, 4, 2 hits left.
+   * **Pressure**: a heartbeat (`entity.warden.heartbeat`, pitch and volume rise) whose pause shrinks from 26 ticks to 6 as the bar runs down, a ring of red light that closes
+     round the giant (radius 9 / 7 / 5 / 3.5), the monster squeezes (pose `wrap_tight`) in the last 8 s, bell beeps and a white bar in the last 5 s.
+   The remaining hits break it; at 0 -> `won`.
+6. `angel:fight/lost` (`lost_start`): giant health 0 or the countdown at 0 -> blindness fade, lines 7.19/7.20, then `restart`.  **Before the core has cracked** (`#ck` 0):
+   back to the launch at human size and a fresh `start` (barks reset, attempt counter +1).  **Once it has cracked** (`core_crack` -> `ck_save` sets `#ck` 1 and stores
+   where the monster and the giant stood): `restart_ck` keeps the giant giant and the screen black, and 3 s later `start_ck` puts the giant back where it stood (healed,
+   100), rebuilds the monster where it stood, with the core at its crack health (30), phase 2 and the hunched pause (it calls `core_crack` again), the intro lines
+   (7.01 to 7.08) not repeated, attempt +1.  A loss in the cracked phase or the wrap both come back to this point.  Phase sequence seen from outside: 5 (lost) -> 0 (`#run` 0, 60 ticks)
+   -> 2 (-> 3 ...); the launch restart is 5 -> 0 -> 1.  The story's polling (`s07.py`: beat 81 on phase 5 and back to 70 with `#run` 1 and phase 0..3; music re-armed on phase 0,
+   `fight_final` on phase 2 or 3) copes with both; the selftest runs that polling line for line (`StoryModel`).  `won`: the Angel dies (three-stage fold), a
    white cross-shaped pillar of light (190 tall, 60 across) with `angel:sfx.cross`, the body is removed, the lines 7.15-7.18 play, the
    giant is put back at human size on the lift at (1160.5, 64, 160.5) facing north, the fight is cleaned up and the story is told.
 
@@ -142,10 +178,13 @@ Keep the player's own VR World Scale setting at 1: it multiplies.
 | beam charge (A / B) | 40 / 34 ticks (2.0 / 1.7 s) | beam_charge, beam_charge_b |
 | thrust windup, recovery | 26, 44 ticks | thrust_windup, thrust_recover |
 | cooldown after beam (A / B), after thrust (A / B) | 150 / 105, 100 / 70 ticks | cd_* |
-| cracks at / wraps at / countdown | 30 / 10 hits left / 400 ticks (20 s) | crack_at, wrap_at, wrap_ticks |
+| cracks at / wraps at / countdown | 30 / 10 hits left / 320 ticks (16 s) | crack_at, wrap_at, wrap_ticks |
+| wrap: time back per landed hit / guard / squeeze at / distance / most wait for 7.14 | +10 ticks (0.5 s) / none / 160 ticks left / 10 blocks / 100 ticks | wrap_bonus, (hit_cd does not apply), wrap_tight_at, wrap_dist, wrap_wait |
+| wrap: cracks of the core at hits left | 8, 6, 4, 2 | wrap_crack_hits |
+| back-off: thrown back | 0.8 x 6 ticks = 4.8 blocks | shove, shove_ticks |
 | arm's length (barrier) | 12.5 blocks | near |
 | invulnerability after a hit, regen | 20 ticks; +2 per second after 8 s unhurt | giant_inv, regen_* |
-| core guard after a LANDED hit | 24 ticks (1.2 s) | hit_cd |
+| core guard after a LANDED hit (phases 1 and 2 only) | 24 ticks (1.2 s) | hit_cd |
 | back-off: after this many landed hits (not the wrap) | 8 | backoff_hits |
 | back-off: retreat distance / least room before it sidesteps | 30 / 10 blocks | backoff_dist, backoff_min |
 | back-off: stagger, retreat speed, wait before its next attack, longest hold | 30 ticks, 0.45 blocks/tick, 50 ticks, 300 ticks | backoff_stagger, backoff_speed, backoff_cd, backoff_hold |
@@ -159,12 +198,14 @@ Keep the player's own VR World Scale setting at 1: it multiplies.
 
 * (a) the scripted attacker of the earlier test (a click every 0.95 s, never dodges, runs at 13 blocks/s): the guard swallows every other
   click, so one landed hit per 1.9 s; at each back-off it can only wait for the barrier, which stays up for stagger + retreat + 50 ticks +
-  the first beam (219 ticks = 11 s): **about 190 s = 3.2 minutes** (it was 63 s with 40 hits and a 7-tick guard).  Its margin in the 20 s wrap
-  countdown is under 2 s: ten hits at 1.9 s need 17 s.
+  the first beam (219 ticks = 11 s): **about 180 s = 3.0 minutes** by the arithmetic (the wrap, with no guard, takes it 9.5 s with 11 s to spare;
+  with the old guard it needed 19 s and lost twice with one hit left, the first playthrough's finding).  Measured live earlier (scratch server, the giant kept 9
+  blocks in front of the monster, a click every 0.95 s, never dodging): **won in 150 s = 2.5 minutes**, 5 back-offs (the 3 hits landed during the intro
+  do not count), the giant undamaged (it was 63 s with 40 hits and a 7-tick guard).
 * (b) a plausible first-time player: a landed hit every 2.0 s while free to hit (swing, aim at a 4.5-block target, the guard), 2.5 s lost to
   each arm thrust (the cycle is 8.5 s, 7 s after the crack), 24 s from the start to the first hit (about 85 blocks at 6 blocks/s, the first
   beam's cover), after each retreat 8 s to close the 30 blocks and 4 s to take cover from its beam (so 17 s per back-off), a hit every 1.5 s in
-  the wrap: **about 290 s = 4.9 minutes**.  A slower player (2.6 s per hit, 3 s per thrust, 10 s + 5 s per back-off) comes out at 6.4 minutes,
+  the wrap (5.5 s to spare on its bar): **about 290 s = 4.9 minutes**.  A slower player (2.6 s per hit, 3 s per thrust, 10 s + 5 s per back-off) comes out at 6.4 minutes,
   a quick one (1.5 s per hit) at 3.6.  Not modelled: the player dying (giant health 100: four thrusts or four beams, regenerating 2 per second
   after 8 s unhurt) and restarting.  Not verified with a human: only the stand-in test drives it.
 
@@ -208,7 +249,8 @@ angel: `summon remove walk walk_go walk_tick turn step sync pose pose_* core_sta
 `p/<pose>_<h>`, `pp/<pose>`, `fx_foot*`.
 fight: `load tick start stop stop_quiet become_giant become_human leave_giant bark bark_beam pump say/7_NN hurt core_hit core_land
 core_blocked core_guarded body_hit wall_draw bar_pulse heartbeat heartbeat_stop ai_tick st_* begin_beam beam_fire beam_step wall_flash cross_flash pillar begin_thrust thrust_strike backoff_check backoff_start backoff_aim backoff_side st_bo_stagger st_bo_retreat bo_turn bo_go bo_end hold_tick bo_release core_crack
-wrap_start wrap_clamp self_destruct won_start won_tick won_final lost_start lost_tick restart hand_won test/*`.
+bo_shove wrap_start wrap_clamp wrap_follow wrap_wait wrap_count wrap_hit wrap_hit_fx wrap_flare wrap_squeeze wrap_loosen wrap_restore wrap_beat wrap_ring(_N) wrap_beep self_destruct ck_save start_ck restart_ck restart_ck_go bark_front won_start won_tick won_final lost_start lost_tick restart hand_won test/*`.
+angel: also `pose_wrap_tight pose_wrap_hit core_crack_1..4` (the wrap's crack slivers; hidden again by `core_stage_0/1/2`).
 
 ## Risks only a human in a headset can check
 

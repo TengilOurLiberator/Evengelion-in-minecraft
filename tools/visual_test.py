@@ -30,10 +30,10 @@ sys.stdout.reconfigure(encoding="utf-8", line_buffering=True)
 
 import numpy as np  # noqa: E402
 from visual import client as cl  # noqa: E402
-from visual import hqdata, plan as planmod, winutil  # noqa: E402
+from visual import fabricmode, hqdata, plan as planmod, winutil  # noqa: E402
 from visual.server import Scratch  # noqa: E402
 
-GAME = os.path.join(ROOT, "work", "testgame")
+GAME = os.path.join(ROOT, "work", "testgame")        # --gamedir changes it
 PIDFILE = os.path.join(ROOT, "work", "visual_pids.json")
 T0 = time.time()
 
@@ -78,6 +78,8 @@ class Session:
         self.client = None
         self.hwnd = None
         self.manifest = []
+        self.gui_scale = 1
+        self.font_zip = None
 
     # ---------------------------------------------------------------- picture taking
     def frame(self):
@@ -85,6 +87,10 @@ class Session:
             raise RuntimeError("the game client closed; see work\\testgame\\client.log")
         if not self.hwnd or not winutil.user32.IsWindow(self.hwnd):
             self.hwnd = winutil.window_of_pid_tree({self.client.pid})
+        if self.hwnd and winutil.user32.IsIconic(self.hwnd):          # a minimised window paints nothing (all-black pictures): put it back, no focus
+            log("the game window was minimised: restoring it")
+            winutil.user32.ShowWindow(self.hwnd, 4)
+            time.sleep(0.5)
         return winutil.grab(self.hwnd) if self.hwnd else None
 
     def settle(self, minimum, maximum):
@@ -117,6 +123,44 @@ class Session:
         log(f"shot {name}  ({img.width}x{img.height}, waited {waited}s{'' if stable else ', NOT STABLE'}, contrast {flat:.0f})")
         return dict(name=name, file=path, waited=waited, stable=stable, contrast=round(flat, 1))
 
+    def measure_fps(self, name, out, samples=3):
+        """The frame rate at the place the camera is now, read from the F3 overlay ("N fps"): the overlay is switched on, left
+        alone for 2 s (the counter is the average of the last second, with no picture-taking hitch inside it), photographed,
+        and the number read from the picture; median of `samples`. The pictures are kept in <out>\\fps\\."""
+        from visual import fpsocr
+        d = os.path.join(out, "fps")
+        os.makedirs(d, exist_ok=True)
+        gui_was_hidden = not self.a.gui
+        if gui_was_hidden:                                      # F1 hides the debug overlay too
+            ok1 = winutil.press(self.hwnd, winutil.VK_F1, winutil.SC_F1)
+            time.sleep(0.6)
+        ok3 = winutil.press(self.hwnd, 0x72, 0x3D)             # F3
+        log(f"   (F1 {'ok' if not gui_was_hidden or ok1 else 'NOT SENT'}, F3 {'ok' if ok3 else 'NOT SENT'})")
+        vals = []
+        try:
+            for i in range(samples):
+                time.sleep(2.2)
+                img = self.frame()
+                if img is None:
+                    continue
+                v = fpsocr.read_fps(img, self.gui_scale, self.font_zip)
+                if i == 0 or v is None:
+                    img.crop((0, 0, 700, 260)).save(os.path.join(d, f"{name}_{i}.png"))
+                    if v is None and i == 0:
+                        img.save(os.path.join(d, f"{name}_full.png"))
+                if v is not None:
+                    vals.append(v)
+        finally:
+            winutil.press(self.hwnd, 0x72, 0x3D)
+            time.sleep(0.4)
+            if gui_was_hidden:
+                winutil.press(self.hwnd, winutil.VK_F1, winutil.SC_F1)
+        if not vals:
+            return None
+        vals.sort()
+        med = vals[len(vals) // 2]
+        return dict(fps=med[0], p50=med[1], p98=med[2], p999=med[3], samples=[v[0] for v in vals])
+
     # ---------------------------------------------------------------- the run
     def run(self):
         a = self.a
@@ -137,7 +181,8 @@ class Session:
                 sys.exit(f"port {pt} is busy (another visual test running?)")
 
         log("scratch server")
-        self.srv = Scratch(exclude_dirs=() if a.with_story else ("story", "say"), keep=a.keep_server, datapack=a.datapack)
+        self.srv = Scratch(exclude_dirs=() if a.with_story else ("story", "say"), keep=a.keep_server, datapack=a.datapack,
+                           extra_mods=a.server_mod or ())
         self.srv.prepare()
         if a.world_build:
             self.build_world()
@@ -153,8 +198,17 @@ class Session:
         log(f"placed ({self.srv.log()[mark:].count('placed')} messages)")
 
         log("client")
-        cl.prepare(GAME, os.path.join(ROOT, "pack", "angel-resources"), fov, render, a.gamma)
-        self.client = cl.launch(GAME, self.srv.port, width, height)
+        extra = {"maxFps": str(a.maxfps), "enableVsync": "false"}
+        if a.fabric:
+            variant = fabricmode.VARIANTS[a.variant]
+            extra.update(fabricmode.prepare(GAME, variant, a.src_game))
+            log(f"fabric mode, variant {a.variant}: {json.dumps(variant)}")
+            fz = [p for p in variant.get("packs", []) if "Faithful" in p]
+            self.font_zip = os.path.join(GAME, "resourcepacks", fz[0][5:]) if fz else None
+        else:
+            variant = {}
+        cl.prepare(GAME, os.path.join(ROOT, "pack", "angel-resources"), fov, render, a.gamma, extra)
+        self.client = cl.launch(GAME, self.srv.port, width, height, fabric=bool(a.fabric))
         json.dump([self.srv.proc.pid, self.client.pid], open(PIDFILE, "w"))
         t0 = time.time()
         while cl.NAME not in self.srv.cmd("list"):
@@ -172,8 +226,11 @@ class Session:
             vleft = winutil.user32.GetSystemMetrics(76)
             if vleft < 0:
                 winutil.move_window(self.hwnd, vleft + 10, 10)
+            else:
+                winutil.keep_visible(self.hwnd)
+        winutil.SHOT_DIR = os.path.join(GAME, "screenshots")
         if not a.gui:
-            winutil.post_key(self.hwnd, winutil.VK_F1, winutil.SC_F1)
+            winutil.press(self.hwnd, winutil.VK_F1, winutil.SC_F1)
         time.sleep(2)
 
         for s in p.get("setup", []):
@@ -190,6 +247,10 @@ class Session:
                     continue
                 rec = self.shoot(name, out, shot.get("settle", 4), shot.get("max", 25))
                 rec["steps"] = shot.get("steps", [])
+                if a.fps and not shot.get("nofps"):
+                    m = self.measure_fps(name, out)
+                    rec.update(fps=m["fps"], p50=m["p50"], p98=m["p98"], p999=m["p999"], fps_samples=m["samples"]) if m else rec.update(fps=None)
+                    log(f"   fps {rec['fps']}" + (f"  p50 {m['p50']} p98 {m['p98']} p99.9 {m['p999']}  samples {m['samples']}" if m else ""))
                 self.manifest.append(rec)
                 for s in shot.get("after", []):            # additive: steps run after the picture (e.g. take a card down)
                     run.run(s, where)
@@ -242,6 +303,11 @@ class Session:
             shutil.copy(os.path.join(GAME, "client.log"), os.path.join(out, "client.log"))
         except OSError:
             pass
+        try:                                                    # what the mods wrote into their config files during this run
+            shutil.rmtree(os.path.join(out, "config_after"), ignore_errors=True)
+            shutil.copytree(os.path.join(GAME, "config"), os.path.join(out, "config_after"))
+        except OSError:
+            pass
 
     def close(self):
         winutil.kill_tree(self.client)
@@ -276,6 +342,14 @@ def main():
                                        "for pictures of a test build that is not in the repo")
     ap.add_argument("--monitor", choices=["left", "primary"], default="left",
                     help="where the game window sits ('left': on a monitor left of the primary if there is one)")
+    ap.add_argument("--fabric", action="store_true", help="start the Fabric Loader profile (fabric-loader-0.19.5-26.3, read from the launcher folder) "
+                    "with the mods of --src-game instead of the plain 26.3 client; needs --variant")
+    ap.add_argument("--variant", default="b_mods", help="with --fabric: one of " + ", ".join(fabricmode.VARIANTS))
+    ap.add_argument("--gamedir", help="the test game directory (default work\\testgame; with --fabric use work\\testgame_mods): never the real game folder")
+    ap.add_argument("--src-game", default=fabricmode.REAL_GAME, help="the game folder whose mods, config, shaderpacks, resourcepacks are copied (read only)")
+    ap.add_argument("--maxfps", type=int, default=260, help="frame rate cap for the client (260 = unlimited); vsync is always off")
+    ap.add_argument("--fps", action="store_true", help="after each picture, read the frame rate from the F3 overlay and put it in the manifest")
+    ap.add_argument("--server-mod", action="append", help="a jar to put into the scratch server mods folder (repeatable)")
     ap.add_argument("--max-minutes", type=float, default=60)
     a = ap.parse_args()
     if a.list:
@@ -284,6 +358,13 @@ def main():
         return
     if not a.plan:
         ap.error("--plan is required")
+    global GAME
+    if a.gamedir:
+        GAME = os.path.abspath(a.gamedir)
+    elif a.fabric:
+        GAME = os.path.join(ROOT, "work", "testgame_mods")
+    if os.path.normcase(GAME) == os.path.normcase(fabricmode.REAL_GAME):
+        sys.exit("the test game directory must not be the real game folder")
     kill_stale()
     s = Session(a)
     atexit.register(s.close)
@@ -299,3 +380,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

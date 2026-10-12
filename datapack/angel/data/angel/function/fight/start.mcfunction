@@ -26,7 +26,7 @@ scoreboard players set #gap angel.fight 0
 scoreboard players set #bt angel.fight 40
 scoreboard players set #locked angel.fight 0
 scoreboard players set #sl angel.fight 30
-scoreboard players set #wt angel.fight 400
+scoreboard players set #wt angel.fight 320
 scoreboard players set #dmg angel.fight 0
 scoreboard players set #blocked1 angel.fight 0
 scoreboard players set #destroy angel.fight 1
@@ -38,7 +38,15 @@ scoreboard players set #hold_t angel.fight 0
 scoreboard players set #hb angel.fight 0
 scoreboard players set #blockcd angel.fight 0
 scoreboard players set #sparkcd angel.fight 0
+scoreboard players set #barsnd angel.fight 0
 scoreboard players set #wallt angel.fight 0
+scoreboard players set #wgo angel.fight 0
+scoreboard players set #wwait angel.fight 0
+scoreboard players set #wstage angel.fight 0
+scoreboard players set #shud angel.fight 0
+scoreboard players set #hbt angel.fight 0
+scoreboard players set #whits angel.fight 0
+scoreboard players set #ck angel.fight 0
 scoreboard players reset * angel.barks
 data modify storage angel:fight q set value []
 data modify storage angel:fight played set value []
@@ -55,6 +63,7 @@ bossbar set angel:fight/giant visible true
 bossbar set angel:fight/angel visible true
 bossbar set angel:fight/wrap visible false
 bossbar set angel:fight/giant color green
+bossbar set angel:fight/wrap color red
 function angel:fight/bark {id:"7_01"}
 function angel:fight/bark {id:"7_02"}
 scoreboard players set #run angel.fight 1

@@ -1,11 +1,9 @@
 setblock 3090 64 58 minecraft:black_concrete
 setblock 3091 63 58 minecraft:black_concrete
-setblock 3092 63 58 minecraft:black_concrete
+setblock 3092 62 58 minecraft:black_concrete
 setblock 3093 62 58 minecraft:black_concrete
-setblock 3094 62 58 minecraft:black_concrete
-setblock 3098 62 58 minecraft:black_concrete
 setblock 3099 62 58 minecraft:black_concrete
-setblock 3100 63 58 minecraft:black_concrete
+setblock 3100 62 58 minecraft:black_concrete
 setblock 3101 63 58 minecraft:black_concrete
 setblock 3102 64 58 minecraft:black_concrete
 setblock 3092 60 60 minecraft:air

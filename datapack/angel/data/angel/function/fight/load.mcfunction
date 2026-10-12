@@ -6,12 +6,13 @@ scoreboard objectives add angel.barks dummy
 scoreboard objectives add angel.story dummy
 scoreboard players set #2 angel.mon 2
 scoreboard players set #2 angel.fight 2
+scoreboard players set #16 angel.fight 16
 bossbar add angel:fight/giant {"text":"UNIT-01","color":"green"}
 bossbar add angel:fight/angel {"text":"ANGEL","color":"red"}
 bossbar add angel:fight/wrap {"text":"SELF-DESTRUCT","color":"dark_red"}
 bossbar set angel:fight/giant max 100
 bossbar set angel:fight/angel max 60
-bossbar set angel:fight/wrap max 400
+bossbar set angel:fight/wrap max 320
 bossbar set angel:fight/giant color green
 bossbar set angel:fight/angel color red
 bossbar set angel:fight/angel style notched_10

@@ -5,23 +5,65 @@ then you pilot the giant and fight.
 
 ## Play
 
-1. `.\start.ps1` (add `-NewWorld` to begin again). This opens the local server.
-2. Minecraft launcher, profile **Angel Attack**, Play. For the headset, start SteamVR first and switch Vivecraft to VR.
-3. Multiplayer, **Angel Attack**.
+**First time, once.** Prepare the game folder, then add its launcher profile:
 
-The server listens on port 25566, RCON on 25576 (Genesis uses 25565 and 25575, so both can run at once).
+1. `D:\voice-assistant\.venv\Scripts\python.exe tools\setup_client.py` makes `game\`, the VR game folder: the mods, Vivecraft
+   and SteamVR settings and options of the Genesis VR game (read from `D:\genesis-vr\game`, never written), the resource
+   pack and the server entry "Angel Attack".
+2. Close the Minecraft launcher, then `D:\voice-assistant\.venv\Scripts\python.exe tools\setup_client.py --install-profile`
+   adds the launcher profile **Angel Attack VR** (game folder `D:\angel-attack\game`, the same Fabric and Java settings as
+   Genesis VR). Without the flag the script only prints the entry it would add.
+
+**Each time.**
+
+1. `.\start.ps1` opens the server in one window and the voice bridge in another. The first start places the world
+   (about 25 s); after that the world is kept as it is.
+2. Start SteamVR first, for the headset.
+3. Minecraft launcher: profile **Angel Attack VR**, Play. In Vivecraft, switch to VR.
+4. Multiplayer: **Angel Attack** (`localhost:25566`).
+5. Start the story with `function angel:story/start`, typed in the server window, or let `.\start.ps1 -AutoStart` send it
+   once you have joined (it waits for a player, then starts the story; keep that window open until it has).
+
+`start.ps1` options: `-NewWorld` deletes the world and the characters' memory and begins again from the beginning;
+`-Text` types to the characters in the bridge window instead of speaking (the bridge's `--text --live`: the real server);
+`-Output "Oculus"` picks the speakers, by part of the name (the bridge's `--output`; default is the Windows default device);
+`-NoBridge` starts the server only.
+
+**While playing.**
+
+- When the **Your turn** prompt shows, speak aloud to the character you mean (say "Misato", "Ritsuko", "Gendo" or "Rei").
+  The prompt is in the headset; the bridge hears you and answers in that character's voice.
+- If the story is stuck (it waits for something that has not come), type `function angel:story/skip` in the server
+  window. `function angel:story/next` skips the current step instead. The players are not operators (`server\ops.json` is
+  empty), so these are typed in the server window, or from any terminal with `D:\voice-assistant\.venv\Scripts\python.exe tools\rcon.py "function angel:story/skip"`.
+- To jump to a scene: `function angel:story/scene {n:3}` (scenes 1 to 7; the state of that scene is rebuilt).
+- To start the story again in the same world: `function angel:story/start`. `function angel:story/stop` stops it.
+  To start the whole thing again from the beginning, close the server window and run `.\start.ps1 -NewWorld`.
 
 ## What is here
 
 | Path | What it is |
 |---|---|
-| `start.ps1` | Starts the server, then the character bridge (the bridge start is a TODO for now) |
-| `tools/server.ps1`, `tools/rcon.py` | Run the server and talk to it over RCON |
-| `server/` | Fabric server runtime, mods and config, copied from Genesis. The world, logs and player data are made here and are not in git |
-| `datapack/angel` | The datapack (empty for now) |
-| `pack/angel-resources` | The resource pack for the narration and sounds (empty for now) |
-| `tools/voices` | in progress |
-| `characters_bridge/bridge.py` | in progress: the character bridge |
-| `tools/world` | in progress |
-| `script.md` | in progress |
-| `characters/` | in progress |
+| `start.ps1` | Starts the server, places the world if it is new, starts the voice bridge |
+| `tools/setup_client.py` | Prepares `game\` from the Genesis VR game and `tools/client_mods.json` (visual and audio mods, shader packs, Faithful, all from Modrinth, sha512-checked, kept in `downloads\mods\`); `--install-profile` adds the launcher profile; `--plain` returns to bare Fabric + Vivecraft |
+| `tools/server.ps1` | Runs the server; copies `datapack\angel` into the world on every start (`-NewWorld`, `-Offline`) |
+| `tools/rcon.py` | Sends commands to the running server over RCON: `python tools\rcon.py "list"` |
+| `tools/world/build.py` | Builds the four sets (city, geofront, hq, outskirts) and writes the functions that place them (`function angel:world/place_all`) |
+| `tools/story/build_story.py` | Generates the story: seven scenes in `tools/story/scenes/`, the speak prompt, the sound cues, the title cards |
+| `tools/cast/build_cast.py` | The cast as entities: Misato, Ritsuko, Gendo, Rei and the medics |
+| `tools/fight/build_fight.py` | The Angel and the scene-7 boss fight |
+| `tools/sound/make_sound.py` | The ambience, effects and score, synthesised here (nothing sampled) |
+| `tools/voices/` | The voice pipeline: cutting the recorded reading into lines, the five voices |
+| `tools/visual/`, `tools/visual_test.py` | See the project in the real game: a scratch server, a silent client, screenshots |
+| `datapack/angel` | The datapack (generated by the tools above) |
+| `pack/angel-resources` | The resource pack: sounds, music, the card font, the cast's textures |
+| `characters_bridge/bridge.py` | The voice bridge: microphone, Claude as the characters, their voices, and the link to the game (see its README) |
+| `characters/` | The characters' sheets (`misato.md` and so on) and `beats.md`, the story's beats they are told about |
+| `script.md`, `cue-sheet.md` | The story's text and what the world does at each cue |
+| `recording/` | The lines each voice records, one sheet per voice |
+| `voices/` | Voice material made by the pipeline (not in git) |
+| `server/` | The Fabric server: the jar, mods and config, and the world `angel-world` (not in git) |
+| `game/` | The VR game folder, made by `tools/setup_client.py` (not in git) |
+| `work/` | Scratch output (not in git) |
+
+The recording project (`angel-attack.aup4` and its `.wav`) is kept beside the scripts; both are not in git.

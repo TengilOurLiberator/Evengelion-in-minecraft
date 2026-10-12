@@ -16,6 +16,7 @@ import numpy as np
 
 from context import play_at
 from core import NS, OBJ, TAG, fn, fnum, num, qaxis, sadd, sc, sset
+import models
 from models import Part, Rig, summon_part, transformation_nbt
 
 N_AC = 5
@@ -43,7 +44,15 @@ def reg(ctx, path, lines, scheduled=False):
 
 # --------------------------------------------------------------------------------------------------- the model
 def vtol_parts(scale=SCALE):
-    """A VTOL, nose along +z, light grey with orange lift-fan glows under the wings and a red nose band so that it reads against the sky and the Angel."""
+    """The VTOL (nose along +z): the item models of tools/models/vtol.py (fuselage, nose with canopy and cannon, swept wings, two tilted ducted fans
+    with glowing exhausts, V-tail; grey with a red nose band and invented roundels); with models.MODELS == "boxes" the old box VTOL."""
+    if models.MODELS != "boxes":
+        return models._custom_parts(models._vehicle("vtol"), scale=scale)
+    return _vtol_parts_boxes(scale)
+
+
+def _vtol_parts_boxes(scale=SCALE):
+    """The old box VTOL, light grey with orange lift-fan glows under the wings and a red nose band so that it reads against the sky and the Angel."""
     P_ = Part
     s = scale
     raw = [
@@ -234,15 +243,12 @@ def crash_functions(ctx, crash_xyz, frames):
               f"particle minecraft:block{{block_state:\"minecraft:gray_concrete\"}} {num(x)} {num(y + 1)} {num(z)} 6 1.5 6 0.6 140 force",
               play_at("angel:sfx.explosion_near", x, y, z, 1.2, 1.0, 0.0)]
     rnd = random.Random(11)
-    k = 1.7
-    pieces = [("gray_concrete", (-1.8, 0, -0.5), (1.8, 0.9, 0.9)), ("black_concrete", (0.6, 0, -2.2), (2.1, 0.5, 0.3)),
-              ("light_gray_concrete", (-3.4, 0, 1.2), (-1.8, 0.35, 2.7)), ("black_concrete", (2.2, 0, 0.9), (3.0, 1.1, 1.7)),
-              ("gray_concrete", (-0.4, 0, 1.6), (0.7, 0.4, 3.2)), ("orange_concrete", (-1.0, 0.1, -1.4), (0.2, 0.5, -0.2)),
-              ("light_gray_concrete", (-4.6, 0, -1.8), (-2.4, 0.5, -0.6)), ("gray_concrete", (1.4, 0, -3.6), (3.6, 0.7, -2.0))]
-    for n, (b, lo, hi) in enumerate(pieces):
-        lo2, hi2 = tuple(v * k for v in lo), tuple(v * k for v in hi)
-        wreck.append(summon_part(Part(f"w{n}", b, lo2, hi2, qaxis("y", rnd.uniform(0, 360)) if n else (0, 0, 0, 1)), ["angel.wreck"], 0, None, 4.0,
-                                 pos=f"{num(x)} {num(y)} {num(z)}"))
+    if models.MODELS != "boxes":
+        # the broken aircraft: four scorched item-model pieces lying where the fire blocks burn
+        for part, pos in wreck_parts(x, y, z):
+            wreck.append(summon_part(part, ["angel.wreck"], 0, None, 6.0, pos=pos))
+    else:
+        wreck += _wreck_boxes(rnd, x, y, z)
     for n in range(10):
         fx_, fz_ = x + rnd.uniform(-5.0, 5.0), z + rnd.uniform(-5.0, 5.0)
         s = rnd.uniform(1.6, 3.2)
@@ -254,6 +260,45 @@ def crash_functions(ctx, crash_xyz, frames):
         f"particle minecraft:campfire_signal_smoke {num(x)} {num(y + 1.5)} {num(z)} 1.5 0.5 1.5 0.01 3 force",
         f"particle minecraft:large_smoke {num(x)} {num(y + 2)} {num(z)} 2.2 1.5 2.2 0.02 3 force",
         f"particle minecraft:flame {num(x)} {num(y + 0.6)} {num(z)} 3.2 0.4 3.2 0.01 4 force"])
+
+
+def _wreck_boxes(rnd, x, y, z):
+    """The old wreck: eight scattered boxes."""
+    out = []
+    k = 1.7
+    pieces = [("gray_concrete", (-1.8, 0, -0.5), (1.8, 0.9, 0.9)), ("black_concrete", (0.6, 0, -2.2), (2.1, 0.5, 0.3)),
+              ("light_gray_concrete", (-3.4, 0, 1.2), (-1.8, 0.35, 2.7)), ("black_concrete", (2.2, 0, 0.9), (3.0, 1.1, 1.7)),
+              ("gray_concrete", (-0.4, 0, 1.6), (0.7, 0.4, 3.2)), ("orange_concrete", (-1.0, 0.1, -1.4), (0.2, 0.5, -0.2)),
+              ("light_gray_concrete", (-4.6, 0, -1.8), (-2.4, 0.5, -0.6)), ("gray_concrete", (1.4, 0, -3.6), (3.6, 0.7, -2.0))]
+    for n, (b, lo, hi) in enumerate(pieces):
+        lo2, hi2 = tuple(v * k for v in lo), tuple(v * k for v in hi)
+        out.append(summon_part(Part(f"w{n}", b, lo2, hi2, qaxis("y", rnd.uniform(0, 360)) if n else (0, 0, 0, 1)), ["angel.wreck"], 0, None, 4.0,
+                               pos=f"{num(x)} {num(y)} {num(z)}"))
+    return out
+
+
+# the broken aircraft: (model, offset east / south from the crash site in blocks, yaw about the vertical, lean about x, lean about z)
+WRECK = [("vtol_wreck_mid", (0.0, 0.0), 35.0, 0.0, 9.0),
+         ("vtol_wreck_nose", (-1.5, 6.2), 205.0, 14.0, -6.0),
+         ("vtol_wreck_tail", (-3.0, -6.8), 118.0, -6.0, 18.0),
+         ("vtol_wreck_nacelle", (7.2, 2.4), 20.0, 78.0, 0.0)]
+
+
+def wreck_parts(x, y, z):
+    """[(ModelPart, "x y z")]: the wreck's four pieces, each turned and set so that its lowest corner sits just under the ground."""
+    import numpy as np
+    from core import qaxis as _qa, qmul as _qm
+    veh = models._vehicle("vtol")
+    out = []
+    for n, (name, (dx, dz), yaw, lx, lz) in enumerate(WRECK):
+        m = veh.models[name]
+        q = _qm(_qm(_qa("y", yaw), _qa("x", lx)), _qa("z", lz))
+        R = models._qmat(q)
+        c = np.array(m.center)
+        low = min(float((R @ ((p - c) * SCALE))[1]) for e in m.elems for p in e.corners_world())
+        part = models.ModelPart(f"w{n}", name, m.center, at=(dx, -low - 0.25, dz), R=R, scale=SCALE, elems=m.elems)
+        out.append((part, f"{num(x)} {num(y)} {num(z)}"))
+    return out
 
 
 def stop_cmds():

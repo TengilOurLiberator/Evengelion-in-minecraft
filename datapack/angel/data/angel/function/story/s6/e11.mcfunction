@@ -17,5 +17,6 @@ summon minecraft:block_display 3029.12 10.12 6.12 {Tags:["angel.story","angel.la
 summon minecraft:block_display 3029.12 10.12 14.85 {Tags:["angel.story","angel.launch","angel.lshell","angel.lshell_s"],block_state:"minecraft:black_concrete",teleport_duration:0,interpolation_duration:0,view_range:1.0f,brightness:{sky:0,block:0},transformation:{translation:[0.0f,0.0f,0.0f],left_rotation:[0f,0f,0f,1f],scale:[2.76f,4.76f,0.03f],right_rotation:[0f,0f,0f,1f]}}
 summon minecraft:block_display 3029.12 10.12 6.12 {Tags:["angel.story","angel.launch","angel.lshell","angel.lshell_d"],block_state:"minecraft:black_concrete",teleport_duration:0,interpolation_duration:0,view_range:1.0f,brightness:{sky:0,block:0},transformation:{translation:[0.0f,0.0f,0.0f],left_rotation:[0f,0f,0f,1f],scale:[2.76f,0.03f,8.76f],right_rotation:[0f,0f,0f,1f]}}
 summon minecraft:block_display 3029.12 14.85 6.12 {Tags:["angel.story","angel.launch","angel.lshell","angel.lshell_u"],block_state:"minecraft:black_concrete",teleport_duration:0,interpolation_duration:0,view_range:1.0f,brightness:{sky:0,block:0},transformation:{translation:[0.0f,0.0f,0.0f],left_rotation:[0f,0f,0f,1f],scale:[2.76f,0.03f,8.76f],right_rotation:[0f,0f,0f,1f]}}
+function angel:story/launch/plug_dim
 scoreboard players set #step angel.story 12
 function angel:story/s6/e12

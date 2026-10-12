@@ -1,0 +1,2429 @@
+{
+ "name": "gallery3",
+ "fov": 75,
+ "render": 24,
+ "width": 1600,
+ "height": 900,
+ "setup": [
+  "gamemode spectator Tester",
+  "execute as Tester run function angel:world/enter_outskirts"
+ ],
+ "shots": [
+  {
+   "name": "outskirts_start",
+   "steps": [
+    {
+     "enter": "outskirts"
+    },
+    {
+     "tp": "outskirts.start"
+    }
+   ],
+   "settle": 6,
+   "max": 25
+  },
+  {
+   "name": "outskirts_phone_use",
+   "steps": [
+    {
+     "tp": "outskirts.phone_use"
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "outskirts_street_east_to_sea",
+   "steps": [
+    {
+     "tp": "outskirts.street",
+     "yaw": -90,
+     "pitch": 0
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "outskirts_street_west_to_station",
+   "steps": [
+    {
+     "tp": "outskirts.street",
+     "yaw": 90,
+     "pitch": 0
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "outskirts_vision_girl",
+   "steps": [
+    {
+     "at": "outskirts.vision",
+     "run": "function angel:cast/summon {id:\"rei_uniform\"}",
+     "yaw": 90
+    },
+    {
+     "wait": 1.0
+    },
+    {
+     "tp": "outskirts.street",
+     "look_at": [
+      133.5,
+      65.2,
+      128.5
+     ]
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "outskirts_car_arrive",
+   "steps": [
+    {
+     "clean": true
+    },
+    {
+     "tp": "outskirts.car_arrive"
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "outskirts_ridge_toward_angel_spawn",
+   "steps": [
+    {
+     "tp": "outskirts.ridge",
+     "look_at": [
+      228.5,
+      63,
+      128.5
+     ]
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "outskirts_gate",
+   "steps": [
+    {
+     "tp": "outskirts.gate"
+    }
+   ],
+   "settle": 5,
+   "max": 25
+  },
+  {
+   "name": "outskirts_cartrain",
+   "steps": [
+    {
+     "tp": "outskirts.cartrain"
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "outskirts_aerial_overview",
+   "steps": [
+    {
+     "tp": [
+      8,
+      118,
+      128
+     ],
+     "yaw": -90.0,
+     "pitch": 30.49
+    }
+   ],
+   "settle": 8,
+   "max": 25
+  },
+  {
+   "name": "outskirts_aerial_bay",
+   "steps": [
+    {
+     "tp": [
+      60,
+      110,
+      128
+     ],
+     "yaw": -90.0,
+     "pitch": 27.06
+    }
+   ],
+   "settle": 6,
+   "max": 25
+  },
+  {
+   "name": "outskirts_monster100_from_street",
+   "steps": [
+    {
+     "clean": true
+    },
+    {
+     "at": "outskirts.angel_spawn",
+     "run": "function angel:angel/summon {height:100}"
+    },
+    {
+     "wait": 3.0
+    },
+    {
+     "tp": "outskirts.street",
+     "look_at": [
+      228.5,
+      120,
+      128.5
+     ]
+    }
+   ],
+   "settle": 5,
+   "max": 25
+  },
+  {
+   "name": "outskirts_monster100_street_level_low",
+   "steps": [
+    {
+     "tp": "outskirts.street",
+     "look_at": [
+      228.5,
+      85,
+      128.5
+     ]
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "outskirts_monster100_from_ridge",
+   "steps": [
+    {
+     "tp": "outskirts.ridge",
+     "look_at": [
+      228.5,
+      120,
+      128.5
+     ]
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "outskirts_monster100_aerial",
+   "steps": [
+    {
+     "tp": [
+      60,
+      125,
+      100
+     ],
+     "yaw": -80.4,
+     "pitch": 15.26
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "geofront_start_dark_tunnel",
+   "steps": [
+    {
+     "clean": true
+    },
+    {
+     "enter": "geofront"
+    },
+    {
+     "tp": "geofront.start"
+    }
+   ],
+   "settle": 8,
+   "max": 25
+  },
+  {
+   "name": "geofront_wall_opens",
+   "steps": [
+    {
+     "tp": "geofront.wall_opens"
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "geofront_reveal",
+   "steps": [
+    {
+     "tp": "geofront.reveal"
+    }
+   ],
+   "settle": 6,
+   "max": 25
+  },
+  {
+   "name": "geofront_train_8",
+   "steps": [
+    {
+     "tp": "geofront.train_8"
+    }
+   ],
+   "settle": 5,
+   "max": 25
+  },
+  {
+   "name": "geofront_train_16",
+   "steps": [
+    {
+     "tp": "geofront.train_16"
+    }
+   ],
+   "settle": 5,
+   "max": 25
+  },
+  {
+   "name": "geofront_train_24",
+   "steps": [
+    {
+     "tp": "geofront.train_24"
+    }
+   ],
+   "settle": 5,
+   "max": 25
+  },
+  {
+   "name": "geofront_terminal",
+   "steps": [
+    {
+     "tp": "geofront.terminal"
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "geofront_hq_entrance_pyramid",
+   "steps": [
+    {
+     "tp": "geofront.hq_entrance"
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "geofront_overview_west_rim",
+   "steps": [
+    {
+     "tp": [
+      2045,
+      70,
+      160
+     ],
+     "yaw": -90.0,
+     "pitch": 13.79
+    }
+   ],
+   "settle": 8,
+   "max": 25
+  },
+  {
+   "name": "geofront_overview_south",
+   "steps": [
+    {
+     "tp": [
+      2160,
+      60,
+      285
+     ],
+     "yaw": -159.68,
+     "pitch": 12.39
+    }
+   ],
+   "settle": 6,
+   "max": 25
+  },
+  {
+   "name": "geofront_pyramid_from_terminal",
+   "steps": [
+    {
+     "tp": "geofront.terminal",
+     "look_at": [
+      2240,
+      45,
+      150
+     ]
+    }
+   ],
+   "settle": 5,
+   "max": 25
+  },
+  {
+   "name": "hq_start",
+   "steps": [
+    {
+     "enter": "hq"
+    },
+    {
+     "tp": "hq.start"
+    }
+   ],
+   "settle": 6,
+   "max": 25
+  },
+  {
+   "name": "hq_corr_2",
+   "steps": [
+    {
+     "tp": "hq.corr_2"
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "hq_loop_door",
+   "steps": [
+    {
+     "tp": "hq.loop_door"
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "hq_escalator_hall_from_top",
+   "steps": [
+    {
+     "tp": "hq.corr_5",
+     "look_at": [
+      3050,
+      112,
+      160
+     ]
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "hq_escalator_hall_from_bottom",
+   "steps": [
+    {
+     "tp": [
+      3030,
+      107,
+      160
+     ],
+     "look_at": [
+      3070,
+      128,
+      160
+     ]
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "hq_elevator",
+   "steps": [
+    {
+     "tp": "hq.elevator"
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "hq_elevator_alert_red",
+   "steps": [
+    {
+     "fn": "story/hq/strips_red"
+    },
+    {
+     "wait": 0.5
+    },
+    {
+     "tp": "hq.elevator"
+    }
+   ],
+   "settle": 2,
+   "max": 25
+  },
+  {
+   "name": "hq_dock",
+   "steps": [
+    {
+     "fn": "story/hq/strips_on"
+    },
+    {
+     "tp": "hq.dock"
+    }
+   ],
+   "settle": 6,
+   "max": 25
+  },
+  {
+   "name": "hq_crossing",
+   "steps": [
+    {
+     "tp": "hq.crossing"
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "hq_bridge_start_lights_off",
+   "steps": [
+    {
+     "tp": "hq.bridge_start"
+    }
+   ],
+   "settle": 6,
+   "max": 25
+  },
+  {
+   "name": "hq_face_lights_off",
+   "steps": [
+    {
+     "tp": "hq.face"
+    }
+   ],
+   "settle": 5,
+   "max": 25
+  },
+  {
+   "name": "hq_face_lights_off_look_up",
+   "steps": [
+    {
+     "tp": "hq.face",
+     "pitch": -35
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "hq_face_lights_off_look_down_lake",
+   "steps": [
+    {
+     "tp": "hq.face",
+     "pitch": 40
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "hq_face_lights_off_look_back_south",
+   "steps": [
+    {
+     "tp": "hq.face",
+     "yaw": 0,
+     "pitch": 0
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "hq_bridge_mid_lights_off",
+   "steps": [
+    {
+     "tp": [
+      3096.5,
+      54,
+      105
+     ],
+     "yaw": 180,
+     "pitch": -5
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "hq_bank_0_on",
+   "steps": [
+    {
+     "fn": "story/hq/bank_on_0"
+    },
+    {
+     "wait": 0.7
+    },
+    {
+     "tp": [
+      3096.5,
+      54,
+      105
+     ],
+     "yaw": 180,
+     "pitch": -5
+    }
+   ],
+   "settle": 2.5,
+   "max": 10
+  },
+  {
+   "name": "hq_bank_1_on",
+   "steps": [
+    {
+     "fn": "story/hq/bank_on_1"
+    },
+    {
+     "wait": 0.7
+    },
+    {
+     "tp": [
+      3096.5,
+      54,
+      105
+     ],
+     "yaw": 180,
+     "pitch": -5
+    }
+   ],
+   "settle": 2.5,
+   "max": 10
+  },
+  {
+   "name": "hq_bank_2_on",
+   "steps": [
+    {
+     "fn": "story/hq/bank_on_2"
+    },
+    {
+     "wait": 0.7
+    },
+    {
+     "tp": [
+      3096.5,
+      54,
+      105
+     ],
+     "yaw": 180,
+     "pitch": -5
+    }
+   ],
+   "settle": 2.5,
+   "max": 10
+  },
+  {
+   "name": "hq_bank_3_on",
+   "steps": [
+    {
+     "fn": "story/hq/bank_on_3"
+    },
+    {
+     "wait": 0.7
+    },
+    {
+     "tp": [
+      3096.5,
+      54,
+      105
+     ],
+     "yaw": 180,
+     "pitch": -5
+    }
+   ],
+   "settle": 2.5,
+   "max": 10
+  },
+  {
+   "name": "hq_bank_4_on",
+   "steps": [
+    {
+     "fn": "story/hq/bank_on_4"
+    },
+    {
+     "wait": 0.7
+    },
+    {
+     "tp": [
+      3096.5,
+      54,
+      105
+     ],
+     "yaw": 180,
+     "pitch": -5
+    }
+   ],
+   "settle": 2.5,
+   "max": 10
+  },
+  {
+   "name": "hq_bank_5_on",
+   "steps": [
+    {
+     "fn": "story/hq/bank_on_5"
+    },
+    {
+     "wait": 0.7
+    },
+    {
+     "tp": [
+      3096.5,
+      54,
+      105
+     ],
+     "yaw": 180,
+     "pitch": -5
+    }
+   ],
+   "settle": 2.5,
+   "max": 10
+  },
+  {
+   "name": "hq_bank_5_on_from_the_stop",
+   "steps": [
+    {
+     "tp": "hq.face"
+    }
+   ],
+   "settle": 2.5,
+   "max": 10
+  },
+  {
+   "name": "hq_bank_6_on",
+   "steps": [
+    {
+     "fn": "story/hq/bank_on_6"
+    },
+    {
+     "wait": 0.7
+    },
+    {
+     "tp": [
+      3096.5,
+      54,
+      105
+     ],
+     "yaw": 180,
+     "pitch": -5
+    }
+   ],
+   "settle": 2.5,
+   "max": 10
+  },
+  {
+   "name": "hq_bank_6_on_from_the_stop",
+   "steps": [
+    {
+     "tp": "hq.face"
+    }
+   ],
+   "settle": 2.5,
+   "max": 10
+  },
+  {
+   "name": "hq_bank_7_on",
+   "steps": [
+    {
+     "fn": "story/hq/bank_on_7"
+    },
+    {
+     "wait": 0.7
+    },
+    {
+     "tp": [
+      3096.5,
+      54,
+      105
+     ],
+     "yaw": 180,
+     "pitch": -5
+    }
+   ],
+   "settle": 2.5,
+   "max": 10
+  },
+  {
+   "name": "hq_bank_7_on_from_the_stop",
+   "steps": [
+    {
+     "tp": "hq.face"
+    }
+   ],
+   "settle": 2.5,
+   "max": 10
+  },
+  {
+   "name": "hq_bank_7_on_face_close",
+   "steps": [
+    {
+     "tp": [
+      3096.5,
+      54,
+      74.5
+     ],
+     "yaw": 180,
+     "pitch": -28
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "hq_face_cage_lights_on_eyes_dark",
+   "steps": [
+    {
+     "tp": "hq.face"
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "hq_face_cage_lights_on_look_up",
+   "steps": [
+    {
+     "tp": "hq.face",
+     "pitch": -35
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "hq_face_cage_lights_on_look_down_lake",
+   "steps": [
+    {
+     "tp": "hq.face",
+     "pitch": 35
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "hq_bridge_start_cage_lit",
+   "steps": [
+    {
+     "tp": "hq.bridge_start"
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "hq_face_eyes_lit",
+   "steps": [
+    {
+     "fn": "story/hq/eyes_on"
+    },
+    {
+     "wait": 1.0
+    },
+    {
+     "tp": "hq.face"
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "hq_face_eyes_lit_close",
+   "steps": [
+    {
+     "tp": [
+      3096.5,
+      54,
+      75.5
+     ],
+     "pitch": -30
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "hq_eyes_off_again",
+   "steps": [
+    {
+     "fn": "story/hq/eyes_off"
+    },
+    {
+     "wait": 0.7
+    },
+    {
+     "tp": "hq.face"
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "hq_booth_balcony_empty",
+   "steps": [
+    {
+     "fn": "story/hq/booth_on"
+    },
+    {
+     "wait": 1.0
+    },
+    {
+     "tp": "hq.face",
+     "look_at": [
+      3107.0,
+      66,
+      53.75
+     ]
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "hq_gendo_balcony_scale_2.0_from_face",
+   "steps": [
+    {
+     "at": "hq.booth",
+     "run": "function angel:cast/summon {id:\"gendo\"}",
+     "yaw": 29
+    },
+    {
+     "wait": 1.0
+    },
+    {
+     "at": "hq.booth",
+     "run": "function angel:cast/scale {id:\"gendo\",scale:2.0}"
+    },
+    {
+     "wait": 1.2
+    },
+    {
+     "tp": "hq.face",
+     "look_at": [
+      3107.0,
+      66.2,
+      53.75
+     ]
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "hq_gendo_balcony_from_face_wide",
+   "steps": [
+    {
+     "tp": "hq.face",
+     "yaw": -150,
+     "pitch": -14
+    }
+   ],
+   "settle": 2,
+   "max": 25
+  },
+  {
+   "name": "hq_gendo_balcony_closer",
+   "steps": [
+    {
+     "tp": [
+      3101.5,
+      56,
+      64.0
+     ],
+     "look_at": [
+      3107.0,
+      66.2,
+      53.75
+     ]
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "hq_gendo_balcony_side_on",
+   "steps": [
+    {
+     "tp": [
+      3086.0,
+      62.5,
+      54.0
+     ],
+     "look_at": [
+      3107.0,
+      66.2,
+      53.75
+     ]
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "hq_hand_raised_from_bridge",
+   "steps": [
+    {
+     "clean": true
+    },
+    {
+     "fn": "story/hq/hand_up"
+    },
+    {
+     "wait": 1.5
+    },
+    {
+     "tp": [
+      3096.5,
+      54,
+      94.5
+     ],
+     "look_at": [
+      3092,
+      66,
+      78
+     ]
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "hq_hand_raised_front",
+   "steps": [
+    {
+     "tp": [
+      3096.5,
+      54,
+      103.5
+     ],
+     "look_at": [
+      3094,
+      62,
+      80
+     ]
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "hq_hand_raised_side",
+   "steps": [
+    {
+     "tp": [
+      3112,
+      62,
+      82
+     ],
+     "look_at": [
+      3094,
+      62,
+      82
+     ]
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "hq_hand_raised_from_below_close",
+   "steps": [
+    {
+     "tp": [
+      3092,
+      40,
+      100
+     ],
+     "yaw": 180,
+     "pitch": -32
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "hq_hand_raised_from_below_far",
+   "steps": [
+    {
+     "tp": [
+      3092,
+      38,
+      135
+     ],
+     "yaw": 180,
+     "pitch": -20
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "hq_hand_raised_from_below_side",
+   "steps": [
+    {
+     "tp": [
+      3125,
+      40,
+      80
+     ],
+     "look_at": [
+      3092,
+      64,
+      80
+     ]
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "hq_hand_raised_with_eyes_lit",
+   "steps": [
+    {
+     "fn": "story/hq/eyes_on"
+    },
+    {
+     "wait": 0.7
+    },
+    {
+     "tp": "hq.face",
+     "pitch": -12
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "hq_hand_down",
+   "steps": [
+    {
+     "fn": "story/hq/hand_down"
+    },
+    {
+     "fn": "story/hq/eyes_off"
+    },
+    {
+     "wait": 1.5
+    },
+    {
+     "tp": [
+      3096.5,
+      54,
+      94.5
+     ],
+     "look_at": [
+      3092,
+      50,
+      78
+     ]
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "hq_gurney_rei_medics",
+   "steps": [
+    {
+     "at": "hq.gurney_mark",
+     "run": "function angel:cast/gurney {}"
+    },
+    {
+     "wait": 0.5
+    },
+    {
+     "at": "hq.gurney_mark",
+     "run": "function angel:cast/summon {id:\"rei\"}",
+     "off": [
+      0,
+      0.82,
+      0
+     ]
+    },
+    {
+     "wait": 0.5
+    },
+    {
+     "at": "hq.gurney_mark",
+     "run": "function angel:cast/mount {id:\"rei\",tag:\"angel.seat_gurney\"}"
+    },
+    {
+     "wait": 0.5
+    },
+    {
+     "at": "hq.gurney_mark",
+     "run": "function angel:cast/pose {id:\"rei\",pose:\"lying\"}"
+    },
+    {
+     "wait": 0.5
+    },
+    {
+     "at": "hq.gurney_mark",
+     "run": "function angel:cast/gurney_crew {}"
+    },
+    {
+     "wait": 2.0
+    },
+    {
+     "tp": [
+      3096.5,
+      54,
+      90.5
+     ],
+     "look_at": [
+      3096.5,
+      56,
+      80.5
+     ]
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "hq_rei_from_above",
+   "steps": [
+    {
+     "tp": [
+      3096.5,
+      62,
+      80.5
+     ],
+     "yaw": -90,
+     "pitch": 86
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "hq_rei_from_above_wide",
+   "steps": [
+    {
+     "tp": [
+      3096.5,
+      64,
+      82.5
+     ],
+     "yaw": 180,
+     "pitch": 75
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "hq_rei_player_height_side_north",
+   "steps": [
+    {
+     "tp": [
+      3096.5,
+      54,
+      76.5
+     ],
+     "look_at": [
+      3096.5,
+      55.4,
+      80.5
+     ]
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "hq_rei_player_height_side_south",
+   "steps": [
+    {
+     "tp": [
+      3096.5,
+      54,
+      85.5
+     ],
+     "look_at": [
+      3096.5,
+      55.4,
+      80.5
+     ]
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "hq_rei_player_height_head_end",
+   "steps": [
+    {
+     "tp": [
+      3090.0,
+      54,
+      80.5
+     ],
+     "look_at": [
+      3095.5,
+      55.4,
+      80.5
+     ]
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "hq_rei_player_height_foot_end_close",
+   "steps": [
+    {
+     "tp": [
+      3100.0,
+      54,
+      80.5
+     ],
+     "look_at": [
+      3096.3,
+      55.4,
+      80.5
+     ]
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "hq_rei_close_face",
+   "steps": [
+    {
+     "tp": [
+      3093.2,
+      54,
+      79.0
+     ],
+     "look_at": [
+      3095.4,
+      55.4,
+      80.5
+     ]
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "hq_plug_seat",
+   "steps": [
+    {
+     "clean": true
+    },
+    "function angel:cast/gurney_remove",
+    {
+     "tp": "hq.plug_seat"
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "hq_pad_look_up_shaft",
+   "steps": [
+    {
+     "tp": "hq.pad",
+     "pitch": -75
+    }
+   ],
+   "settle": 6,
+   "max": 25
+  },
+  {
+   "name": "card_1_ad2015",
+   "steps": [
+    {
+     "tp": "hq.dock",
+     "pause": 3
+    },
+    {
+     "fn": "story/card/bg"
+    },
+    {
+     "fn": "story/card/c1"
+    },
+    {
+     "wait": 0.8
+    }
+   ],
+   "settle": 1.5,
+   "max": 6,
+   "after": [
+    {
+     "fn": "story/card/off"
+    }
+   ]
+  },
+  {
+   "name": "card_2_angel_attack",
+   "steps": [
+    {
+     "fn": "story/card/bg"
+    },
+    {
+     "fn": "story/card/c2"
+    },
+    {
+     "wait": 0.8
+    }
+   ],
+   "settle": 1.5,
+   "max": 6,
+   "after": [
+    {
+     "fn": "story/card/off"
+    }
+   ]
+  },
+  {
+   "name": "card_3_evangelion_unit01",
+   "steps": [
+    {
+     "fn": "story/card/bg"
+    },
+    {
+     "fn": "story/card/c3"
+    },
+    {
+     "wait": 0.8
+    }
+   ],
+   "settle": 1.5,
+   "max": 6,
+   "after": [
+    {
+     "fn": "story/card/off"
+    }
+   ]
+  },
+  {
+   "name": "card_4_to_be_continued",
+   "steps": [
+    {
+     "fn": "story/card/bg"
+    },
+    {
+     "fn": "story/card/c4"
+    },
+    {
+     "wait": 0.8
+    }
+   ],
+   "settle": 1.5,
+   "max": 6,
+   "after": [
+    {
+     "fn": "story/card/off"
+    }
+   ]
+  },
+  {
+   "name": "cast_misato_front_3m",
+   "steps": [
+    {
+     "clean": true
+    },
+    {
+     "enter": "outskirts"
+    },
+    {
+     "at": [
+      100.5,
+      64.0,
+      128.5
+     ],
+     "run": "function angel:cast/summon {id:\"misato\"}",
+     "yaw": 0
+    },
+    {
+     "wait": 0.5
+    },
+    {
+     "tp": [
+      100.5,
+      64.0,
+      131.5
+     ],
+     "look_at": [
+      100.5,
+      65.0,
+      128.5
+     ]
+    },
+    {
+     "wait": 2.0
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "cast_misato_threequarter_6m",
+   "steps": [
+    {
+     "at": [
+      100.5,
+      64.0,
+      128.5
+     ],
+     "run": "function angel:cast/look {id:\"misato\",mode:\"ahead\"}"
+    },
+    {
+     "tp": [
+      104.194,
+      64.0,
+      133.228
+     ],
+     "look_at": [
+      100.5,
+      65.0,
+      128.5
+     ]
+    }
+   ],
+   "settle": 2,
+   "max": 25
+  },
+  {
+   "name": "cast_misato_face_closeup",
+   "steps": [
+    {
+     "tp": [
+      100.812,
+      64.0,
+      129.967
+     ],
+     "look_at": [
+      100.5,
+      65.55,
+      128.5
+     ]
+    }
+   ],
+   "settle": 2,
+   "max": 25
+  },
+  {
+   "name": "cast_ritsuko_front_3m",
+   "steps": [
+    {
+     "clean": true
+    },
+    {
+     "at": [
+      100.5,
+      64.0,
+      128.5
+     ],
+     "run": "function angel:cast/summon {id:\"ritsuko\"}",
+     "yaw": 0
+    },
+    {
+     "wait": 0.5
+    },
+    {
+     "tp": [
+      100.5,
+      64.0,
+      131.5
+     ],
+     "look_at": [
+      100.5,
+      65.0,
+      128.5
+     ]
+    },
+    {
+     "wait": 2.0
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "cast_ritsuko_threequarter_6m",
+   "steps": [
+    {
+     "at": [
+      100.5,
+      64.0,
+      128.5
+     ],
+     "run": "function angel:cast/look {id:\"ritsuko\",mode:\"ahead\"}"
+    },
+    {
+     "tp": [
+      104.194,
+      64.0,
+      133.228
+     ],
+     "look_at": [
+      100.5,
+      65.0,
+      128.5
+     ]
+    }
+   ],
+   "settle": 2,
+   "max": 25
+  },
+  {
+   "name": "cast_ritsuko_face_closeup",
+   "steps": [
+    {
+     "tp": [
+      100.812,
+      64.0,
+      129.967
+     ],
+     "look_at": [
+      100.5,
+      65.55,
+      128.5
+     ]
+    }
+   ],
+   "settle": 2,
+   "max": 25
+  },
+  {
+   "name": "cast_gendo_front_3m",
+   "steps": [
+    {
+     "clean": true
+    },
+    {
+     "at": [
+      100.5,
+      64.0,
+      128.5
+     ],
+     "run": "function angel:cast/summon {id:\"gendo\"}",
+     "yaw": 0
+    },
+    {
+     "wait": 0.5
+    },
+    {
+     "tp": [
+      100.5,
+      64.0,
+      131.5
+     ],
+     "look_at": [
+      100.5,
+      65.0,
+      128.5
+     ]
+    },
+    {
+     "wait": 2.0
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "cast_gendo_threequarter_6m",
+   "steps": [
+    {
+     "at": [
+      100.5,
+      64.0,
+      128.5
+     ],
+     "run": "function angel:cast/look {id:\"gendo\",mode:\"ahead\"}"
+    },
+    {
+     "tp": [
+      104.194,
+      64.0,
+      133.228
+     ],
+     "look_at": [
+      100.5,
+      65.0,
+      128.5
+     ]
+    }
+   ],
+   "settle": 2,
+   "max": 25
+  },
+  {
+   "name": "cast_gendo_face_closeup",
+   "steps": [
+    {
+     "tp": [
+      100.812,
+      64.0,
+      129.967
+     ],
+     "look_at": [
+      100.5,
+      65.55,
+      128.5
+     ]
+    }
+   ],
+   "settle": 2,
+   "max": 25
+  },
+  {
+   "name": "cast_rei_front_3m",
+   "steps": [
+    {
+     "clean": true
+    },
+    {
+     "at": [
+      100.5,
+      64.0,
+      128.5
+     ],
+     "run": "function angel:cast/summon {id:\"rei\"}",
+     "yaw": 0
+    },
+    {
+     "wait": 0.5
+    },
+    {
+     "tp": [
+      100.5,
+      64.0,
+      131.5
+     ],
+     "look_at": [
+      100.5,
+      65.0,
+      128.5
+     ]
+    },
+    {
+     "wait": 2.0
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "cast_rei_threequarter_6m",
+   "steps": [
+    {
+     "at": [
+      100.5,
+      64.0,
+      128.5
+     ],
+     "run": "function angel:cast/look {id:\"rei\",mode:\"ahead\"}"
+    },
+    {
+     "tp": [
+      104.194,
+      64.0,
+      133.228
+     ],
+     "look_at": [
+      100.5,
+      65.0,
+      128.5
+     ]
+    }
+   ],
+   "settle": 2,
+   "max": 25
+  },
+  {
+   "name": "cast_rei_face_closeup",
+   "steps": [
+    {
+     "tp": [
+      100.812,
+      64.0,
+      129.967
+     ],
+     "look_at": [
+      100.5,
+      65.55,
+      128.5
+     ]
+    }
+   ],
+   "settle": 2,
+   "max": 25
+  },
+  {
+   "name": "cast_rei_uniform_front_3m",
+   "steps": [
+    {
+     "clean": true
+    },
+    {
+     "at": [
+      100.5,
+      64.0,
+      128.5
+     ],
+     "run": "function angel:cast/summon {id:\"rei_uniform\"}",
+     "yaw": 0
+    },
+    {
+     "wait": 0.5
+    },
+    {
+     "tp": [
+      100.5,
+      64.0,
+      131.5
+     ],
+     "look_at": [
+      100.5,
+      65.0,
+      128.5
+     ]
+    },
+    {
+     "wait": 2.0
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "cast_rei_uniform_threequarter_6m",
+   "steps": [
+    {
+     "at": [
+      100.5,
+      64.0,
+      128.5
+     ],
+     "run": "function angel:cast/look {id:\"rei_uniform\",mode:\"ahead\"}"
+    },
+    {
+     "tp": [
+      104.194,
+      64.0,
+      133.228
+     ],
+     "look_at": [
+      100.5,
+      65.0,
+      128.5
+     ]
+    }
+   ],
+   "settle": 2,
+   "max": 25
+  },
+  {
+   "name": "cast_rei_uniform_face_closeup",
+   "steps": [
+    {
+     "tp": [
+      100.812,
+      64.0,
+      129.967
+     ],
+     "look_at": [
+      100.5,
+      65.55,
+      128.5
+     ]
+    }
+   ],
+   "settle": 2,
+   "max": 25
+  },
+  {
+   "name": "cast_medic1_front_3m",
+   "steps": [
+    {
+     "clean": true
+    },
+    {
+     "at": [
+      100.5,
+      64.0,
+      128.5
+     ],
+     "run": "function angel:cast/summon {id:\"medic1\"}",
+     "yaw": 0
+    },
+    {
+     "wait": 0.5
+    },
+    {
+     "tp": [
+      100.5,
+      64.0,
+      131.5
+     ],
+     "look_at": [
+      100.5,
+      65.0,
+      128.5
+     ]
+    },
+    {
+     "wait": 2.0
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "cast_medic1_threequarter_6m",
+   "steps": [
+    {
+     "at": [
+      100.5,
+      64.0,
+      128.5
+     ],
+     "run": "function angel:cast/look {id:\"medic1\",mode:\"ahead\"}"
+    },
+    {
+     "tp": [
+      104.194,
+      64.0,
+      133.228
+     ],
+     "look_at": [
+      100.5,
+      65.0,
+      128.5
+     ]
+    }
+   ],
+   "settle": 2,
+   "max": 25
+  },
+  {
+   "name": "cast_medic2_front_3m",
+   "steps": [
+    {
+     "clean": true
+    },
+    {
+     "at": [
+      100.5,
+      64.0,
+      128.5
+     ],
+     "run": "function angel:cast/summon {id:\"medic2\"}",
+     "yaw": 0
+    },
+    {
+     "wait": 0.5
+    },
+    {
+     "tp": [
+      100.5,
+      64.0,
+      131.5
+     ],
+     "look_at": [
+      100.5,
+      65.0,
+      128.5
+     ]
+    },
+    {
+     "wait": 2.0
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "cast_medic2_threequarter_6m",
+   "steps": [
+    {
+     "at": [
+      100.5,
+      64.0,
+      128.5
+     ],
+     "run": "function angel:cast/look {id:\"medic2\",mode:\"ahead\"}"
+    },
+    {
+     "tp": [
+      104.194,
+      64.0,
+      133.228
+     ],
+     "look_at": [
+      100.5,
+      65.0,
+      128.5
+     ]
+    }
+   ],
+   "settle": 2,
+   "max": 25
+  },
+  {
+   "name": "cast_four_in_a_line",
+   "steps": [
+    {
+     "clean": true
+    },
+    {
+     "at": [
+      98.4,
+      64.0,
+      128.5
+     ],
+     "run": "function angel:cast/summon {id:\"misato\"}",
+     "yaw": 0
+    },
+    {
+     "at": [
+      99.80000000000001,
+      64.0,
+      128.5
+     ],
+     "run": "function angel:cast/summon {id:\"ritsuko\"}",
+     "yaw": 0
+    },
+    {
+     "at": [
+      101.2,
+      64.0,
+      128.5
+     ],
+     "run": "function angel:cast/summon {id:\"gendo\"}",
+     "yaw": 0
+    },
+    {
+     "at": [
+      102.60000000000001,
+      64.0,
+      128.5
+     ],
+     "run": "function angel:cast/summon {id:\"rei\"}",
+     "yaw": 0
+    },
+    {
+     "wait": 1.0
+    },
+    {
+     "tp": [
+      100.5,
+      64.0,
+      134.0
+     ],
+     "look_at": [
+      100.5,
+      65.0,
+      128.5
+     ]
+    },
+    {
+     "wait": 2.0
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "city_launch_top_human",
+   "steps": [
+    {
+     "clean": true
+    },
+    {
+     "enter": "city"
+    },
+    {
+     "tp": "city.launch_top"
+    }
+   ],
+   "settle": 8,
+   "max": 25
+  },
+  {
+   "name": "city_aerial_overview",
+   "steps": [
+    {
+     "tp": [
+      1160,
+      185,
+      8
+     ],
+     "yaw": 0.0,
+     "pitch": 34.83
+    }
+   ],
+   "settle": 8,
+   "max": 25
+  },
+  {
+   "name": "city_aerial_plaza",
+   "steps": [
+    {
+     "tp": [
+      1010,
+      150,
+      260
+     ],
+     "yaw": -130.91,
+     "pitch": 29.35
+    }
+   ],
+   "settle": 6,
+   "max": 25
+  },
+  {
+   "name": "city_launch_top_as_giant",
+   "steps": [
+    {
+     "scale": 16
+    },
+    "execute as Tester run function angel:fight/become_giant",
+    {
+     "tp": "city.launch_top"
+    }
+   ],
+   "settle": 6,
+   "max": 25
+  },
+  {
+   "name": "city_giant_sees_monster30_from_launch",
+   "steps": [
+    {
+     "at": "city.angel_start",
+     "run": "function angel:angel/summon {height:30}"
+    },
+    {
+     "wait": 3.0
+    },
+    {
+     "tp": "city.launch_top",
+     "look_at": [
+      1160,
+      80,
+      50
+     ]
+    }
+   ],
+   "settle": 5,
+   "max": 25
+  },
+  {
+   "name": "city_giant_sees_monster30_halfway",
+   "steps": [
+    {
+     "tp": [
+      1160,
+      64,
+      105
+     ],
+     "look_at": [
+      1160,
+      82,
+      50
+     ]
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "city_giant_sees_monster30_12m",
+   "steps": [
+    {
+     "tp": [
+      1160,
+      64,
+      62
+     ],
+     "look_at": [
+      1160,
+      82,
+      50
+     ]
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "city_monster30_charging",
+   "steps": [
+    {
+     "at": "city.angel_start",
+     "run": "function angel:angel/pose {pose:\"charging\"}"
+    },
+    {
+     "wait": 3.5
+    },
+    {
+     "tp": [
+      1160,
+      64,
+      82
+     ],
+     "look_at": [
+      1160,
+      80,
+      50
+     ]
+    }
+   ],
+   "settle": 2,
+   "max": 25
+  },
+  {
+   "name": "city_monster30_thrust",
+   "steps": [
+    {
+     "at": "city.angel_start",
+     "run": "function angel:angel/pose {pose:\"thrust\"}"
+    },
+    {
+     "wait": 3.5
+    },
+    {
+     "tp": [
+      1160,
+      64,
+      82
+     ],
+     "look_at": [
+      1160,
+      80,
+      50
+     ]
+    }
+   ],
+   "settle": 2,
+   "max": 25
+  },
+  {
+   "name": "city_monster30_regenerating",
+   "steps": [
+    {
+     "at": "city.angel_start",
+     "run": "function angel:angel/pose {pose:\"regenerating\"}"
+    },
+    {
+     "wait": 3.5
+    },
+    {
+     "tp": [
+      1160,
+      64,
+      82
+     ],
+     "look_at": [
+      1160,
+      80,
+      50
+     ]
+    }
+   ],
+   "settle": 2,
+   "max": 25
+  },
+  {
+   "name": "city_monster30_dying",
+   "steps": [
+    {
+     "at": "city.angel_start",
+     "run": "function angel:angel/pose {pose:\"dying\"}"
+    },
+    {
+     "wait": 6.0
+    },
+    {
+     "tp": [
+      1160,
+      64,
+      82
+     ],
+     "look_at": [
+      1160,
+      80,
+      50
+     ]
+    }
+   ],
+   "settle": 2,
+   "max": 25
+  },
+  {
+   "name": "city_monster30_core_close",
+   "steps": [
+    {
+     "at": "city.angel_start",
+     "run": "function angel:angel/summon {height:30}"
+    },
+    {
+     "wait": 2.5
+    },
+    {
+     "tp": [
+      1160,
+      64,
+      70
+     ],
+     "look_at": [
+      1160,
+      76,
+      50
+     ]
+    }
+   ],
+   "settle": 3,
+   "max": 25
+  },
+  {
+   "name": "city_human_street_level_monster",
+   "steps": [
+    {
+     "scale": 1
+    },
+    "execute as Tester run function angel:fight/become_human",
+    {
+     "tp": [
+      1160,
+      64,
+      110
+     ],
+     "look_at": [
+      1160,
+      80,
+      50
+     ]
+    }
+   ],
+   "settle": 4,
+   "max": 25
+  },
+  {
+   "name": "plug_seat_sealed_dark",
+   "steps": [
+    {
+     "clean": true
+    },
+    {
+     "enter": "hq"
+    },
+    "function angel:story/scene {n:6}",
+    {
+     "wait": 12.5
+    }
+   ],
+   "settle": 0.3,
+   "max": 0
+  },
+  {
+   "name": "plug_dark_instrument_light",
+   "steps": [
+    {
+     "wait": 2.0
+    }
+   ],
+   "settle": 0.2,
+   "max": 0
+  },
+  {
+   "name": "plug_amber_rising_low",
+   "steps": [
+    {
+     "wait": 7.0
+    }
+   ],
+   "settle": 0.2,
+   "max": 0
+  },
+  {
+   "name": "plug_amber_at_the_eyes",
+   "steps": [
+    {
+     "wait": 2.2
+    }
+   ],
+   "settle": 0.2,
+   "max": 0
+  },
+  {
+   "name": "plug_amber_full",
+   "steps": [
+    {
+     "wait": 2.5
+    }
+   ],
+   "settle": 0.2,
+   "max": 0
+  },
+  {
+   "name": "plug_contact_shimmer",
+   "steps": [
+    {
+     "wait": 9.5
+    }
+   ],
+   "settle": 0.2,
+   "max": 0
+  },
+  {
+   "name": "plug_cockpit_in_the_white",
+   "steps": [
+    {
+     "wait": 1.2
+    }
+   ],
+   "settle": 0.2,
+   "max": 0
+  },
+  {
+   "name": "plug_cockpit_view_down_the_bridge",
+   "steps": [
+    {
+     "wait": 1.5
+    }
+   ],
+   "settle": 0.2,
+   "max": 0
+  },
+  {
+   "name": "plug_cockpit_view_later",
+   "steps": [
+    {
+     "wait": 5.0
+    }
+   ],
+   "settle": 0.2,
+   "max": 0
+  },
+  {
+   "name": "plug_stop",
+   "steps": [
+    "function angel:story/stop",
+    "gamemode spectator Tester"
+   ],
+   "nopic": true
+  }
+ ],
+ "geofront": [
+  "geofront_start_dark_tunnel",
+  "geofront_wall_opens",
+  "geofront_reveal",
+  "geofront_train_8",
+  "geofront_train_16",
+  "geofront_train_24",
+  "geofront_terminal",
+  "geofront_hq_entrance_pyramid",
+  "geofront_overview_west_rim",
+  "geofront_overview_south",
+  "geofront_pyramid_from_terminal"
+ ]
+}

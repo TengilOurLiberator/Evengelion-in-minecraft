@@ -1,1 +1,2 @@
-execute as @e[tag=angel.lfluid] run data merge entity @s {block_state:"minecraft:orange_stained_glass"}
+kill @e[tag=angel.lliner]
+kill @e[tag=angel.lshell]

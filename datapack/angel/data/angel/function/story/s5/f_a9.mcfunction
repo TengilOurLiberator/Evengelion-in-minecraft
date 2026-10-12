@@ -1,1 +1,1 @@
-tp @e[type=minecraft:mannequin,tag=angel.rei,limit=1] 3096.2 54.893 77.071
+playsound angel:sfx.gurney master @a 3078.95 55.0 80.5 2.2 1.0 0.6

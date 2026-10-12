@@ -129,11 +129,14 @@ def build(s, ctx):
     s.do(blind(CAGE_DARK + 1.0), note="black a little longer: the cage must arrive")
     s.do("time of angel:day rate 1.0", *worldgen_sky.sky("hq"), note="the clock stops its run; the cage's sky")
     # city -> hq is 2000 blocks: the guarded move (forceload the cage, dismount, teleport, wait until he is really there)
-    s.move_player(face["x"], face["y"], face["z"], yaw=face["yaw"], pitch=face["pitch"], settle=1.2, before=cg.forceload_cage(),
-                  note="the player to the cage (hq.face), turned to the giant's face (he was facing east in the city)")
+    ex, ey, ez, eyaw, epitch = cg.ending_spots(ctx)["player"]
+    s.move_player(ex, ey, ez, yaw=eyaw, pitch=epitch, settle=1.2, before=cg.forceload_cage(),
+                  note="the player to the cage, at the south end of the bridge's last stretch, turned north (through the black: the one place his head is turned): "
+                       "the curtain call is in front of him")
     s.do(cg.lights_on(), fn("story/launch/eyes_off"), *cg.cast_for_ending(ctx),
          sset("#present_misato", 1), sset("#present_ritsuko", 1), sset("#present_gendo", 1), sset("#present_rei", 1), sset("#beat", 80),
-         note="the cage at human size: lights on, eyes dark, Misato and Ritsuko on their marks, Gendo in the booth, Rei on the gurney; beat 80")
+         note="the cage at human size, the curtain call: lights on, eyes dark, Misato and Ritsuko either side of Rei on her gurney, all turned to him, "
+              "the giant behind them, Gendo above in the booth; beat 80")
     s.bed("cage")
     s.sleep(CAGE_DARK, note="the black lifts")
     # the story is over: the boy is free in the cage at human size, everyone present; the bridge lets them talk

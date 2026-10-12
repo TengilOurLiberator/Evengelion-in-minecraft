@@ -51,15 +51,20 @@ def quat_mat(q):
 
 
 class Box:
-    def __init__(self, name, state, t, q, size, colour=None, kind="car"):
+    def __init__(self, name, state, t, q, size, colour=None, kind="car", R=None):
         self.name, self.state, self.kind = name, state, kind
         self.t = np.array(t, float)
-        self.R = quat_mat(q)
+        self.R = quat_mat(q) if R is None else np.asarray(R, float)
         self.size = np.array(size, float)
         self.colour = colour or COLOURS.get(state, (160, 160, 160))
 
 
+PART_COLOURS = {"nose": (40, 90, 220), "wing": (40, 90, 220), "tub": (40, 90, 220), "tail": (40, 90, 220), "door": (40, 90, 220), "seat": (190, 130, 80),
+                "wheel": (25, 25, 28), "screen": (215, 215, 220), "dash": (30, 30, 34), "mirror": (30, 30, 34)}
+
+
 def car_boxes(parts, base_motion=None, motions=None, kind="car"):
+    """Oriented boxes of every part: one for a box part, one per element for an item-model part (models.ModelPart.boxes)."""
     out = []
     for p in parts:
         extra = (motions or {}).get(p.name) or (motions or {}).get(p.group)
@@ -69,8 +74,11 @@ def car_boxes(parts, base_motion=None, motions=None, kind="car"):
             mot = models.compose(bm, extra)
         else:
             mot = extra or bm
-        t, q, s = p.with_motion(*mot) if mot else p.with_motion()
-        out.append(Box(p.name, p.state, t, q, s, kind="glass" if (p.state and "glass" in p.state) else kind))
+        col = None
+        if getattr(p, "model", None):
+            col = next((c for k, c in PART_COLOURS.items() if p.name.lower().startswith(k)), (150, 150, 155))
+        for t, R, size, kd, nm in p.boxes(mot):
+            out.append(Box(nm, p.state, t, None, size, colour=col, kind="glass" if kd == "glass" else kind, R=R))
     return out
 
 
