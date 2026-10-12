@@ -1,1 +1,1 @@
-title @a actionbar {"text": "Get in the car.", "color": "gray"}
+title @a actionbar {"text": "Walk up to the car - you get in by yourself.", "color": "gray"}

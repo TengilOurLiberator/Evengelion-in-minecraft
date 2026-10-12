@@ -243,7 +243,7 @@ def build(s, ctx):
     s.steps[-1].guarded = True                       # (the checker: this teleport is followed by the wait below)
     # the move is 2000 blocks (the chunks were forceloaded at the pad, long before): make sure he is there, re-teleporting every 0.4 s if not
     s.until(C.near(top["x"], top["y"], top["z"], 8.0, est=0.1), timeout=4.0, nag=(0.4, 0.4, [tp_top]), on_timeout=[tp_top], est=0.1,
-            note="he is really on the lift (re-teleported every 0.4 s if not)")
+            no_objective="a teleport guard: 4 s at most, re-teleported every 0.4 s", note="he is really on the lift (re-teleported every 0.4 s if not)")
     s.bed("city_night", note="night: the city bed")
     s.after(0.6, sh.set_block("angel.lflash", "white_stained_glass"), note="the white thins")
     s.after(1.2, sh.kill("angel.lflash"), note="night")

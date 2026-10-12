@@ -18,6 +18,7 @@ from core import PA, P, blind, fn, num, sset
 from audio import sfx
 from engine import C, Cond
 from hq_cage import cage, dirty_cmd
+from objective import follow_objective, objective
 import worldgen_sky
 
 N = 4
@@ -80,7 +81,7 @@ def build(s, ctx):
     esc = next((d_ for d_ in ((0.0, -1.0), (-1.0, 0.0), (1.0, 0.0), (0.0, 1.0)) if L.way_clear(ctx, loop_door["x"], Y_UP, loop_door["z"], *d_)), None)
     arm_door = L.space_on(ctx, "misato", loop_door["x"] + esc[0] * L.SPACE_STEP, Y_UP, loop_door["z"] + esc[1] * L.SPACE_STEP) if esc else []
     s.do(*L.face(ctx, "misato", *door_pt), *arm_door, note="she stops dead and looks at the door (personal space armed)")
-    s.until(L.near_char("misato", 6.0), timeout=120, est=0.5, hint=("Misato has stopped at a door.", []), hint_after=30,
+    s.until(L.near_char("misato", 6.0), timeout=120, est=0.5, hint=("Misato has stopped at a door.", []), hint_after=30, objective=follow_objective("misato"),
             on_timeout=[tp_player(loop_door["x"] + 2.5, Y_UP, loop_door["z"] - 1.0)], note="the player catches up")
     s.sleep(0.9)
     s.say("4.03")
@@ -116,6 +117,7 @@ def build(s, ctx):
 
     # ================================================================ the lift lobby
     s.until(C.near(elev["x"], Y_LO, elev["z"], 8.5, est=3), timeout=90, est=2.0, note="the player reaches the lobby",
+            objective=objective("Go to the lift", at=(elev["x"], Y_LO, elev["z"]), line="Walk on to the lift  -  Misato is waiting there", how="walk", grace=3.0),
             on_timeout=[tp_player(elev["x"] + 5.0, Y_LO, elev["z"] + 0.0)])
     s.sleep(0.8)
     s.do(sfx("sfx.elevator_arrive", at=(elev_in["x"], Y_LO + 1.5, elev_in["z"]), vol=2.0, minvol=0.6), note="the lift arrives: a tone")
@@ -166,6 +168,7 @@ def build(s, ctx):
          f'function angel:cast/walk {{id:"misato",x:{num(LIFT_M[0])},y:{num(Y_LO)},z:{num(LIFT_M[1])},speed:0.14}}',
          note="Ritsuko and Misato step into the lift, to the back corners")
     s.until([C.near(LIFT_P[0], Y_LO, LIFT_P[1], 0.9, est=6)], timeout=50, est=6.0, hint=("Step into the lift (all the way in: the doors close).", []), hint_after=14,
+            objective=objective("Step into the lift", at=(LIFT_P[0], Y_LO, LIFT_P[1]), line="Walk into the lift, all the way in to the doors", how="walk", grace=2.0),
             on_timeout=[tp_player(LIFT_P[0], Y_LO, LIFT_P[1])], note="the player steps into the lift")
     s.until(Cond(["if score #arrived_ritsuko angel.cast matches 1", "if score #arrived_misato angel.cast matches 1"], 2.0, "both in the car"),
             timeout=15, est=1.0, note="both are in")

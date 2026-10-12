@@ -35,6 +35,12 @@ class Config:
     gap = 0.4                # seconds of silence between two recorded lines in a block
     answer_est = 6.0         # how long the offline simulator assumes a spoken answer takes
     subtitles_default = 0    # 1: show every recorded line as chat text too (flat-screen testing)
+    # --- the objective system and its safety net (objective.py, engine.py): seconds; also changeable at run time: function angel:story/stuck {hint_s:60,skip_s:150}
+    stuck_hint_s = 60.0      # a player-waiting `until` with no objective of its own and no progress for this long gets a generic direction line
+    stuck_skip_s = 150.0     # any player-waiting step with no progress for this long is skipped (a short fade), so nobody is stuck for more than a couple of minutes
+    ob_grace = 2.0           # seconds before an objective shows (a step that is done at once never flashes it)
+    ob_repeat = 15.0         # seconds without getting closer before the direction line comes again
+    ob_line_secs = 5.0       # seconds the direction line stays
 
 
 CFG = Config()

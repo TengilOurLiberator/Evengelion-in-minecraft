@@ -31,12 +31,28 @@ execute unless score #placed angel.story matches -2147483648..2147483647 run sco
 execute unless score #nagt angel.story matches -2147483648..2147483647 run scoreboard players set #nagt angel.story 0
 execute unless score #nagi angel.story matches -2147483648..2147483647 run scoreboard players set #nagi angel.story 0
 execute unless score #hush angel.story matches -2147483648..2147483647 run scoreboard players set #hush angel.story 0
+execute unless score #ctl angel.story matches -2147483648..2147483647 run scoreboard players set #ctl angel.story 0
+execute unless score #tut.off angel.story matches -2147483648..2147483647 run scoreboard players set #tut.off angel.story 0
+execute unless score #ob.on angel.story matches -2147483648..2147483647 run scoreboard players set #ob.on angel.story 0
+execute unless score #ob.line angel.story matches -2147483648..2147483647 run scoreboard players set #ob.line angel.story -1
+execute unless score #ob.shown angel.story matches -2147483648..2147483647 run scoreboard players set #ob.shown angel.story 0
+execute unless score #stk angel.story matches -2147483648..2147483647 run scoreboard players set #stk angel.story 0
+execute unless score #stkh angel.story matches -2147483648..2147483647 run scoreboard players set #stkh angel.story 0
+execute unless score #ob.k angel.story matches -2147483648..2147483647 run scoreboard players set #ob.k angel.story 0
+execute unless score #ob.gf angel.story matches -2147483648..2147483647 run scoreboard players set #ob.gf angel.story 1
 execute unless score #present_misato angel.story matches -2147483648..2147483647 run scoreboard players set #present_misato angel.story 0
 execute unless score #present_ritsuko angel.story matches -2147483648..2147483647 run scoreboard players set #present_ritsuko angel.story 0
 execute unless score #present_gendo angel.story matches -2147483648..2147483647 run scoreboard players set #present_gendo angel.story 0
 execute unless score #present_rei angel.story matches -2147483648..2147483647 run scoreboard players set #present_rei angel.story 0
 scoreboard players set #c5 angel.story 5
 scoreboard players set #c20 angel.story 20
+scoreboard players set #c3600 angel.story 3600
+scoreboard players set #stk_hint angel.story 1200
+scoreboard players set #stk_skip angel.story 3000
+kill @e[tag=angel.objective]
+scoreboard players set #ob.shown angel.story 0
+scoreboard players set #ob.bl angel.story -1
+scoreboard players set #ob.line angel.story -1
 execute unless score #running angel.story matches 1 run kill @e[tag=angel.story]
 execute unless score #running angel.story matches 1 if score #hq.dirty angel.story matches 1 run function angel:story/hq/reset_all
 execute unless score #running angel.story matches 1 if score #l.plug angel.story matches 1 if loaded 3030 12 11 run function angel:story/launch/plug_lit

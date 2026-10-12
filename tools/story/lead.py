@@ -33,6 +33,7 @@ import math
 from context import cast_look, tp_player
 from core import NS, OBJ, P, fn, num, sset
 from engine import C, Cond
+from objective import follow_objective
 
 FAR = 9.0
 NEAR = 6.0
@@ -172,9 +173,14 @@ def arrived(who, est=None):
 
 
 # --------------------------------------------------------------------------------------------------- the helper
-def lead(s, ctx, who, stops, speed=0.14, near=NEAR, far=FAR, companion=None, start=None):
+def lead(s, ctx, who, stops, speed=0.14, near=NEAR, far=FAR, companion=None, start=None, follow=True, follow_text=None):
     """Steps that make `who` lead the player along `stops` (see the module doc).  `start`: (x, z) of the place she starts from, used for
-    the estimated time of the first leg and the companion's trail.  Returns the last Stop."""
+    the estimated time of the first leg and the companion's trail.  Returns the last Stop.
+    `follow`: every wait of the walk carries the objective "Follow Misato" / "Follow Dr. Akagi" attached to the leader (objective.follow_objective:
+    it shows only when the player is more than 8 blocks behind her or has stood still for 10 s); `follow_text` renames it ("Go through the door");
+    follow=False for a walk that has an objective of its own."""
+    obj_all = follow_objective(who) if follow else None
+    obj_first = follow_objective(who, follow_text) if (follow and follow_text) else obj_all           # `follow_text` names the objective of the FIRST stop only
     ensure_monitor(ctx, who, near, far)
     if companion:
         ensure_monitor(ctx, companion[0], near, far)
@@ -188,6 +194,7 @@ def lead(s, ctx, who, stops, speed=0.14, near=NEAR, far=FAR, companion=None, sta
     last = None
     for n, st in enumerate(stops):
         st = _stop(st)
+        obj = obj_first if n == 0 else obj_all
         d = math.hypot(st.x - prev[0], st.z - prev[1]) if prev else 10.0
         est = d / (speed * 20.0) + 1.0
         cmds = walk_cmds(who, st.x, st.y, st.z, speed)
@@ -204,7 +211,7 @@ def lead(s, ctx, who, stops, speed=0.14, near=NEAR, far=FAR, companion=None, sta
             cmds += walk_cmds(cw, gx, st.y, gz, speed)             # the companion has the same monitor: she too waits for the player
         s.do(*cmds, note=f"{who} walks to {st.note or f'({st.x:.1f}, {st.z:.1f})'}")
         for ln in st.say_while:
-            s.until(near_char(who, 11.0), timeout=90, est=0.5, note=f"the player is within earshot of {who}")
+            s.until(near_char(who, 11.0), timeout=90, est=0.5, note=f"the player is within earshot of {who}", objective=obj)
             s.say(ln)
         if prev and d > 0.5:
             bx, bz = st.x - 2.0 * (st.x - prev[0]) / d, st.z - 2.0 * (st.z - prev[1]) / d
@@ -214,7 +221,7 @@ def lead(s, ctx, who, stops, speed=0.14, near=NEAR, far=FAR, companion=None, sta
                  f"tp {char(who)} {num(st.x)} {num(st.y)} {num(st.z)}",
                  tp_player(bx, st.y, bz)]
         s.until(arrived(who, est=est), est=est, timeout=180, on_timeout=bring,
-                hint=(f"{name} is waiting for you.", []), hint_after=35, note=f"{who} reaches the stop")
+                hint=(f"{name} is waiting for you.", []), hint_after=35, note=f"{who} reaches the stop", objective=obj, watch=False)
         if st.wait:
             arm = []
             if st.space and ux is not None:
@@ -237,7 +244,7 @@ def lead(s, ctx, who, stops, speed=0.14, near=NEAR, far=FAR, companion=None, sta
                         arm += space_on(ctx, companion[0], comp_at[0] + ex * SPACE_STEP, st.y, comp_at[1] + ez * SPACE_STEP)
             s.do(cast_look(who, "player"), sset(f"#f.lp_{who}", 0), *arm, note=f"{who} turns to look for the player" + (" (personal space armed)" if arm else ""))
             s.until(near_char(who, near), timeout=180, est=0.5, on_timeout=bring[2:],
-                    hint=(f"{name} is waiting for you.", []), hint_after=35, note=f"the player catches up with {who}")
+                    hint=(f"{name} is waiting for you.", []), hint_after=35, note=f"the player catches up with {who}", objective=obj)
             if arm:
                 s.do(*space_off(who), *(space_off(companion[0]) if companion else []), note="personal space off")
         for ln in st.say_at:

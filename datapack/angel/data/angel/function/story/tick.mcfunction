@@ -6,6 +6,7 @@ function angel:story/mover
 function angel:story/t_ride
 function angel:story/t_inv
 function angel:story/t_prompt
+function angel:story/ob/tick
 execute if score #scene angel.story matches 1 run function angel:story/s1/poll
 execute if score #scene angel.story matches 2 run function angel:story/s2/poll
 execute if score #scene angel.story matches 3 run function angel:story/s3/poll

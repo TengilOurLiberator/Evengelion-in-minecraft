@@ -87,7 +87,13 @@ def main(argv=None):
     ap.add_argument("--extra", help="a folder of extra scene modules sNN.py (they replace scenes of the same number)")
     ap.add_argument("--scenes", help="build only these scene numbers, e.g. 1,2,3,4,5 (for testing while another scene is being written)")
     ap.add_argument("--steps", help="also write a JSON listing of every scene's steps (for test drivers)")
+    ap.add_argument("--stuck-hint", type=float, help="seconds without progress before a generic direction line (default CFG.stuck_hint_s = 60)")
+    ap.add_argument("--stuck-skip", type=float, help="seconds without progress before a step is skipped by itself (default CFG.stuck_skip_s = 150)")
     args = ap.parse_args(argv)
+    if args.stuck_hint is not None:
+        CFG.stuck_hint_s = args.stuck_hint
+    if args.stuck_skip is not None:
+        CFG.stuck_skip_s = args.stuck_skip
     if args.extra:
         EXTRA.append(os.path.abspath(args.extra))
     if args.scenes:

@@ -34,13 +34,16 @@ def build_system(out, ctx):
     defaults = {"#beat": 0, "#wait": 0, "#speaker": 0, "#talking": 0, "#lastspoke": 0, "#bridge_speaking": 0, "#running": 0,
                 "#scene": 0, "#step": -1, "#mv.on": 0, "#mv.n": 0, "#mv.limit": 0, "#mv.route": 0, "#ride": 0, "#timeout_s": 0,
                 "#subtitles": CFG.subtitles_default, "#line_left": 0, "#sleep": 0, "#force": 0, "#tick": 0, "#wt": -1, "#consent": 0,
-                "#c5": 5, "#c20": 20, "#looking": 0, "#pk": 0, "#line": 0, "#rd": 0, "#placed": 0, "#nagt": 0, "#nagi": 0, "#hush": 0}
+                "#c5": 5, "#c20": 20, "#looking": 0, "#pk": 0, "#line": 0, "#rd": 0, "#placed": 0, "#nagt": 0, "#nagi": 0, "#hush": 0,
+                "#ctl": 0, "#tut.off": 0, "#ob.on": 0, "#ob.line": -1, "#ob.shown": 0, "#stk": 0, "#stkh": 0, "#ob.k": 0, "#ob.gf": 1}
     for c in CHARACTERS:
         defaults[f"#present_{c}"] = 0
     load = [f"scoreboard objectives add {OBJ} dummy"]
     for k, v in defaults.items():
         load.append(f"execute unless score {k} {OBJ} matches -2147483648..2147483647 run {sset(k, v)}")
-    load += [sset("#c5", 5), sset("#c20", 20)]
+    load += [sset("#c5", 5), sset("#c20", 20), sset("#c3600", 3600),
+             sset("#stk_hint", T(CFG.stuck_hint_s)), sset("#stk_skip", T(CFG.stuck_skip_s)),        # (angel:story/stuck {hint_s:..,skip_s:..} changes them until the next reload)
+             f"kill @e[tag=angel.objective]", sset("#ob.shown", 0), sset("#ob.bl", -1), sset("#ob.line", -1)]    # a /reload never leaves a duplicate waypoint: the tick makes them again
     # a reload or restart: if no story is running there is nothing that should still be standing
     load.append(f"execute unless score #running {OBJ} matches 1 run kill @e[tag={TAG}]")
     load += ctx.load_extra
@@ -54,7 +57,8 @@ def build_system(out, ctx):
             fn("story/mover"),
             fn("story/t_ride"),
             fn("story/t_inv"),
-            fn("story/t_prompt")]
+            fn("story/t_prompt"),
+            fn("story/ob/tick")]
     for sc_ in scenes:
         tick.append(f"execute if score #scene {OBJ} matches {sc_.n} run function {NS}:story/s{sc_.n}/poll")
     tick.append(fn("story/t_fx"))
@@ -71,6 +75,7 @@ def build_system(out, ctx):
     halt += [f"kill @e[tag={TAG}]"]
     for cid in CAST_IDS:
         halt.append(f'function {NS}:cast/remove {{id:"{cid}"}}')
+    halt.append(fn("story/ob/end"))                            # objectives: waypoints, direction lines, target markers
     halt.append(f"function {NS}:cast/gurney_remove")          # the hospital gurney (cast entities carry no story tag)
     halt.append(f"function {NS}:story/snd/stop_all")           # ambience beds, music, their restart timers
     halt += ctx.halt_extra
@@ -85,11 +90,14 @@ def build_system(out, ctx):
 
     # ----------------------------------------------------------------------------------------------------------- entry points
     out.function("story/scene", [f"$function {NS}:story/s$(n)/begin"])
-    out.function("story/start", [fn("story/load"), *ctx.stop_extra, fn("story/halt"), "stopsound @a voice", f"effect clear {PA()} minecraft:blindness",
-                                 sset("#running", 1), sset("#consent", 0),
-                                 f"gamemode adventure {PA()}",
-                                 *[f"clear {PA()} {it}" for it in STORY_ITEMS],          # a restart: no letter, photograph or booklet left over
-                                 f"function {NS}:story/scene {{n:1}}"])
+    start_body = [fn("story/load"), *ctx.stop_extra, fn("story/halt"), "stopsound @a voice", f"effect clear {PA()} minecraft:blindness",
+                  sset("#running", 1), sset("#consent", 0),
+                  f"gamemode adventure {PA()}",
+                  *[f"clear {PA()} {it}" for it in STORY_ITEMS],          # a restart: no letter, photograph or booklet left over
+                  f"function {NS}:story/scene {{n:1}}"]
+    out.function("story/start_run", start_body)
+    out.function("story/start", [sset("#tut.off", 0), fn("story/start_run")])                    # with the 20-second opening tutorial (scene 1, after the card)
+    out.function("story/start_no_tutorial", [sset("#tut.off", 1), fn("story/start_run")])        # a replay: no tutorial
     out.function("story/stop", [*ctx.stop_extra, fn("story/halt"), sset("#running", 0), sset("#scene", 0), sset("#step", -1), "stopsound @a voice",
                                 f"effect clear {PA()} minecraft:blindness",
                                 f"tellraw @a {text_json('[angel] story stopped', 'gray')}"])
@@ -153,6 +161,9 @@ def build_system(out, ctx):
     # ----------------------------------------------------------------------------------------------------------- the speak prompt
     build_prompt(out, ctx)
 
+    from objective import build_objectives
+    build_objectives(out, ctx)
+
     # ----------------------------------------------------------------------------------------------------------- rigs and routes
     from movers import write_route, write_mover_system
     for r in ctx.routes.values():
@@ -198,7 +209,8 @@ def build_prompt(out, ctx):
     variants = ctx.prompt_variants
     for k, text in enumerate(variants):
         main = [{"text": BUBBLE + " ", "color": "gold"}, {"text": "Your turn", "color": "white", "bold": True}]
-        sub = [{"text": text, "color": "gray"}]
+        loud = text in ctx.prompt_loud                      # the consent wait: the question and what to do, in yellow, bold
+        sub = [{"text": text, "color": "yellow", "bold": True}] if loud else [{"text": text, "color": "gray"}]
 
         def summon(role, comp, ty, scale):
             return (f'summon minecraft:text_display ~ ~ ~ {{Tags:["{TAG}","angel.prompt","angel.prompt_{role}"],billboard:"center",background:{BG},'
@@ -206,7 +218,7 @@ def build_prompt(out, ctx):
                     f'interpolation_duration:8,text:{json.dumps(comp, ensure_ascii=True)},{_tf(0.04, ty * 0.1)}}}')
         out.function(f"story/prompt/v{k}/spawn", [summon("main", main, 0.0, MAIN_SCALE), summon("sub", sub, -SUB_DROP, SUB_SCALE),
                                                   f"schedule function {NS}:story/prompt/pop 2t"])
-        out.function(f"story/prompt/v{k}/bar", [f"title {PA()} actionbar " + text_json(f"Your turn - {text}", "gray")])
+        out.function(f"story/prompt/v{k}/bar", [f"title {PA()} actionbar " + text_json(f"Your turn - {text}", "yellow" if loud else "gray")])
     ctx.fx_scheduled += ["story/prompt/pop", "story/prompt/pulse_back"]            # halt clears them
     items_spawn = {k: [fn(f"story/prompt/v{k}/spawn")] for k in range(len(variants))}
     items_bar = {k: [fn(f"story/prompt/v{k}/bar")] for k in range(len(variants))}
@@ -256,7 +268,7 @@ def build_prompt(out, ctx):
     # whatever happened above, a panel standing in the world counts as placed (the action bar says the same words only when it does not)
     place.append(f"execute if entity @e[tag=angel.prompt_main,limit=1] run {sset('#placed', 1)}")
     out.function("story/prompt/place", place)
-    out.function("story/prompt/show", [fn("story/prompt/place"),
+    out.function("story/prompt/show", ["kill @e[tag=angel.ob_line]", sset("#ob.line", -1), fn("story/prompt/place"),
                                        f"execute at {P()} run playsound angel:sfx.speak_chime master {PA()} ~ ~ ~ 0.6 1.0 0.5",
                                        f"execute {sc('#placed', '0')} run function {NS}:story/prompt/bar"])
     out.function("story/prompt/keep", [

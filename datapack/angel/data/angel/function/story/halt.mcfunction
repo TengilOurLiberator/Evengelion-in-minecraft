@@ -361,6 +361,7 @@ function angel:cast/remove {id:"rei"}
 function angel:cast/remove {id:"rei_uniform"}
 function angel:cast/remove {id:"medic1"}
 function angel:cast/remove {id:"medic2"}
+function angel:story/ob/end
 function angel:cast/gurney_remove
 function angel:story/snd/stop_all
 function angel:story/launch/restore

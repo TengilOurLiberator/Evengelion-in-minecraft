@@ -42,6 +42,7 @@ from core import NS, OBJ, TAG, blind, P, PA, T, fn, local_to_world, num, qaxis, 
 from engine import C, Cond
 from models import transformation_nbt
 from motion import Path
+from objective import note_panel, objective, tutorial
 
 N = 1
 TITLE = "The empty city"
@@ -138,7 +139,7 @@ def build(s, ctx):
     crash, arrive = A("outskirts.crash"), A("outskirts.car_arrive")
     spawn = A("outskirts.angel_spawn")
     walks = [A(f"outskirts.angel_walk_{i}") for i in range(1, 5)]
-    A("outskirts.vision")                     # kept as the far mark of the street (the girl stands nearer: GIRL_AHEAD)
+    vision = A("outskirts.vision")            # the far mark of the street (the girl stands nearer: GIRL_AHEAD); the waypoint of "Look down the street" 
     car = ctx.rig("car")
     probe = ctx.probe("outskirts")
     phone_at = (phone["x"], phone["y"], phone["z"])
@@ -176,12 +177,26 @@ def build(s, ctx):
     # ---------------------------------------------------------------- the card, over black, the cicadas starting underneath
     s.card("A.D. 2015", hold=3.2, under=[(0.9, ctx.audio.start("bed", "cicadas+town_empty", fade=3.2))])
 
+    # ---------------------------------------------------------------- the tutorial, then the photograph's note (read once, in the world)
+    # The tutorial comes just after he wakes, not before the card: the card is the film's first image and stays alone, and "look", "move" and "a light
+    # marks where to go" are then learned in the very place he is about to walk through.  Skipped by `function angel:story/start_no_tutorial`.
+    tutorial(s)
+    # The note on the back of the photograph is the story's own instruction, but the props are kept out of his hand (system.py), so he never read it:
+    # it is shown once, as a pale panel with dark handwriting-style text, signed, hanging in front of him for six seconds.
+    s.do(note_panel(["If I'm late,", "ring me from the phone", "outside the station."], "- M.K."), note="the note on the back of the photograph, in the world")
+    s.sleep(6.0, note="he reads it")
+    s.do("kill @e[tag=angel.ob_note]", note="the note goes")
+    s.until(C.near(53.5, 65.0, 128.5, 5.0, est=12), timeout=120, on_timeout=[tp_player(53.5, 65.0, 128.5)],
+            objective=objective("Leave the station", at=(53.5, 65.0, 128.5), line="Walk out of the station, through the bright doorway", how="walk", grace=6.0, lift=0.4),
+            note="walk out of the station hall (the objective shows only if he has not moved for 6 s)")
+
     # ---------------------------------------------------------------- the payphone
     # The telephone is on the booth's back wall (z 113); the old trigger stood him 2 blocks from it with the green slab filling his eyes.  Now being
     # anywhere in front of the open booth (up to 2.6 blocks beyond its doorway), at the telephone itself, or touching it is enough.
     ia_phone = "@e[tag=angel.ia_phone,limit=1]"
     s.until([C.near(*PHONE_FRONT, 2.6, est=15), C.near(use["x"], use["y"], use["z"], 1.8, est=15), C.data(ia_phone, "interaction", est=15)],
-            hint=("Right-click the phone, or step closer, to pick it up.",
+            objective=objective("Pick up the phone", at=phone_at, line="Walk up to the phone - it picks up by itself", how="walk"),
+            hint=("Walk up to the phone - it picks up by itself.",
                   [f"particle minecraft:end_rod {num(phone['x'])} {num(phone['y'] + 0.8)} {num(phone['z'] + 1.0)} 0.2 0.8 0.2 0.01 24 force"]),
             hint_after=20, timeout=150, on_timeout=[tp_player(PHONE_FRONT[0], PHONE_FRONT[1], PHONE_FRONT[2])], note="walk to the payphone (to the booth's front is enough)")
     s.do(f"kill {ia_phone}", sfx("sfx.phone_pickup", at=phone_at, vol=1.2), note="he lifts the handset")
@@ -195,6 +210,7 @@ def build(s, ctx):
 
     # ---------------------------------------------------------------- the street: the girl (in silence), the birds
     s.until(C.near(street["x"], street["y"], street["z"], 3.0, est=14),
+            objective=objective("Walk out into the street", at=(street["x"], street["y"], street["z"]), line="Walk out into the street - it runs east", how="walk", grace=3.0),
             hint=("The street runs east.", [f"particle minecraft:end_rod {num(street['x'])} {num(street['y'] + 1)} {num(street['z'])} 0.2 1.2 0.2 0.01 30 force"]),
             hint_after=45, timeout=150, on_timeout=[tp_player(street["x"], street["y"], street["z"])], note="walk out into the street (no sound at all)")
     birds_spawn, birds_go = ride_air.birds(ctx)
@@ -211,6 +227,7 @@ def build(s, ctx):
         f"if entity @e[tag=angel.gaze,distance=..{GIRL_SEEN_WITHIN}] run " + sset("#looking", 1)])
     s.until(Cond(["if score #looking angel.story matches 1"], 3.0, "he looks down the street"), tick=[look40], timeout=45,
             hint=("The street runs east.", [f"particle minecraft:end_rod {num(girl[0])} {num(girl[1] + 1.0)} {num(girl[2])} 0.2 1.2 0.2 0.01 30 force"]),
+            objective=objective("Look down the street", at=(vision["x"], vision["y"] + 1.5, vision["z"]), line="Look down the street, to the east - just turn your head", how="look", grace=3.0),
             hint_after=12, est=3.0, note="he looks down the street (within 40 degrees of where she will stand); after 45 s she comes anyway")
     s.do(f"execute as {P()} at @s positioned ~{num(GIRL_AHEAD)} {num(girl[1])} {num(girl[2])} rotated 90 0 run function {NS}:cast/summon {{id:\"rei_uniform\"}}",
          cast_look("rei_uniform", "player"),
@@ -221,7 +238,7 @@ def build(s, ctx):
     vanish = [f"execute at @e[tag=angel.rei_uniform,tag=angel.char,limit=1] run particle minecraft:poof ~ ~1 ~ 0.25 0.6 0.25 0.02 10 force",
               cast_remove("rei_uniform"), "kill @e[tag=angel.look_target]", "kill @e[tag=angel.gaze]", *birds_go]
     s.until(Cond([f"if score #v.away angel.story matches {GIRL_AWAY_TICKS}.."], 3.0, "looked, then looked away for a moment"),
-            timeout=GIRL_MAX,
+            timeout=GIRL_MAX, no_objective="a vision of six seconds at most: nothing to do but be there",
             tick=[look40, "execute if score #looking angel.story matches 1 run scoreboard players set #f.seen angel.story 1",
                   "execute if score #looking angel.story matches 1 run scoreboard players set #v.away angel.story 0",
                   "execute if score #f.seen angel.story matches 1 if score #looking angel.story matches 0 run scoreboard players add #v.away angel.story 1"],
@@ -316,6 +333,7 @@ def build(s, ctx):
     board = [f"kill {ia_car}", *carfx.board_player_cmds()]
     s.until([C.near(dx, dy, dz, 2.2, est=6), C.data(ia_car, "interaction", est=6), C.data(ia_car, "attack", est=6)],
             nag=(8.0, 25.0, [fn("say/1_06")]), timeout=70, on_done=board, est=6.0,
+            objective=objective("Get in the car", at="@e[tag=angel.seat_passenger,limit=1]", line="Walk up to the car - you get in by yourself", how="walk", grace=3.0),
             hint=("The blue car is waiting for you.", []), hint_after=30, note="get in (door, or touch the car); Misato nags at 8 s")
     s.sleep(0.6)
     s.do("kill @e[tag=angel.gaze]", "kill @e[tag=angel.look_target]", "kill @e[tag=angel.girl_mark]", note="the look-check marker's use ended with the girl: nothing of it goes on into scene 2")

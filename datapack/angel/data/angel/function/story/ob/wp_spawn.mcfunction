@@ -1,0 +1,2 @@
+function angel:story/ob/wd/root
+summon minecraft:block_display ~ ~ ~ {Tags:["angel.story","angel.objective","angel.ob_wp","angel.ob_beam"],block_state:"minecraft:white_stained_glass",brightness:{sky:15,block:15},view_range:4.0f,teleport_duration:5,interpolation_duration:5,transformation:{translation:[-0.05f,-0.5f,-0.05f],left_rotation:[0f,0f,0f,1f],scale:[0.1f,70.0f,0.1f],right_rotation:[0f,0f,0f,1f]}}

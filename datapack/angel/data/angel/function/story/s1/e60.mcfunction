@@ -1,2 +1,2 @@
 scoreboard players set #force angel.story 0
-scoreboard players set #sleep angel.story 56
+scoreboard players set #sleep angel.story 40

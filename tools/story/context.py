@@ -35,6 +35,8 @@ class Context:
         self.cards = {}                   # (text, small) -> index, see cards.py
         self.turns = []                   # smooth turns of characters (lead.py)
         self.helpers = {}                 # per-module caches (hq_cage etc.)
+        self.objectives = []              # objective.Objective, index = k of angel:story/ob/b<k>
+        self.prompt_loud = set()          # prompt texts drawn in yellow (the consent wait)
         self.enter_hooks = {}             # scene number -> commands run when the scene is entered (jump or hand-over): see system.py
         from audio import Audio
         self.audio = Audio(self)
@@ -64,6 +66,20 @@ class Context:
         if text not in self.prompt_variants:
             self.prompt_variants.append(text)
         return self.prompt_variants.index(text)
+
+    # ------------------------------------------------------------------ objectives
+    def ob_index(self, obj):
+        """index of an objective in the registry (the same objective twice is one entry)"""
+        key = obj.key()
+        for k, o in enumerate(self.objectives):
+            if o.key() == key:
+                return k
+        self.objectives.append(obj)
+        return len(self.objectives) - 1
+
+    def ob_begin(self, obj):
+        """the command that makes `obj` the current objective (for scene code that switches objectives from its own tick, e.g. the fight's guide)"""
+        return f"function {NS}:story/ob/b{self.ob_index(obj)}"
 
     # ------------------------------------------------------------------ rigs and routes
     def rig(self, name, factory=None):

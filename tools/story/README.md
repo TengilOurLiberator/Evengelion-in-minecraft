@@ -21,7 +21,10 @@ $py = "D:\voice-assistant\.venv\Scripts\python.exe"
 
 | Command | What it does |
 |---|---|
-| `function angel:story/start` | fresh run from scene 1 (clears everything, sets adventure mode, gives the letter and photograph at the scene start) |
+| `function angel:story/start` | fresh run from scene 1 (clears everything, sets adventure mode, gives the letter and photograph at the scene start; with the opening tutorial) |
+| `function angel:story/start_no_tutorial` | the same without the 20-second tutorial (replays) |
+| `function angel:story/controls_vr` / `_flat` / `_both` | which controls the directions name (default both) |
+| `function angel:story/stuck {hint_s:60,skip_s:150}` / `stuck_off` | the safety net's thresholds (see Directions) |
 | `function angel:story/scene {n:3}` | jump to the start of scene N with its state rebuilt: cast, car, positions, beat, presence flags (through a fade) |
 | `function angel:story/stop` | stop; removes every entity the story made, the cast, the monster, timers and forceloads |
 | `function angel:story/skip` | resume any wait (the bridge is not needed) |
@@ -289,6 +292,70 @@ when the story has been in the set (`#hq.dirty`). A scene that wants the cage li
 * **Scene 1**: the girl is 12 blocks ahead of him; a street-wide jolt (`jolt_street`); bigger tracers; the wreck column.  **Scene 7**: the ending is a
   curtain call (`launch_cage.ending_spots`).
 
+## Directions: the objective system (`objective.py`)
+
+Every place where the story waits for the PLAYER to do something (walk somewhere, touch something, look somewhere) has an **objective**: in-world
+directions that cannot be missed in a headset.  The speak prompt covers the waits for speech; this covers everything else.
+
+```python
+from objective import objective, Objective, follow_objective, Ahead
+s.until(C.near(x, y, z, 2.6), objective=objective("Pick up the phone", at=(x, y, z), line="Walk up to the phone - it picks up by itself", how="walk"), ...)
+s.objective_on(objective("Follow Misato", at="@e[type=minecraft:mannequin,tag=angel.misato,limit=1]", far=8, still=10))   # a block of steps ...
+s.objective_off()                                                                                                         # ... until here
+s.until(..., no_objective="a vision of six seconds at most")      # a player-dependent step that needs none says so; the checker lists them
+```
+
+`objective(text, at=None, line=None, how=None, grace=2.0, waypoint=True, lines=True, bearing=True, giant=1, repeat=15, secs=5, sound=True, far=None,
+still=None, lift=0, first_how=False)`.  `text` is the waypoint label, `line` the direction-line sentence (str or `(both, vr, flat)`), `how` the controls line
+(a key of `objective.HOW` or text; shown on the repeat, always with `first_how`), `at` a point, an entity selector (the waypoint follows it) or
+`Ahead(dist, side, up)` (a point made relative to the player's view when it begins).  `far` / `still` gate it ("Follow Misato" shows only when he is more
+than 8 blocks behind her or has stood still 10 s).  `giant=16` scales the panel for the 16x giant.  Only one objective is current at a time; a new one,
+a speak prompt, a title card and the step's exit remove the previous one.
+
+What the player sees, after the grace (2 s; a step he completes at once never flashes it):
+
+* **Waypoint** (entities tagged `angel.story` + `angel.objective`): a label (`text_display`, `angel.ob_label`: the text in pale yellow, a gold triangle under it,
+  billboard, `see_through`, 25 % black behind) and a thin beam (`block_display`, `angel.ob_beam`: white stained glass, 70 blocks tall, so it stands over
+  the roofs), a marker `angel.ob_target` at the target (it follows an entity every tick), a spark of light at its foot.  Re-scaled every 5 ticks in 17 distance
+  bands (1.5 .. 120 blocks): the label stays about one degree of visual angle (scale 0.1 x distance, clamped to 0.5 .. 12), the beam widens with distance
+  (0.03 + 0.006 x distance).  Two entities + the marker per waypoint, one more for the line.
+* **Direction line** (`angel.ob_line`, one `text_display`): the sentence 2 m ahead of where he looks at that moment, 0.4 below the eyes (lowered to 1.0 if a
+  character is within 1.5 blocks of that spot), letters 9 cm tall, line width 170 px, the speak prompt's 40 % black background.  It begins with a gold arrow
+  (up ahead, right, left, "behind you:") computed from his yaw and the target's.  It stays 5 s and comes back (with `how` on a second line) when the distance
+  has not got smaller for 15 s.  On a flat screen the sentence is on the action bar too (not after `angel:story/controls_vr`).
+* **Chime**: `angel:sfx.speak_chime` at pitch 0.62, volume 0.35 (the prompt's is 1.0 / 0.6); 0.22 on a repeat; silent inside a hush.
+
+Controls wording.  The server cannot tell whether a player is in VR: Vivecraft's server mod keeps that in Java (`ServerVivePlayer.isVR/isSeated`, reachable only
+through its API) and sets no tag, team, score or attribute, and its server config has no such switch.  So the text names both ("Walk: left thumbstick
+(keyboard: W A S D)") and `function angel:story/controls_vr` / `controls_flat` / `controls_both` (score `#ctl` 1 / 2 / 0) narrow it (the launcher
+can call one).  Controls named (Oculus Touch defaults, `assets/vivecraft/input/oculus_defaults.json` in the Vivecraft jar): left thumbstick = move
+(`vivecraft.key.freeMoveStrafe`), right thumbstick = turn (`rotateAxis`), right trigger = attack / left click (`key.attack`), A (right hand) = use / right click
+(`key.use`), left trigger = teleport / walk forward when teleport is off, left stick click = jump, right stick click = sneak.  The reversed file swaps the
+hands.  Roomscale: `SwingTracker` hits with the controller without a button unless the player is in creative (Auto weapon collision; the story is adventure).
+
+Wording rule: nothing needs a button.  The phone, the car (getting in, pushing it), the lift, Rei all work by walking up to them; the one button is hitting
+the core (swing your hand at it, or the right trigger / left click).
+
+The **opening tutorial** (`objective.tutorial`, scene 1, just after he wakes: the card stays the film's first image): "Look around" (60 degrees of yaw), "Move:
+left thumbstick (keyboard: W A S D)" (3 blocks), "When you see Your turn, just speak aloud", "A light like this marks where to go" (a sample waypoint
+beside him); each leaves when he does the thing or after 8 s (about 20 s in all).  `function angel:story/start_no_tutorial` starts a replay without it
+(`#tut.off` 1; `story/start` sets it back to 0).  Then the note on the photograph's back hangs in front of him for 6 s (`objective.note_panel`).
+
+**Safety net** (`CFG.stuck_hint_s` 60, `CFG.stuck_skip_s` 150; `build_story.py --stuck-hint S --stuck-skip S`; at run time
+`function angel:story/stuck {hint_s:60,skip_s:150}` until the next reload, `stuck_off`): a step the player must act in (an `until` on a distance, a touch or a look,
+and every speech wait) counts ticks without progress (`#stk`: an objective resets it when he gets closer to the target or, for "Follow", moves; a
+speech wait counts only silent ticks).  At the hint threshold a step with no objective gets a generic direction line from its `hint` text; at the skip
+threshold the step is let go with a 2 s fade (`sk<i>`: the step's `on_timeout` if it has a timeout, else its `on_done`, so the player is brought to the place
+or put in the car; a speech wait simply ends).  Not watched (time-driven, or with their own recovery): route / flag / score waits, `move_player`'s guard,
+leaders' `arrived` waits, the fight (scene 7) and the girl's vision; `until(..., no_skip=True)` / `wait_*(..., no_skip=True)` excludes a step.
+`--check` prints every objective with its target, the `until` steps marked as needing none, and the watched / unwatched lists; it fails on a player-dependent
+`until` with neither an objective nor a `no_objective=` reason.
+
+Scene 7's directions (`s07.py`, from the fight's scoreboard, the fight untouched): "Walk toward the Angel" -> within 24 blocks of the core "Hit the red core"
+with a waypoint on it and the controls named (stays until a hit lands: `#ch` below 60; the controls come again after 20 s in range without a hit) -> then
+only the waypoint ("Keep hitting the core") until three hits -> the first time `#st` is 1 (the beam is charging) "Get behind a building" -> after each
+back-off (`#hold` 1, up to 3 times) "Close the distance again".  Nothing in the wrap (phase 3 and up), after a loss it starts again.
+
 ## What the engine keeps out of the picture
 
 * **Vanilla toasts**: `datapack/angel/pack.mcmeta` has a `filter` block that hides every vanilla advancement and recipe from the packs below ours
@@ -304,6 +371,7 @@ when the story has been in the set (`#hq.dirty`). A scene that wants the cage li
 
 | file | role |
 |---|---|
+| `objective.py` | the objective system: waypoints, direction lines, the tutorial, the note panel |
 | `audio.py`, `cards.py`, `cardfont.py`, `lead.py`, `hq_cage.py` | beds / music / sfx, title cards and their typeface, characters that lead, the cage's block lists |
 | `build_story.py` | entry point |
 | `core.py` | constants, writer + manifest, selectors, tree dispatch, quaternion helpers |

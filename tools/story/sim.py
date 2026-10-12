@@ -826,6 +826,58 @@ def check_routes(ctx, report, step=2):
     return lines
 
 
+def check_objectives(ctx, report):
+    """Every `until` step whose condition depends on the player's position, a touch or a look has an objective (in-world directions) or is explicitly
+    marked as not needing one; prints the list.  Also lists the safety net: which steps are watched (generic direction line after CFG.stuck_hint_s,
+    auto-skip after CFG.stuck_skip_s) and which are excluded, and every objective with its target."""
+    from engine import Compiler
+    ob_rows, exempt, watched, unwatched, tutor = [], [], [], [], []
+    n_dep = 0
+    for scene in ctx.scenes:
+        for st in scene.steps:
+            if st.kind == "wait":
+                (unwatched if st.no_skip else watched).append(f"{scene.n}:{st.index} wait ({st.speaker}, {st.prompt!r})")
+                continue
+            if st.kind != "until":
+                continue
+            dep = Compiler.player_dependent(st)
+            n_dep += dep
+            obj = st.objective
+            label = f"scene {scene.n} step {st.index}"
+            if obj is not None:
+                ob_rows.append((scene.n, st.index, obj, st))
+            elif dep and not st.no_objective:
+                report.error(f"{label}: waits for the player ({st.note[:60]}) but has no objective and is not marked as needing none")
+            if obj is None and st.no_objective:
+                exempt.append(f"{label}: {st.note[:56]} -- {st.no_objective}")
+            wt = getattr(st, "watched", None)
+            if wt is None:
+                wt = Compiler.watched(None, st)
+            (watched if wt else unwatched).append(f"{scene.n}:{st.index} {st.note[:50]}")
+    print("=" * 100)
+    print(f"OBJECTIVES: {len(ob_rows)} steps carry an objective ({len(ctx.objectives)} distinct); {n_dep} `until` steps depend on the player's position / touch / look")
+    for sn, i, o, st in ob_rows:
+        gate = f", only when > {o.far:g} blocks away or still {o.still:g} s" if o.gated else ""
+        parts = [("waypoint" if o.waypoint else "no waypoint"), (f"grace {o.grace:g} s")]
+        print(f"   scene {sn} step {i:3d}  {o.text!r:34s} -> {o.target_desc()}{gate}  [{', '.join(parts)}]  {o.texts(0)[0][:64]!r}")
+    # the fight's guide and any objective registered outside a step
+    inside = {id(o) for _, _, o, _ in ob_rows}
+    extra = [o for o in ctx.objectives if not any(o.key() == p[2].key() for p in ob_rows)]
+    for o in extra:
+        if o.generic:
+            continue
+        print(f"   (set by scene code)       {o.text!r:34s} -> {o.target_desc()}  [{'waypoint' if o.waypoint else 'no waypoint'}{', line only' if not o.waypoint else ''}]  {o.texts(0)[0][:64]!r}")
+    print(f"NOT NEEDING an objective (marked): " + (str(len(exempt)) if exempt else "none"))
+    for e in exempt:
+        print("   " + e)
+    print(f"SAFETY NET (generic direction line after {CFG.stuck_hint_s:g} s, auto-skip after {CFG.stuck_skip_s:g} s without progress): {len(watched)} steps watched")
+    print("   not watched (time-driven or with their own timeout; auto-skip would break them or is pointless): " + "; ".join(unwatched[:60]))
+    report.note(f"objectives: {len(ob_rows)} steps with an objective, {len(exempt)} marked as needing none, every one of the {n_dep} player-dependent `until` steps is covered")
+    report.note(f"safety net: {len(watched)} player-waiting steps watched (hint {CFG.stuck_hint_s:g} s, skip {CFG.stuck_skip_s:g} s); {len(unwatched)} not watched")
+    if CFG.stuck_hint_s >= CFG.stuck_skip_s:
+        report.error("stuck_hint_s must be shorter than stuck_skip_s")
+
+
 def main_check(ctx, out):
     report = Report()
     scenes_said = {}
@@ -872,6 +924,7 @@ def main_check(ctx, out):
     check_commands(out, report)
     for l in check_routes(ctx, report):
         print(l)
+    check_objectives(ctx, report)
     print("anchors used:", ", ".join(sorted(ctx.used_anchors)))
     missing = [a for a in ctx.used_anchors if a not in ctx.anchors]
     if missing:

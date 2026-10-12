@@ -64,6 +64,11 @@ class C:
         return Cond([sc("#talking", "0")], None, "no line playing")
 
     @staticmethod
+    def never():
+        """a condition that is never true: the step ends by its timeout (a timed hold with an objective on screen)"""
+        return Cond(["if score #never angel.story matches 1"], None, "(a timed hold)")
+
+    @staticmethod
     def data(sel, path, est=None):
         return Cond([f"if data entity {sel} {path}"], est, f"data {path}")
 
@@ -211,12 +216,14 @@ class Scene:
         voiced a reply to something the player said that was not a yes; `nudges=Nudges(...)` runs a series of nudges while it waits."""
         return self._wait(2, speaker, prompt, timeout, est, note, **kw)
 
-    def _wait(self, mode, speaker, prompt, timeout, est, note, answer_ends=False, nudges=None):
+    def _wait(self, mode, speaker, prompt, timeout, est, note, answer_ends=False, nudges=None, no_skip=False, loud=False):
         spk = speaker or self._last_char or "misato"
         if spk not in CHARACTERS:
             raise ValueError(f"wait speaker must be one of {CHARACTERS}, not {spk!r}")
         if prompt is None:
             prompt = f"answer {DISPLAY_NAMES[spk]}"
+        if loud:
+            self.ctx.prompt_loud.add(prompt)
         variant = self.ctx.prompt_variant(prompt)
         if nudges is not None and est is None:
             est = nudges.nominal()
@@ -224,21 +231,38 @@ class Scene:
             nudges = Nudges.gentle_for(spk)          # every wait reminds a silent player: a look and the prompt, no new lines
         return self._add(Step("wait", mode=mode, speaker=spk, prompt=prompt, variant=variant, timeout=timeout,
                               est=est if est is not None else CFG.answer_est, note=note or f"WAIT {mode} {spk}",
-                              answer_ends=answer_ends, nudges=nudges))
+                              answer_ends=answer_ends, nudges=nudges, no_skip=no_skip))
 
-    def until(self, cond, timeout=None, on_timeout=None, est=None, hint=None, hint_after=40, nag=None, note="", on_done=None, tick=None):
+    def until(self, cond, timeout=None, on_timeout=None, est=None, hint=None, hint_after=40, nag=None, note="", on_done=None, tick=None,
+              objective=None, no_objective=None, watch=None, no_skip=False):
         """Wait until `cond` (a Cond, or a list of alternative Conds: any one will do) holds.
         timeout:    seconds after which `on_timeout` (list of commands) runs and the story goes on (nothing may soft-lock);
         hint:       (actionbar text, [extra commands]) shown once after `hint_after` seconds of waiting;
         nag:        (first_seconds, repeat_seconds_or_None, [commands]) run when the player is slow (not while a line plays);
         on_done:    commands run when the condition becomes true or the timeout hits (before the next step);
-        tick:       commands run every tick before the condition is looked at (to refresh a score the condition reads)."""
+        tick:       commands run every tick before the condition is looked at (to refresh a score the condition reads);
+        objective:  an objective.Objective: the in-world directions (waypoint, direction line, chime) shown while the player has this to do;
+        no_objective: a reason (str) why a step that depends on the player's position or interaction needs none (the checker lists them);
+        watch:      the safety net: after CFG.stuck_hint_s without progress a step with no objective gets a generic direction line, and after
+                    CFG.stuck_skip_s the story goes on by itself (a short fade; the step's on_timeout, else its on_done, runs).  Default: on for
+                    a step whose condition depends on the player's position or interaction (distance=, a touched interaction, a look), off for
+                    route / flag / score conditions, which are time-driven.  no_skip=True turns it off for one step."""
         conds = cond if isinstance(cond, (list, tuple)) else [cond]
         if est is None:
             est = min((c.est for c in conds if c.est is not None), default=CFG.answer_est)
         return self._add(Step("until", conds=list(conds), timeout=timeout, on_timeout=on_timeout or [], est=est, hint=hint,
                               hint_after=hint_after, nag=nag, on_done=on_done or [], tick=tick or [],
+                              objective=objective, no_objective=no_objective, watch_arg=watch, no_skip=no_skip,
                               note=note or " | ".join(c.desc for c in conds)))
+
+    def objective_on(self, obj, note=""):
+        """Make `obj` the current objective from here until the next objective_on / objective_off / an `until` with an objective of its own (a block of
+        steps: a walk the player is led through, a series of lines)."""
+        self._block = True
+        return self.do(self.ctx.ob_begin(obj), note=note or f"OBJECTIVE ON: {obj.text}")
+
+    def objective_off(self, note=""):
+        return self.do(fn("story/ob/end"), note=note or "OBJECTIVE OFF")
 
     def setup_done(self):
         """Mark the end of the steps that (re)build the scene's starting state.  A jump (`angel:story/scene {n:N}`) runs them all;
@@ -360,7 +384,7 @@ class Scene:
         from cards import card_index
         from audio import sfx as _sfx
         k = card_index(self.ctx, text, small, font, bold, color)
-        self.do(blind(hold + 5), note=f"card {text!r}: to black")
+        self.do(fn("story/ob/end"), blind(hold + 5), note=f"card {text!r}: to black")
         self.sleep(0.5, note="card: dark")
         self.do(fn("story/card/bg"), f"effect clear {PA()} minecraft:blindness", note="card: the black room, blindness off")
         self.sleep(0.35, note="card: black")
@@ -388,6 +412,25 @@ class Compiler:
         if j >= len(scene.steps):
             return [sset("#step", -1), f"# end of scene {scene.n}"]
         return [sset("#step", j), fn(f"story/s{scene.n}/e{j}")]
+
+    @staticmethod
+    def player_dependent(st):
+        """True when the step's condition depends on where the player stands, what he touches or where he looks"""
+        return any(("distance=" in f) or ("data entity" in f) or ("#looking" in f) for c in st.conds for f in c.frags)
+
+    def watched(self, st):
+        if st.no_skip:
+            return False
+        if st.watch_arg is not None:
+            return bool(st.watch_arg)
+        return self.player_dependent(st)
+
+    def generic_objective(self, st):
+        from objective import Objective
+        text = None
+        if st.hint:
+            text = st.hint[0] if isinstance(st.hint, (tuple, list)) else st.hint
+        return Objective(text or "Keep going - the story is waiting for you.", at=None, grace=0.0, waypoint=False, bearing=False, generic=True)
 
     def compile(self, scene):
         n = scene.n
@@ -427,13 +470,19 @@ class Compiler:
                 poll = [f"execute {sc('#talking', '0')} run function {NS}:{base}/x{i}"]
             elif k == "wait":
                 enter += [sset("#wait", st.mode), sset("#speaker", CHARACTERS.index(st.speaker) + 1), sset("#pk", st.variant),
-                          sset("#wt", T(st.timeout) if st.timeout else -1)]
+                          sset("#wt", T(st.timeout) if st.timeout else -1), sset("#stk", 0)]
                 if not st.timeout:
                     enter += [f"execute {sc('#timeout_s', '1..')} run function {NS}:story/wt_global"]
                 poll = [f"execute {sc('#wait', '0')} run function {NS}:{base}/x{i}",
                         f"execute if score #step {OBJ} matches {i} {sc('#wait', '1..')} {sc('#wt', '0..')} run function {NS}:story/wait_tick"]
                 exit_pre = [sset("#wait", 0)]
                 bsp = f"score #bridge_speaking {OBJ} matches 1.."
+                if not st.no_skip:
+                    # the safety net: a wait in which nobody speaks (no recorded line, the bridge silent) for CFG.stuck_skip_s is let go with a short fade
+                    out.function(f"{base}/sk{i}", [blind(2), f'tellraw @a {{"text":"[angel] no answer for a long time: the story goes on","color":"gray"}}', sset("#wait", 0)])
+                    poll += [f"execute if score #step {OBJ} matches {i} {sc('#talking', '0')} unless {bsp} run {sadd('#stk')}",
+                             f"execute if score #step {OBJ} matches {i} if {bsp} run {sset('#stk', 0)}",
+                             f"execute if score #step {OBJ} matches {i} if score #stk {OBJ} >= #stk_skip {OBJ} run function {NS}:{base}/sk{i}"]
                 if getattr(st, "answer_ends", False):
                     # a consent-capable wait that also ends, without consent, once the bridge has voiced an answer to something the
                     # player said that was not a yes: #bsa is -1 (the bridge was already speaking at the start: ignore that), 0 (armed),
@@ -463,6 +512,14 @@ class Compiler:
                         out.function(f"{base}/nb{i}_{kk}", cmds_)
             elif k == "until":
                 enter += [sset("#stept", 0), sset("#nagt", 0), sset("#hinted", 0)]
+                watched = self.watched(st)
+                st.watched = watched
+                ok = None
+                if st.objective is not None:
+                    ok = self.ctx.ob_index(st.objective)
+                    enter += [fn(f"story/ob/b{ok}")]
+                elif watched:
+                    enter += [sset("#stk", 0), sset("#stkh", 0)]
                 poll = list(st.tick)
                 first_cond = True
                 for c in st.conds:
@@ -471,6 +528,19 @@ class Compiler:
                     poll.append(f"execute {guard}{c.text()} run function {NS}:{base}/x{i}")
                 poll.append(sadd("#stept"))
                 poll.append(sadd("#nagt"))
+                if watched or ok is not None:
+                    # the safety net (CFG.stuck_hint_s / stuck_skip_s, scores #stk_hint / #stk_skip): #stk counts ticks without progress; an objective
+                    # resets it when the player gets closer to its target
+                    poll.append(f"execute if score #step {OBJ} matches {i} run {sadd('#stk')}")
+                    if watched:
+                        skip_call = f"{NS}:{base}/t{i}" if st.timeout else f"{NS}:{base}/x{i}"
+                        out.function(f"{base}/sk{i}", [blind(2), f'tellraw @a {{"text":"[angel] no progress for a long time: the story goes on","color":"gray"}}',
+                                                       f"function {skip_call}"])
+                        poll.append(f"execute if score #step {OBJ} matches {i} if score #stk {OBJ} >= #stk_skip {OBJ} run function {NS}:{base}/sk{i}")
+                    if watched and ok is None:
+                        gen = self.ctx.ob_index(self.generic_objective(st))
+                        out.function(f"{base}/sh{i}", [sset("#stkh", 1), f"execute unless score #ob.on {OBJ} matches 1 run function {NS}:story/ob/line_generic_{gen}"])
+                        poll.append(f"execute if score #step {OBJ} matches {i} if score #stk {OBJ} >= #stk_hint {OBJ} unless score #stkh {OBJ} matches 1 run function {NS}:{base}/sh{i}")
                 if st.timeout:
                     out.function(f"{base}/t{i}", st.on_timeout + [f"function {NS}:{base}/x{i}"])
                     poll.append(f"execute if score #step {OBJ} matches {i} {sc('#stept', str(T(st.timeout)))} run function {NS}:{base}/t{i}")
@@ -489,6 +559,10 @@ class Compiler:
                     out.function(f"{base}/nn{i}", body + ([sset("#nagt", T(first) - T(repeat))] if repeat else [sset("#nagt", -999999)]))
                     poll.append(f"execute if score #step {OBJ} matches {i} {sc('#nagt', str(T(first)))} run function {NS}:{base}/n{i}")
                 exit_pre = list(st.on_done)
+                if ok is not None:
+                    exit_pre.append(fn("story/ob/end"))
+                elif watched:
+                    exit_pre.append(fn("story/ob/line_off"))
             else:
                 raise ValueError(f"unknown step kind {k}")
             if poll is not None:

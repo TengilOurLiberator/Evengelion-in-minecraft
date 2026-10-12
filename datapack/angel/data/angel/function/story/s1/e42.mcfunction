@@ -1,5 +1,5 @@
 scoreboard players set #force angel.story 0
-execute at @a[limit=1] run playsound angel:sfx.card master @a ~ ~ ~ 1.0 1.0 1.0
-function angel:story/card/c2
-scoreboard players set #step angel.story 43
-function angel:story/s1/e43
+scoreboard players set #stept angel.story 0
+scoreboard players set #nagt angel.story 0
+scoreboard players set #hinted angel.story 0
+function angel:story/ob/b11

@@ -34,7 +34,7 @@ What it writes into game\\:
   config\\iris.properties         the preset's shader pack, only if the file does not exist (--shaders or --reset-mod-config: always)
   shaderpacks\\<pack>.txt         the preset's options of that pack (tools\\client_presets.json), same rule
   config\\DistantHorizons.toml    only with --distant-horizons: the LOD radius (64 chunks) and the vanilla fog kept, same rule
-  options.txt                    also the preset's game_options (render distance)
+  options.txt                    also the preset's game_options (render distance; 12 with --distant-horizons)
   Everything else (Sodium, Continuity, ETF, EMF, Sound Physics, Flashback, Mod Menu, Vivecraft) is left at the mods' defaults.
 
 The launcher's profile list (launcher_profiles.json under %APPDATA%\\.minecraft) is changed only with --install-profile.
@@ -434,7 +434,10 @@ def main():
     for name in ("config", "openvr"):
         n = copy_missing(genesis, game, name)
         made.append(os.path.join(game, name) + f" ({n} files added from Genesis; existing files kept)")
-    opts, opts_base = write_options(genesis, game, manifest, args.plain, None if args.plain else preset.get("game_options"))
+    game_options = dict(preset.get("game_options", {}))
+    if args.distant_horizons:                 # the LODs carry the distance: 12 chunks of real terrain (tested: same frame time as 24 without)
+        game_options["renderDistance"] = "12"
+    opts, opts_base = write_options(genesis, game, manifest, args.plain, None if args.plain else game_options)
     made.append(opts)
     made.append(write_servers(game, server_port()))
     cfg = [] if args.plain else mod_configs(game, manifest, eff, preset, shaders, args.reset_mod_config or bool(args.shaders))

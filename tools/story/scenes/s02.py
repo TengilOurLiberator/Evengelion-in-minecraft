@@ -35,6 +35,7 @@ from core import NS, OBJ, blind, P, PA, T, angdiff, fn, local_to_world, num, sse
 from engine import C, Cond
 from motion import Path, leg_frames
 from models import DOOR_OPEN_DEG
+from objective import objective
 from scenes.s01 import MON_H, SIREN_AT, SIREN_VOL
 
 N = 2
@@ -243,7 +244,8 @@ def build(s, ctx):
     cleanup_push = [f"kill {ia_push}"]
     # touching the car, punching it or right-clicking it; Misato says it again after ten seconds
     s.until([C.near(roof[0], by, roof[2], 2.3, est=5), C.data(ia_push, "interaction", est=5), C.data(ia_push, "attack", est=5)],
-            nag=(10.0, 14.0, [fn("say/2_09")]), timeout=50, on_done=cleanup_push, est=5.0, hint=("Push the car.", []), hint_after=25,
+            nag=(10.0, 14.0, [fn("say/2_09")]), timeout=50, on_done=cleanup_push, est=5.0, hint=("Walk up to the car - you push it by yourself.", []), hint_after=25,
+            objective=objective("Help push the car over", at=(lie_centre[0], by + 1.0, lie_centre[2]), line="Walk up to the car - you push it over by yourself", how="walk"),
             note="the boy pushes (touch, punch or right-click); Misato repeats 2.09 after 10 s")
     s.beat(22)
     # the car rolls back onto its wheels, over two seconds, in eight short interpolations; sfx.car_drop lands with it
@@ -267,7 +269,8 @@ def build(s, ctx):
     dx, dy, dz = carfx.door_world(upright)
     ia_car = "@e[tag=angel.ia_car,limit=1]"
     s.until([C.near(dx, dy, dz, 2.2, est=5), C.data(ia_car, "interaction", est=5), C.data(ia_car, "attack", est=5)],
-            timeout=20, on_done=[f"kill {ia_car}", *ride_passenger()], est=5.0, hint=("Get in the car.", []), hint_after=8,
+            timeout=20, on_done=[f"kill {ia_car}", *ride_passenger()], est=5.0, hint=("Walk up to the car - you get in by yourself.", []), hint_after=8,
+            objective=objective("Get back in", at="@e[tag=angel.seat_passenger,limit=1]", line="Walk up to the car - you get in by yourself", how="walk", grace=2.0),
             note="get back in (walk to the door, or touch the car)")
     s.do(*carfx.door_cmds(car, upright, False, 8), note="the door shuts (sfx.car_door)")
     s.sleep(0.5)

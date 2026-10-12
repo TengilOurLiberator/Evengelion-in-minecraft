@@ -1,0 +1,30 @@
+function angel:story/ob/end
+scoreboard players set #ob.on angel.story 1
+scoreboard players set #ob.k angel.story 2
+scoreboard players set #ob.t angel.story 0
+scoreboard players set #ob.g angel.story 0
+scoreboard players set #ob.shown angel.story 0
+scoreboard players set #ob.vis angel.story 1
+scoreboard players set #ob.gate angel.story 0
+scoreboard players set #ob.wp angel.story 1
+scoreboard players set #ob.fl angel.story 1
+scoreboard players set #ob.hast angel.story 1
+scoreboard players set #ob.bb angel.story 9999
+scoreboard players set #ob.b angel.story 99
+scoreboard players set #ob.bl angel.story -1
+scoreboard players set #ob.np angel.story 0
+scoreboard players set #ob.line angel.story -1
+scoreboard players set #ob.rn angel.story 0
+scoreboard players set #ob.gf angel.story 16
+scoreboard players set #ob.rep angel.story 300
+scoreboard players set #ob.secs angel.story 100
+scoreboard players set #ob.stillt angel.story 99999999
+scoreboard players set #ob.sn angel.story 0
+scoreboard players set #ob.snd angel.story 0
+scoreboard players set #ob.nl angel.story 0
+scoreboard players set #ob.dir angel.story -1
+scoreboard players set #stk angel.story 0
+scoreboard players set #stkh angel.story 0
+scoreboard players set #ob.px0 angel.story -99999999
+scoreboard players set #ob.pz0 angel.story -99999999
+function angel:story/ob/td/root

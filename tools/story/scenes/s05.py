@@ -29,6 +29,7 @@ from context import cast_look, cast_mount, cast_pose, cast_remove, cast_scale, c
 from core import CFG, OBJ, P, PA, T, blind, dir_to_yaw, fn, num, sset
 from engine import C, Cond, Nudges
 from hq_cage import N_BANKS, booth_anchor, cage, dirty_cmd
+from objective import follow_objective, objective
 import worldgen_sky
 
 N = 5
@@ -87,7 +88,7 @@ def build(s, ctx):
         L.Stop(XC, Y, 139.0, wait=False, note="through the cage door"),
         L.Stop(bstart["x"], Y, bstart["z"], wait=False, note="hq.bridge_start"),
         L.Stop(XC, Y, 128.0, note="out on the bridge"),
-    ], speed=SPEED, companion=("misato", 3.2, 1.2), start=(XC, cdoor["z"] - 1.8))
+    ], speed=SPEED, companion=("misato", 3.2, 1.2), start=(XC, cdoor["z"] - 1.8), follow_text="Go through the door")
     # the door shuts behind them with a boom; then silence
     s.do(fn("story/hq/door_close"), sfx("sfx.door_heavy", at=(XC, Y + 3.0, 140.5), vol=3.0, minvol=0.8), *ctx.audio.stop("bed"),
          note="the cage door shuts behind them")
@@ -105,6 +106,7 @@ def build(s, ctx):
             tick=[f"execute positioned {num(fx)} {num(fy)} {num(fz)} if entity {P('distance=..4')} run scoreboard players add #f.hold angel.story 1",
                   f"execute positioned {num(fx)} {num(fy)} {num(fz)} unless entity {P('distance=..4')} run scoreboard players set #f.hold angel.story 0"],
             hint=("Walk to the end of the bridge.", []), hint_after=40,
+            objective=objective("Walk out onto the bridge", at=(fx, fy, fz), line="Walk out to the end of the bridge, toward the giant", how="walk", grace=3.0),
             on_timeout=[tp_player(fx, fy, fz)], note="the player reaches hq.face (or stops within 4 blocks of it for 3 s)")
     s.sleep(0.5)
     s.say("5.01")
@@ -297,6 +299,7 @@ def build(s, ctx):
 
     # ================================================================ the girl
     s.until(C.near(REI_MID[0], Y, REI_MID[2], 2.0, est=8), timeout=120, est=8.0, hint=("Go to the girl on the floor.", []), hint_after=25,
+            objective=objective("Go to her", at=(REI_MID[0], Y + 0.5, REI_MID[2]), line="Walk to Rei, on the floor ahead  -  go right up to her", how="walk", grace=10.0),
             note="the player comes within 2 blocks of Rei")
     s.do(cast_pose("rei", "standing"), cast_pose("rei", "sitting"),
          f"execute at {P()} run particle minecraft:dust{{color:[0.62,0.04,0.04],scale:1.3}} ~ ~1.0 ~ 0.22 0.15 0.22 0 14 force",
@@ -312,7 +315,7 @@ def build(s, ctx):
         [fn("say/5_39")],
         [fn("say/5_40"), cg.sched("impact_far", wait_ticks("5.40", 1.2))],
         [fn("say/5_41"), cg.sched("impact_far", wait_ticks("5.41", 1.4))]])
-    s.wait_consent(speaker="rei", prompt="will you pilot it?", nudges=nud, note="WAIT FOR YES (nudged: 5.39, 5.40, 5.41, then 5.40, 5.41 ...)")
+    s.wait_consent(speaker="rei", prompt="will you pilot it?  Say yes or no", loud=True, nudges=nud, no_skip=True, note="WAIT FOR YES (nudged: 5.39, 5.40, 5.41, then 5.40, 5.41 ...)")
     s.goto("yes")
 
     # ================================================================ the early yes: Rei is only a voice
@@ -339,7 +342,7 @@ def build(s, ctx):
     # as the boy follows her, 5.44 from behind: still silence under it
     rx, rz = REI_MID[0], REI_MID[2]
     s.until(Cond([f"positioned {num(rx)} {num(Y)} {num(rz)} unless entity {P('distance=..6.5')}"], 6.0, "the boy is 6.5 blocks from Rei"),
-            timeout=60, est=6.0, hint=("Follow Ritsuko.", []), hint_after=20, note="he follows Ritsuko")
+            timeout=60, est=6.0, hint=("Follow Ritsuko.", []), hint_after=20, note="he follows Ritsuko", objective=follow_objective("ritsuko"))
     s.say("5.44")
     s.unhush()
     # now the cage goes dark behind them, bank by bank, each with its breaker
@@ -347,8 +350,8 @@ def build(s, ctx):
     for j, k in enumerate(range(N_BANKS - 2, 0, -1)):
         s.after(1.0 + 1.1 * j, fn(f"story/hq/bank_off_{k}"), sfx(f"sfx.breaker_{k % 3 + 1}", at=cg.bank_pos[k], vol=1.5, pitch=0.85, minvol=0.4),
                 note=f"bank {k} off")
-    s.until(L.arrived("ritsuko", est=10), timeout=60, est=10.0, note="Ritsuko reaches the middle of the bridge")
-    s.until(L.near_char("ritsuko", 6.0), timeout=60, est=0.5, on_timeout=[tp_player(XC, Y, 119.5)], note="the boy is with her")
+    s.until(L.arrived("ritsuko", est=10), timeout=60, est=10.0, note="Ritsuko reaches the middle of the bridge", objective=follow_objective("ritsuko"), watch=False)
+    s.until(L.near_char("ritsuko", 6.0), timeout=60, est=0.5, on_timeout=[tp_player(XC, Y, 119.5)], note="the boy is with her", objective=follow_objective("ritsuko"))
     s.do(*L.lead_off("ritsuko"), fn("story/hq/bank_off_0"), fn("story/hq/vest_off"), sfx("sfx.breaker_2", at=cg.bank_pos[0], vol=1.5, pitch=0.8, minvol=0.4), note="the last light")
     s.sleep(1.6, note="dark")
     s.do(*ctx.audio.stop("music"), *ctx.audio.stop("bed"))

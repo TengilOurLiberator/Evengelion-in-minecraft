@@ -32,8 +32,9 @@ import launch_geo as geo
 import launch_hooks
 import worldgen_sky
 from context import tp_player
-from core import OBJ, P, PA, blind, fn, num, sset
+from core import OBJ, P, PA, blind, fn, num, sadd, sset, ssub
 from engine import C
+from objective import Objective
 
 N = 7
 TITLE = "The fight"
@@ -55,6 +56,21 @@ DAWN = ((4.0, 30), (4.0, 30), (3.0, 14), (3.0, 14), (8.0, 7))          # 2400 + 
 DAWN_AFTER = 1.5                        # rate once the sun stands over the ridge
 CARD_AT = 30.0                          # seconds after the dawn begins that the card cuts in (music.victory is 40 s and thinning by then)
 CAGE_DARK = 4.5                         # seconds of black after the card for the move to the cage (the chunks must reach the headset)
+
+
+# ---------------------------------------------------------------------------------------------------- the fight's directions
+# One-line objectives, shown as the direction line only (the waypoint on the core excepted), in giant scale (the panel hangs 32 blocks ahead, 16 times
+# the size: the world he sees is 16 times bigger).  They read the fight's scoreboard (objective angel.fight) and never touch the fight:
+#   #ch (core hits left: 60 at the start, 30 after a checkpoint), #st (1: the eye beam is charging), #hold (1: it holds its ground after a back-off),
+#   #phase (3 and up: the wrap, the win, the loss: nothing is shown, the fight draws its own BREAK LOOSE).
+ROOT = "@e[type=minecraft:marker,tag=angel.root,limit=1]"
+CORE = "@e[type=minecraft:interaction,tag=angel.core,limit=1]"
+FG_WALK = Objective("Walk toward the Angel", at=ROOT, line="Walk toward the Angel", how="walk", waypoint=False, giant=16, grace=3.0, secs=7.0, repeat=25.0)
+FG_HIT = Objective("Hit the red core", at=CORE, line="Hit the red core", how="hit", first_how=True, waypoint=True, giant=16, grace=0.0, secs=9.0, repeat=20.0, lift=2.4)
+FG_KEEP = Objective("Keep hitting the core", at=CORE, waypoint=True, lines=False, giant=16, grace=0.0, sound=False, lift=2.4)
+FG_COVER = Objective("Get behind a building", line="It is charging a beam  -  get behind a building", waypoint=False, bearing=False, giant=16, grace=0.0, secs=7.0)
+FG_CLOSE = Objective("Close the distance again", at=ROOT, line="Close in on it again", how="walk", waypoint=False, giant=16, grace=0.5, secs=8.0)
+REACH_UP, CORE_CY = 22.0, 2.25                         # the fight's own numbers (gen_fight.py: reach_up, the core box's half height)
 
 
 def build(s, ctx):
@@ -86,6 +102,7 @@ def build(s, ctx):
 
     # ================================================================ the fight
     s.do(f"tag {P()} add angel.giant", sset("#mus", 0), f"execute as {P()} run function angel:fight/start",
+         sset("#fg", 0), sset("#fg.c", -1), sset("#fg.hit", 0), sset("#fg.beam", 0), sset("#fg.bo", 0), sset("#fg.dflag", 0),
          note="THE FIGHT: the monster is rebuilt in place, the giant's numbers set, 7.01 and 7.02 queued")
     audio_ = ctx.audio
     mus_fight = s.function("mus_fight", [sset("#mus", 1), *audio_.start("music", "fight")])
@@ -101,7 +118,39 @@ def build(s, ctx):
     to_81 = "execute if score #phase angel.fight matches 5 run scoreboard players set #beat angel.story 81"
     to_70 = ("execute if score #beat angel.story matches 81 if score #run angel.fight matches 1 if score #phase angel.fight matches 0..3 "
              "run scoreboard players set #beat angel.story 70")
-    s.until(C.flag("fight_won", est=420.0), tick=[to_81, to_70, *mus], on_done=["function angel:fight/stop", *audio_.stop("music")],
+    # ---- the guide: what to do, one line at a time, from the fight's scoreboard
+    ob = ctx.ob_begin
+    fgs = "#fg angel.story"
+    core_at = lambda r: f"as {CORE} at @s positioned ~ ~{-(REACH_UP - CORE_CY):g} ~ if entity {P(f'distance=..{r}')}"
+    g_a = s.function("g_walk", [ob(FG_WALK), sset("#fg", 1)])
+    g_b = s.function("g_hit", [ob(FG_HIT), sset("#fg", 2), sset("#fg.hit", 0)])
+    g_b2 = s.function("g_keep", [ob(FG_KEEP), sset("#fg", 3)])
+    g_end = s.function("g_end", [fn("story/ob/end"), sset("#fg", 4)])
+    g_wrap = s.function("g_wrap", [fn("story/ob/end"), sset("#fg", 9), sset("#fg.c", -1)])
+    g_rearm = s.function("g_rearm", [sset("#fg", 0), sset("#fg.c", -1), sset("#fg.hit", 0), sset("#fg.dflag", 0)])
+    g_cover = s.function("g_cover", [ob(FG_COVER), sset("#fg.beam", 1), sset("#fg.c", 140)])
+    g_close = s.function("g_close", [ob(FG_CLOSE), sadd("#fg.bo"), sset("#fg.dflag", 1), sset("#fg.c", 160)])
+    g_again = s.function("g_again", [fn("story/ob/reline"), sset("#fg.hit", 0)])
+    g_restore = s.function("g_restore", [sset("#fg.c", -1),
+                                         f"execute if score {fgs} matches 1 run {ob(FG_WALK)}", f"execute if score {fgs} matches 2 run {ob(FG_HIT)}",
+                                         f"execute if score {fgs} matches 3 run {ob(FG_KEEP)}", f"execute if score {fgs} matches 4 run {fn('story/ob/end')}"])
+    guide = s.function("guide", [
+        f"execute if score #phase angel.fight matches 3.. unless score {fgs} matches 9 run {g_wrap}",        # the wrap, the win, the loss: the fight speaks for itself
+        "execute if score #phase angel.fight matches 3.. run return 0",
+        f"execute if score {fgs} matches 9 run {g_rearm}",                                                    # a new attempt
+        f"execute if score #ch angel.fight matches ..57 unless score {fgs} matches 4 unless score #fg.c angel.story matches 1.. run {g_end}",   # (a checkpoint restart: no intro)
+        f"execute if score #ch angel.fight matches 58..59 if score {fgs} matches 0..2 run {g_b2}",           # the first hit has landed
+        f"execute if score #fg.c angel.story matches 1.. run {ssub('#fg.c')}",
+        f"execute if score #fg.c angel.story matches 0 run {g_restore}",
+        "execute if score #fg.c angel.story matches 1.. run return 0",                                       # the beam warning or the 'close in' line is up
+        f"execute if score {fgs} matches 0 if score #ch angel.fight matches 60.. run {g_a}",                 # 1. walk toward it
+        f"execute if score {fgs} matches 1 {core_at(24)} run {g_b}",                                         # 2. close enough: hit the red core (until one lands)
+        f"execute if score {fgs} matches 2 {core_at(12.5)} run {sadd('#fg.hit')}",
+        f"execute if score #fg.hit angel.story matches 400.. run {g_again}",                                 #    20 s in range without a hit: the controls again
+        f"execute if score #st angel.fight matches 1 if score #fg.beam angel.story matches 0 run {g_cover}",   # 3. its first beam
+        f"execute unless score #hold angel.fight matches 1 run {sset('#fg.dflag', 0)}",
+        f"execute if score #hold angel.fight matches 1 if score #fg.dflag angel.story matches 0 if score #fg.bo angel.story matches ..2 if score {fgs} matches 3..4 run {g_close}"])   # 4. after a back-off
+    s.until(C.flag("fight_won", est=420.0), tick=[to_81, to_70, *mus, guide], on_done=["function angel:fight/stop", *audio_.stop("music"), fn("story/ob/end")],
             note="the fight (its own timeline); beat 81 during a defeat, 70 again when it restarts; music.fight / fight_final / defeat follow its phase; "
                  "ends when the fight calls fight_done won")
 
