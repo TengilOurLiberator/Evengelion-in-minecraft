@@ -108,6 +108,32 @@ data merge entity @e[type=minecraft:block_display,tag=angel.p103,limit=1] {trans
 data merge entity @e[type=minecraft:block_display,tag=angel.p104,limit=1] {transformation:{translation:[11.469f,32.34f,-39.56f],left_rotation:[0.49f,-0.276f,0.102f,0.821f],scale:[0.6f,5.34f,0.6f]}}
 data merge entity @e[type=minecraft:block_display,tag=angel.p105,limit=1] {transformation:{translation:[10.624f,34.731f,-35.129f],left_rotation:[0.539f,-0.29f,0.147f,0.777f],scale:[0.75f,5.64f,0.75f]}}
 data merge entity @e[type=minecraft:block_display,tag=angel.p106,limit=1] {transformation:{translation:[13.046f,32.144f,-38.499f],left_rotation:[0.481f,-0.3f,0.125f,0.814f],scale:[0.6f,5.34f,0.6f]}}
+data merge entity @e[type=minecraft:block_display,tag=angel.p107,limit=1] {transformation:{translation:[-3.146f,54.201f,-9.696f],left_rotation:[-0.119f,-0.275f,-0.017f,0.954f],scale:[14.4f,0.27f,5.64f]}}
+data merge entity @e[type=minecraft:block_display,tag=angel.p108,limit=1] {transformation:{translation:[0.907f,57.545f,-9.482f],left_rotation:[-0.119f,-0.275f,-0.017f,0.954f],scale:[7.08f,0.27f,4.08f]}}
+data merge entity @e[type=minecraft:block_display,tag=angel.p109,limit=1] {transformation:{translation:[-4.2f,35.865f,-2.4f],left_rotation:[0f,0f,0f,1f],scale:[8.4f,0.24f,4.8f]}}
+data merge entity @e[type=minecraft:block_display,tag=angel.p110,limit=1] {transformation:{translation:[8.966f,41.282f,10.566f],left_rotation:[-0.294f,-0.27f,0.041f,0.916f],scale:[0.27f,15.6f,0.78f]}}
+data merge entity @e[type=minecraft:block_display,tag=angel.p111,limit=1] {transformation:{translation:[-5.296f,39.416f,-14.912f],left_rotation:[0.199f,-0.294f,0.007f,0.935f],scale:[0.27f,15.6f,0.78f]}}
+data merge entity @e[type=minecraft:block_display,tag=angel.p112,limit=1] {transformation:{translation:[3.545f,31.547f,24.753f],left_rotation:[-0.478f,-0.273f,-0.016f,0.835f],scale:[0.24f,17.4f,0.72f]}}
+data merge entity @e[type=minecraft:block_display,tag=angel.p113,limit=1] {transformation:{translation:[4.454f,37.694f,-29.387f],left_rotation:[0.652f,-0.249f,0.158f,0.699f],scale:[0.24f,17.4f,0.72f]}}
+data merge entity @e[type=minecraft:block_display,tag=angel.p114,limit=1] {transformation:{translation:[6.235f,17.549f,2.233f],left_rotation:[-0.087f,-0.002f,0.026f,0.996f],scale:[0.27f,14.7f,0.9f]}}
+data merge entity @e[type=minecraft:block_display,tag=angel.p115,limit=1] {transformation:{translation:[-6.51f,17.456f,-1.357f],left_rotation:[0.035f,-0.001f,-0.026f,0.999f],scale:[0.27f,14.7f,0.9f]}}
+data merge entity @e[type=minecraft:block_display,tag=angel.p116,limit=1] {transformation:{translation:[-3.704f,48.024f,0.324f],left_rotation:[-0.119f,-0.275f,-0.017f,0.954f],scale:[5.16f,0.48f,0.54f]}}
+data merge entity @e[type=minecraft:block_display,tag=angel.p117,limit=1] {transformation:{translation:[-4.237f,42.78f,1.5f],left_rotation:[-0.119f,-0.275f,-0.017f,0.954f],scale:[5.16f,0.48f,0.54f]}}
+data merge entity @e[type=minecraft:block_display,tag=angel.p118,limit=1] {transformation:{translation:[0.177f,43.296f,4.147f],left_rotation:[-0.119f,-0.275f,-0.017f,0.954f],scale:[0.48f,5.16f,0.54f]}}
+data merge entity @e[type=minecraft:block_display,tag=angel.p119,limit=1] {transformation:{translation:[-4.609f,43.114f,1.168f],left_rotation:[-0.119f,-0.275f,-0.017f,0.954f],scale:[0.48f,5.16f,0.54f]}}
+data merge entity @e[type=minecraft:block_display,tag=angel.p120,limit=1] {transformation:{translation:[-6.069f,43.259f,-0.64f],left_rotation:[-0.119f,-0.275f,-0.017f,0.954f],scale:[10.5f,8.1f,0.24f]}}
+data merge entity @e[type=minecraft:block_display,tag=angel.p121,limit=1] {transformation:{translation:[7.949f,44.991f,5.696f],left_rotation:[-0.294f,-0.27f,0.041f,0.916f],scale:[0.24f,8.4f,2.76f]}}
+data merge entity @e[type=minecraft:block_display,tag=angel.p122,limit=1] {transformation:{translation:[-3.646f,44.752f,-12.181f],left_rotation:[0.199f,-0.294f,0.007f,0.935f],scale:[0.24f,8.4f,2.76f]}}
+data merge entity @e[type=minecraft:block_display,tag=angel.p123,limit=1] {transformation:{translation:[0.274f,56.072f,2.751f],left_rotation:[-0.07f,-0.291f,-0.183f,0.936f],scale:[0.003f,0.003f,0.001f]}}
+data merge entity @e[type=minecraft:block_display,tag=angel.p124,limit=1] {transformation:{translation:[-3.696f,55.92f,0.28f],left_rotation:[-0.165f,-0.25f,0.149f,0.942f],scale:[0.003f,0.003f,0.001f]}}
+data merge entity @e[type=minecraft:block_display,tag=angel.p125,limit=1] {transformation:{translation:[-0.07f,56.228f,3.293f],left_rotation:[-0.07f,-0.291f,-0.183f,0.936f],scale:[0.004f,0.005f,0.001f]}}
+data merge entity @e[type=minecraft:block_display,tag=angel.p126,limit=1] {transformation:{translation:[-4.039f,56.075f,0.822f],left_rotation:[-0.165f,-0.25f,0.149f,0.942f],scale:[0.004f,0.005f,0.001f]}}
+data merge entity @e[type=minecraft:block_display,tag=angel.p127,limit=1] {transformation:{translation:[-0.001f,46.693f,22.799f],left_rotation:[0f,0f,0f,1f],scale:[0.002f,0.002f,0.002f]}}
+data merge entity @e[type=minecraft:block_display,tag=angel.p128,limit=1] {transformation:{translation:[0f,46.693f,22.799f],left_rotation:[0f,0f,0.383f,0.924f],scale:[0.002f,0.002f,0.002f]}}
+data merge entity @e[type=minecraft:block_display,tag=angel.p129,limit=1] {transformation:{translation:[-0.001f,46.693f,22.8f],left_rotation:[-0.383f,0f,0f,0.924f],scale:[0.002f,0.002f,0.002f]}}
+data merge entity @e[type=minecraft:block_display,tag=angel.p130,limit=1] {transformation:{translation:[-0.002f,46.693f,22.8f],left_rotation:[0f,0.383f,0f,0.924f],scale:[0.002f,0.002f,0.002f]}}
+data merge entity @e[type=minecraft:block_display,tag=angel.p131,limit=1] {transformation:{translation:[0f,46.691f,22.799f],left_rotation:[0f,0f,0.383f,0.924f],scale:[0.005f,0.005f,0.002f]}}
+data merge entity @e[type=minecraft:block_display,tag=angel.p132,limit=1] {transformation:{translation:[-0.004f,46.69f,20.4f],left_rotation:[0f,0f,0f,1f],scale:[0.009f,0.009f,0f]}}
 execute as @e[type=minecraft:block_display,tag=angel.eye] run data merge entity @s {block_state:"minecraft:glowstone"}
 data modify storage angel:mon off set value {cx:"-1.623",cy:"41.096",cz:"6.814",bx:"0.000",by:"22.800",bz:"0.000"}
 function angel:angel/sync_hit with storage angel:mon off

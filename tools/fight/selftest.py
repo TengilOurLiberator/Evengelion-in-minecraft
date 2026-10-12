@@ -1,8 +1,8 @@
-"""Live test of the Angel and the fight on a scratch copy of the server (nothing in the repo or the real server changes).
+﻿"""Live test of the Angel and the fight on a scratch copy of the server (nothing in the repo or the real server changes).
 
     python selftest.py [--keep]
 
-Copies D:\\angel-attack\\server (without its world and logs) to a temp folder, sets server-port 25603 and rcon.port 25613,
+Copies D:\\angel-attack\\server (without its world and logs) to a temp folder, sets server-port 25608 and rcon.port 25618,
 copies the datapack in, starts it headless, drives it over RCON, and stops and deletes the copy at the end (--keep leaves it).
 There is no game client: an armor stand tagged angel.giant stands in for the player (`function angel:fight/test/start`), and a
 left click on the core is simulated by writing the `attack` data an interaction entity gets from a real click.
@@ -104,7 +104,7 @@ def main():
         props = open(os.path.join(srv, "server.properties"), encoding="utf-8").read().splitlines()
         out = []
         for ln in props:
-            for k, v in (("server-port", "25603"), ("rcon.port", "25613"), ("query.port", "25603"), ("online-mode", "false")):
+            for k, v in (("server-port", "25608"), ("rcon.port", "25618"), ("query.port", "25608"), ("online-mode", "false")):
                 if ln.startswith(k + "="):
                     ln = f"{k}={v}"
             out.append(ln)
@@ -118,7 +118,7 @@ def main():
         t0 = time.time()
         while True:
             try:
-                R = rcon.Rcon(port=25613)
+                R = rcon.Rcon(port=25618)
                 break
             except Exception:
                 if time.time() - t0 > 180 or proc.poll() is not None:
@@ -193,9 +193,35 @@ def run_tests(log):
     check("all poses ran", count("@e[tag=angel.mon]") > 100)
     wait(100)
     check("dying stage 3 reached (core dark)", "black_concrete" in c("data get entity @e[type=minecraft:block_display,tag=angel.corebody,limit=1] block_state"))
+    check("dying puts the core glow out (strips dark, veil gone)",
+          "black_concrete" in c("data get entity @e[type=minecraft:block_display,tag=angel.coreglow,limit=1] block_state")
+          and "air" in c("data get entity @e[type=minecraft:block_display,tag=angel.veil,limit=1] block_state"))
     c('function angel:angel/pose {pose:"charging"}')
     wait(4)
     check("charging lights the eyes", "glowstone" in c("data get entity @e[type=minecraft:block_display,tag=angel.eye,limit=1] block_state"))
+
+    def glow_scale():
+        m = re.search(r"scale: \[([\d.\-e]+)f", c("data get entity @e[type=minecraft:block_display,tag=angel.eyeglow,limit=1] transformation"))
+        return float(m.group(1)) if m else -1
+    c('function angel:angel/pose {pose:"idle"}')
+    wait(6)
+    g0 = glow_scale()
+    c('function angel:angel/pose {pose:"charging"}')
+    wait(6)
+    g1 = glow_scale()
+    wait(40)
+    g3 = glow_scale()
+    check("the eye glow is hidden when idle and grows over the charge", 0 <= g0 < 0.05 and g1 > 0.5 and g3 > g1 * 1.5, f"idle {g0} stage1 {g1} end {g3}")
+    c('function angel:angel/pose {pose:"idle"}')
+    wait(6)
+    check("going back to idle cancels the pending charge stages and hides the glow", glow_scale() < 0.05, f"{glow_scale()}")
+    c('function angel:angel/pose {pose:"regenerating"}')
+    seen = set()
+    for _ in range(14):
+        wait(6)
+        seen.add(score("#lp", "angel.mon"))
+    check("regenerating runs its 8-frame loop", len(seen) >= 6, f"frames seen {sorted(seen)}")
+    c('function angel:angel/pose {pose:"idle"}')
     c("function angel:angel/remove")
     check("remove deletes every part", count("@e[tag=angel.mon]") == 0)
 
@@ -347,3 +373,5 @@ def run_tests(log):
 
 if __name__ == "__main__":
     sys.exit(main())
+
+

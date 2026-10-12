@@ -335,8 +335,8 @@ class Geo:
             struct = np.maximum(np.maximum(rib[None, :] * jit[None, :] * dmaj[:, None], rib2[None, :] * dmin[:, None]),
                                 (ring[:, None] * 3.0) * fade[None, :])
             D = -struct + Dn[i]
-            m = (1 - ss((self.gal_d[i] - 7) / 11))[None, :] * (1 - ss((np.abs(Yc[:, None] - (self.gal_y[i][None, :] + 3)) - 10) / 10))
-            D = D * (1 - m) + np.maximum(D, -2.0) * m                # no bulges in front of the open gallery
+            m = (1 - ss((self.gal_d[i] - 10) / 16))[None, :] * (1 - ss((np.abs(Yc[:, None] - (self.gal_y[i][None, :] + 8)) - 18) / 18))
+            D = D * (1 - m) + np.maximum(D, 0.3) * m                 # no bulges at all over and in front of the open gallery
             floor_solid = Yc[:, None] <= self.Hh[i][None, :]
             plate = Yc[:, None] >= self.plate_bot_2d[i][None, :]
             hull = (rcol / A_HULL) ** 3 + (dyv / B_HULL) ** 3 < 1
@@ -345,7 +345,7 @@ class Geo:
             solid = hull & ~air
             # ---- material: broad patches along a warm gradient, light up high, ribs and ring beams in sandstone
             st = Yc[:, None] * 0.13 + 2.2 * F1[i]
-            v = 1.0 * F1[i] + 0.5 * F2[i] + 0.4 * np.sin(st) + 0.85 * ss((Yc[:, None] - 55) / 75)
+            v = 1.0 * F1[i] + 0.5 * F2[i] + 0.4 * np.sin(st) + 0.3 + 0.85 * ss((Yc[:, None] - 55) / 75)
             h = hash3(i, np.arange(SY)[:, None], np.arange(SZ)[None, :])
             fam = np.digitize(v, cuts) + np.where(h < 5, 1, np.where(h < 10, -1, 0))
             fam = np.clip(fam, 0, len(FAMILIES) - 1)
@@ -380,6 +380,9 @@ class Geo:
         glow = self.id("glowstone")
         below_air = np.zeros_like(air)
         below_air[:, 1:] = air[:, :-1]
+        # no big lamps right beside the open gallery (they would sit in the passengers' faces and flare the view)
+        near_gal = (self.gal_d[:, None, :] < 15) & (np.abs(Y - (self.gal_y[:, None, :] + 8)) < 28)
+        surf = surf & ~near_gal
         # rib crests: a lamp every fourth block along the rib
         lamp = self.crest & surf & (Y > 20) & (((Y + np.rint(rr).astype(np.int32)) % 4) == 0)
         n1 = int(lamp.sum())
@@ -422,8 +425,13 @@ class Geo:
         inp = (X >= px0) & (X < px1 + 1) & (Z >= pz0) & (Z < pz1 + 1)
         xi, zi = X.astype(int), Z.astype(int)
         pat = np.where(((xi // 4 + zi // 4) % 2) == 0, 7, 8)
-        pat = np.where((xi % 12 == 0) | (zi % 12 == 0), 9, pat)
+        line = (xi % 12 == 0) | (zi % 12 == 0)
+        pat = np.where(line, 9, pat)
+        pat = np.where(~line & (((xi // 12) + (zi // 12)) % 4 == 0), 11, pat)           # dark squares in the paving
         apron = (X >= px1) & (X < 308) & (Z >= TZ - 8) & (Z < TZ + 24)      # paved way from the door to the terminal
+        runner = apron & (np.abs(Z - (TZ + 0.5)) < 1.6)                      # a dark runner from the door, gold dashes beside it
+        pat = np.where(runner, 11, pat)
+        pat = np.where(apron & ~runner & (np.abs(np.abs(Z - (TZ + 0.5)) - 3.0) < 0.6) & ((xi // 2) % 2 == 0), 12, pat)
         surf[inp | apron] = pat[inp | apron]
         # pit surround
         inpit = (np.abs(X - PIT[0] - 0.5) < 23) & (np.abs(Z - PIT[1] - 0.5) < 23)
@@ -431,8 +439,8 @@ class Geo:
         # under the deck at the terminal
         self.surf = surf
         top = ["grass_block", "podzol", "moss_block", "coarse_dirt", "sand", "gravel", "gray_concrete",
-               "polished_andesite", "smooth_stone", "stone_bricks", "clay"]
-        sub = ["dirt", "dirt", "dirt", "dirt", "sand", "gravel", "stone", "stone", "stone", "stone", "clay"]
+               "polished_andesite", "smooth_stone", "stone_bricks", "clay", "polished_blackstone", "yellow_concrete"]
+        sub = ["dirt", "dirt", "dirt", "dirt", "sand", "gravel", "stone", "stone", "stone", "stone", "clay", "stone", "stone"]
         topi = np.array([self.id(n) for n in top], dtype=np.uint16)
         subi = np.array([self.id(n) for n in sub], dtype=np.uint16)
         ix, iz = np.meshgrid(np.arange(SX), np.arange(SZ), indexing="ij")
@@ -464,13 +472,16 @@ class Geo:
         ctr = lambda k: PYR_HALF - 0.875 * k
         halfs = [int(math.floor(ctr(k))) for k in range(PYR_H)]
         lantern = self.id("sea_lantern")
+        glowband = self.id("ochre_froglight")
+        goldb = self.id("gold_block")
         band = self.id("light_gray_concrete")
         body = self.id("quartz_block")
+        light15 = self.id("light[level=15]")
         for k in range(PYR_H):
             h = halfs[k]
             y = top + k
             a[px - h:px + h + 1, y, pz - h:pz + h + 1] = body if (k % 10 == 9) else quartz
-        # stairs on the exposed ring
+        # stairs on the exposed ring; a lit band every tenth course and lit strips between; the top courses are gold
         for k in range(PYR_H):
             h = halfs[k]
             nh = halfs[k + 1] if k + 1 < PYR_H else -1
@@ -481,14 +492,33 @@ class Geo:
             for t in range(-h + 1, h):
                 for d, (sx_, sz_) in [("north", (t, -h)), ("south", (t, h)), ("west", (-h, t)), ("east", (h, t))]:
                     opp = {"north": "south", "south": "north", "west": "east", "east": "west"}[d]
-                    # lit strips
                     strip = (abs(t) % 12 == 0) and k % 3 == 0 and k > 2
-                    a[px + sx_, y, pz + sz_] = lantern if strip else sq[opp]
+                    if k >= PYR_H - 5:
+                        b = goldb
+                    elif k % 10 == 9:
+                        b = glowband
+                    elif strip:
+                        b = glowband
+                    else:
+                        b = sq[opp]
+                    a[px + sx_, y, pz + sz_] = b
+        # hidden light in front of every face, so every course reads bright
+        for k in range(2, PYR_H, 3):
+            h = halfs[k]
+            y = top + k + 1
+            for t in range(-h + 2, h - 1, 6):
+                for sx_, sz_ in ((t, -h - 1), (t, h + 1), (-h - 1, t), (h + 1, t)):
+                    self.put_air(px + sx_, y, pz + sz_, light15)
         apex = top + PYR_H
-        a[px, apex, pz] = self.id("iron_block")
-        for k in range(1, 6):
-            a[px, apex + k, pz] = self.id("end_rod[facing=up]") if k > 1 else self.id("iron_bars")
-        a[px, apex + 1, pz] = self.id("sea_lantern")
+        a[px, apex, pz] = goldb
+        # a lit beacon on the apex: a block of light, then a tall white rod
+        a[px, apex + 1, pz] = glowband
+        a[px, apex + 2, pz] = lantern
+        for k in range(3, 9):
+            a[px, apex + k, pz] = self.id("end_rod[facing=up]")
+        for k in (2, 5, 8):
+            self.put_air(px + 1, apex + k, pz, light15)
+            self.put_air(px - 1, apex + k, pz, light15)
         # plaza steps ring around the pyramid foot
         px0, px1, pz0, pz1 = PLAZA
         # lamp posts around the plaza
@@ -561,6 +591,118 @@ class Geo:
             for k in range(1, 5):
                 a[pcx + dx, LAND + k, pcz + dz] = post
             a[pcx + dx, LAND + 5, pcz + dz] = lantern
+
+    # ------------------------------------------------------------------ 3b. the entrance: portal gate, emblem, lit hall
+    @staticmethod
+    def emblem_mask(u, v):
+        """The organisation's emblem, my own abstract shape ('the seed'): a flat-topped hexagon ring round a slim upright
+        lens, with a bright core and two short bars under it.  Returns 0 nothing, 1 ring, 2 lens, 3 core, 4 bar."""
+        H = 5.6
+        hexd = max(abs(v), 0.866 * abs(u) + 0.5 * abs(v))
+        if 4.1 <= hexd <= H and abs(v) <= H:
+            return 1
+        if hexd < 3.6:
+            if abs(u) <= 1.0 and abs(v) <= 1.0:
+                return 3
+            if abs(v) <= 3.2 and abs(u) <= 2.2 * math.sqrt(max(0.0, 1 - (v / 3.2) ** 2)):
+                return 2
+        return 0
+
+    def put_emblem(self, x, yc, zc, east=True):
+        a = self.a
+        cols = {1: self.id("orange_concrete"), 2: self.id("yellow_concrete"), 3: self.id("red_concrete")}
+        plate = self.id("black_concrete")
+        for du in range(-8, 9):
+            for dv in range(-7, 8):
+                m = self.emblem_mask(du, dv)
+                a[x, yc + dv, zc + du] = cols[m] if m else plate
+
+    def entrance(self):
+        a = self.a
+        bx0, bx1 = PX + PYR_HALF + 1, PX + PYR_HALF + 17
+        bz0, bz1 = TZ - 12, TZ + 12
+        y0, y1 = LAND + 1, LAND + 9
+        I = self.id
+        black, cutsand, smooth = I("polished_blackstone"), I("cut_sandstone"), I("smooth_sandstone")
+        red_s, froglight, gold = I("smooth_red_sandstone"), I("ochre_froglight"), I("gold_block")
+        stripe, yellow, blackc = I("orange_terracotta"), I("yellow_concrete"), I("black_concrete")
+        light15 = I("light[level=15]")
+        # --- the hall: patterned floor with a dark runner, dark skirting and a gold stripe on the walls, light strips
+        for x in range(bx0 + 2, bx1 - 1):
+            for z in range(bz0 + 2, bz1 - 1):
+                dz = abs(z - TZ)
+                if dz <= 1:
+                    b = black
+                elif dz == 3 and (x // 2) % 2 == 0:
+                    b = yellow
+                else:
+                    b = smooth if ((x // 3 + z // 3) % 2) else cutsand
+                a[x, LAND, z] = b
+        for (xa, xb, za, zb) in ((bx0 + 1, bx0 + 1, bz0 + 1, bz1 - 1), (bx1 - 1, bx1 - 1, bz0 + 1, bz1 - 1),
+                                 (bx0 + 1, bx1 - 1, bz0 + 1, bz0 + 1), (bx0 + 1, bx1 - 1, bz1 - 1, bz1 - 1)):
+            for x in range(xa, xb + 1):
+                for z in range(za, zb + 1):
+                    if a[x, y0 + 1, z] <= 1:
+                        continue
+                    pil = (x + z) % 4 == 0
+                    a[x, y0, z] = black
+                    for y in range(y0 + 1, y1 - 2):
+                        a[x, y, z] = red_s if pil else cutsand
+                    a[x, y0 + 4, z] = stripe if not pil else red_s
+        for z in (bz0 + 4, bz1 - 4):                                           # lit cove strips along the long walls
+            a[bx0 + 3:bx1 - 2, y1 - 3, z] = froglight
+        # --- the pyramid's own door at the west end of the hall: a tall panel of light in a gold frame
+        a[bx0:bx0 + 2, y0:y0 + 7, TZ - 2:TZ + 3] = froglight
+        for z in (TZ - 3, TZ + 3):
+            a[bx0:bx0 + 2, y0:y0 + 8, z] = gold
+        a[bx0:bx0 + 2, y0 + 7, TZ - 3:TZ + 4] = gold
+        a[bx0 + 1, y0, TZ - 2:TZ + 3] = black
+        # --- the outer door: a tall frame on the east face, no more old canopy
+        a[bx1 + 1:bx1 + 7, y0:y0 + 14, TZ - 8:TZ + 9] = 1
+        a[bx1 - 2:bx1 + 1, y0:y0 + 5, TZ - 3:TZ + 4] = 1
+        for z in list(range(TZ - 7, TZ - 3)) + list(range(TZ + 4, TZ + 8)):
+            a[bx1 + 1:bx1 + 3, y0:y0 + 13, z] = cutsand
+            a[bx1 + 1, y0:y0 + 2, z] = black
+        for z in (TZ - 7, TZ + 7):
+            a[bx1 + 1:bx1 + 3, y0:y0 + 13, z] = red_s
+        a[bx1 + 1:bx1 + 3, y0 + 9:y0 + 13, TZ - 7:TZ + 8] = cutsand
+        a[bx1 + 1, y0 + 9, TZ - 7:TZ + 8] = gold
+        a[bx1 + 1, y0 + 12, TZ - 7:TZ + 8] = red_s
+        for z in range(TZ - 6, TZ + 7, 2):                                     # a row of lights under the lintel
+            a[bx1 + 1, y0 + 8, z] = froglight
+        for z in (TZ - 5, TZ + 5):                                             # lit slots down the jambs
+            for y in range(y0 + 2, y0 + 9, 2):
+                a[bx1 + 1, y, z] = froglight
+        for z in range(TZ - 3, TZ + 4):
+            a[bx1 - 2:bx1 + 1, y0 - 1, z] = black                              # threshold
+        # --- the portal gate on the way from the terminal: two tall pylons and a lintel carrying the emblem
+        gx = bx1 + 9                                                            # x of the gate's west face
+        for z0_, z1_ in ((TZ - 10, TZ - 7), (TZ + 7, TZ + 10)):
+            a[gx:gx + 2, y0:y0 + 28, z0_:z1_ + 1] = cutsand
+            a[gx:gx + 2, y0:y0 + 3, z0_:z1_ + 1] = black
+            a[gx:gx + 2, y0 + 27, z0_:z1_ + 1] = red_s
+            zc = (z0_ + z1_) // 2
+            for y in range(y0 + 4, y0 + 26, 3):                                # lit slots, east and west faces
+                a[gx + 1, y, zc] = froglight
+                a[gx, y, zc] = froglight
+            a[gx:gx + 2, y0 + 28, zc] = froglight
+        a[gx:gx + 2, y0 + 16:y0 + 28, TZ - 6:TZ + 7] = blackc
+        a[gx:gx + 2, y0 + 16, TZ - 6:TZ + 7] = red_s
+        a[gx:gx + 2, y0 + 27, TZ - 6:TZ + 7] = red_s
+        self.put_emblem(gx + 1, y0 + 21, TZ)
+        self.put_emblem(gx, y0 + 21, TZ)
+        for z in range(TZ - 6, TZ + 7, 2):                                      # lit underside of the lintel
+            a[gx:gx + 2, y0 + 15, z] = froglight
+        # --- light the whole approach: light blocks beside the gate, the door and the hall
+        for (x_, y_, z_) in ((gx - 2, y0 + 3, TZ), (gx + 3, y0 + 3, TZ), (gx - 2, y0 + 14, TZ - 4), (gx - 2, y0 + 14, TZ + 4),
+                             (gx + 3, y0 + 14, TZ - 4), (gx + 3, y0 + 14, TZ + 4), (gx - 3, y0 + 20, TZ), (gx + 4, y0 + 20, TZ),
+                             (bx1 + 4, y0 + 6, TZ), (bx1 + 4, y0 + 3, TZ - 5), (bx1 + 4, y0 + 3, TZ + 5),
+                             (bx1 + 6, y0 + 10, TZ), (bx1 + 5, y0 + 2, TZ - 9), (bx1 + 5, y0 + 2, TZ + 9)):
+            self.put_air(x_, y_, z_, light15)
+        for x_ in range(bx0 + 3, bx1 - 2, 4):
+            for z_ in (TZ - 8, TZ, TZ + 8):
+                self.put_air(x_, y0 + 3, z_, light15)
+        self.gate_x = gx
 
     # ------------------------------------------------------------------ 4. city plate details and towers
     def plate_and_towers(self):
@@ -803,9 +945,14 @@ class Geo:
                     a[cx, yA, cz] = pillar_foot
                     a[cx, yA + 6, cz] = pillar_cap
                 elif mode == 1:
-                    # low kerb on the open edge instead of a glass rail: half a block above the deck, with a lit tile now and then
+                    # low kerb on the open edge instead of a glass rail: half a block above the deck, with a lit tile now and then.
+                    # Along the first 40 blocks of open gallery (the reveal and its approach) the edge is only a flush pale strip: a half
+                    # block kerb 4 blocks away still hides everything between 21 and 27 degrees below the horizon from a seated eye,
+                    # which is exactly where the lake lies in that picture.
                     if (i % 24) in (6, 7):
                         a[cx, yc, cz] = lamp_id
+                    elif rel < 80:
+                        a[cx, yc, cz] = kerb_a if full else kerb_s
                     elif full:
                         a[cx, yA, cz] = kerb_s
                     else:
@@ -826,6 +973,16 @@ class Geo:
                 for qq in (-2.5, 2.5):
                     pos = np.array([P["x"][i], P["z"][i]]) + np.array([P["nx"][i], P["nz"][i]]) * qq
                     a[int(math.floor(pos[0])), yA + 5, int(math.floor(pos[1]))] = light(12)
+        # the open gallery gets hidden light too (alternate sides, every 6 blocks, up where the roof is): its back wall and roof read warm
+        # instead of black between the lamps
+        for i in range(n_t - 20, n, 12):
+            hq = P["hq"][i]
+            yA = int(math.ceil(hq))
+            qq = 2.5 if (i // 12) % 2 else -2.5
+            pos = np.array([P["x"][i], P["z"][i]]) + np.array([P["nx"][i], P["nz"][i]]) * qq
+            cx, cz = int(math.floor(pos[0])), int(math.floor(pos[1]))
+            if a[cx, yA + 5, cz] <= 1:
+                a[cx, yA + 5, cz] = light(13)
         # numbered section signs let into the wall: a one-block niche, the sign, a lamp over it
         self.n_signs = 0
         want = {}
@@ -957,7 +1114,7 @@ class Geo:
         order = rng.permutation(len(cand[0]))
         grid = {}
         pts = []
-        SPACING = 8.0
+        SPACING = 7.0
         cs = 11
         for oi in order:
             x_, y_, z_ = int(cand[0][oi]), int(cand[1][oi]), int(cand[2][oi])
@@ -1242,6 +1399,51 @@ class Geo:
                         break
         self.n_canopy_lights = n
 
+    def fill_dark(self):
+        """A last pass: wherever the finished cavern still has a wall, ceiling or underside lit below level 6 (shadowed by the gallery,
+        the ribs, the towers), put one more hidden light block beside it, spaced so they do not pile up."""
+        a = self.a
+        L = compute_light(self.w)
+        transp = _classes(self.w)[0]
+        air = a == 1
+        solid = (a > 1) & ~transp[a]
+        nb = np.zeros_like(air)
+        nb[1:] |= solid[:-1]
+        nb[:-1] |= solid[1:]
+        nb[:, :, 1:] |= solid[:, :, :-1]
+        nb[:, :, :-1] |= solid[:, :, 1:]
+        nb[:, :-1] |= solid[:, 1:]
+        nb[:, 1:] |= solid[:, :-1]
+        dark = air & nb & (L < 6)
+        dark[:, :18] = False
+        pts = np.argwhere(dark)
+        rng = np.random.default_rng(7)
+        pts = pts[rng.permutation(len(pts))]
+        light15 = self.id("light[level=15]")
+        taken = {}
+        n = 0
+        for x_, y_, z_ in pts:
+            k = (x_ // 6, y_ // 6, z_ // 6)
+            ok = True
+            for ax in (k[0] - 1, k[0], k[0] + 1):
+                for ay in (k[1] - 1, k[1], k[1] + 1):
+                    for az in (k[2] - 1, k[2], k[2] + 1):
+                        for (px, py, pz) in taken.get((ax, ay, az), ()):
+                            if (px - x_) ** 2 + (py - y_) ** 2 + (pz - z_) ** 2 < 36:
+                                ok = False
+                                break
+                        if not ok:
+                            break
+                    if not ok:
+                        break
+                if not ok:
+                    break
+            if ok:
+                taken.setdefault(k, []).append((x_, y_, z_))
+                a[x_, y_, z_] = light15
+                n += 1
+        self.n_fill_lights = n
+
     # ------------------------------------------------------------------ 10. anchors
     def make_anchors(self):
         w, P = self.w, self.P
@@ -1295,8 +1497,11 @@ class Geo:
         door = self.door
         w.anchor("terminal", x, y, z, yaw_of(door[0] - x, door[2] - z), 0)
         self.anchor_info["terminal"] = (x, y, z)
-        w.anchor("hq_entrance", door[0], door[1], door[2], YAW["west"], 0)
-        self.anchor_info["hq_entrance"] = door
+        # outside the door, in front of the portal's frame, looking in through the lit hall at the pyramid's own door, the pyramid
+        # rising overhead (slightly upward: the pitch is positive down)
+        ent = (door[0] + 4.5, door[1], door[2])
+        w.anchor("hq_entrance", ent[0], ent[1], ent[2], YAW["west"], -9.0)
+        self.anchor_info["hq_entrance"] = ent
 
     def run(self):
         self.fields()
@@ -1305,6 +1510,7 @@ class Geo:
         self.surface()
         self.wall_lights()
         self.headquarters()
+        self.entrance()
         self.plate_and_towers()
         self.rail_line()
         self.monorail()
@@ -1312,6 +1518,7 @@ class Geo:
         self.flora()
         self.ground_lights()
         self.canopy_lights()
+        self.fill_dark()
         self.make_anchors()
 
 
@@ -1507,18 +1714,22 @@ def cast(w, p0, p1, clear, step=0.25):
         if not w.inside(*c):
             return c
         if not clear[w.a[c]]:
+            nm = w.palette[w.a[c]] or ""
+            if "_slab[type=bottom" in nm and p[1] - c[1] >= 0.5:        # over the half-block: a bottom slab does not stop the ray
+                continue
             return c
     return None
 
 
-def sight_report(w, g):
-    """Ray-march from the reveal anchor at eye height toward the pyramid, the lake and the towers."""
+def sight_report(w, g, up=1.62):
+    """Ray-march from the reveal anchor at eye height (standing: 1.62 above the feet; seated in a car: 1.2) toward the pyramid,
+    the lake and the towers."""
     _, _, _, clear = _classes(w)
     clear = clear.copy()
     clear[1] = True
     clear[0] = False
     rx, ry, rz = g.anchor_info["reveal"]
-    eye = (rx, ry + 1.62, rz)
+    eye = (rx, ry + up, rz)
     top = LAND + 1
     halfs = [int(math.floor(PYR_HALF - 0.875 * k)) for k in range(PYR_H)]
 
@@ -1589,6 +1800,20 @@ def light_report(w, g, L, eye):
     out["upper surface air cells"] = int(surf.sum())
     out["upper surface < 5"] = float((L[surf] < 5).mean())
     out["upper surface < 3"] = float((L[surf] < 3).mean())
+    # coverage by compass sector of the wall (gallery side is the NW..E arc; the far side is the S and SW) and height band
+    xs_, ys_, zs_ = np.nonzero(surf)
+    ang = (np.degrees(np.arctan2(zs_ + 0.5 - CZ, xs_ + 0.5 - CX)) + 360) % 360          # 0 = east, 90 = south, 180 = west, 270 = north
+    sector = (ang // 45).astype(int)
+    band = np.digitize(ys_, [60, 100])
+    names = ["E", "SE", "S", "SW", "W", "NW", "N", "NE"]
+    cov = {}
+    for s in range(8):
+        row = []
+        for b in range(3):
+            m = (sector == s) & (band == b)
+            row.append((round(float(np.median(L[xs_[m], ys_[m], zs_[m]])), 1), round(float((L[xs_[m], ys_[m], zs_[m]] < 6).mean()), 3)) if m.sum() else None)
+        cov[names[s]] = row
+    out["wall light (median, frac<6) per sector, bands y<60 | 60-100 | >100"] = cov
     # sightline air: along rays from the eye to the pyramid, lake, towers
     return out
 
@@ -1660,7 +1885,7 @@ _RGB = [
     ("polished_blackstone", (53, 49, 57)), ("black_concrete", (20, 20, 24)), ("orange_concrete", (225, 97, 0)),
     ("yellow_concrete", (240, 175, 21)), ("red_concrete", (142, 33, 33)), ("blue_concrete", (45, 47, 143)),
     ("cyan_concrete", (21, 119, 136)), ("lime_concrete", (94, 168, 24)), ("light_blue_concrete", (36, 137, 199)),
-    ("copper", (192, 107, 79)), ("sea_lantern", (255, 245, 215)), ("glowstone", (255, 214, 120)), ("shroomlight", (245, 160, 70)),
+    ("copper", (192, 107, 79)), ("sign", (190, 160, 100)), ("sea_lantern", (255, 245, 215)), ("glowstone", (255, 214, 120)), ("shroomlight", (245, 160, 70)),
     ("froglight", (255, 225, 150)), ("light[", (255, 0, 255)), ("lantern", (255, 220, 160)),
     ("water", (50, 100, 200)), ("lava", (240, 110, 20)), ("grass_block", (95, 160, 70)), ("moss", (85, 130, 60)),
     ("podzol", (110, 80, 40)), ("coarse_dirt", (120, 85, 60)), ("dirt", (130, 95, 65)), ("sand", (225, 210, 160)),
@@ -1703,6 +1928,7 @@ def render(w, eye, yaw, pitch, fov, size, path, maxd=420.0, step=0.5, glass_clea
         opaque = ~(np.arange(len(w.palette)) == 1)
     opaque[0] = True
     rgb = _palette_rgb(w)
+    isslab = np.array([("_slab[type=bottom" in (nm or "")) for nm in w.palette])
     lit = emit > 0
     xs = (np.arange(Wd) + 0.5) / Wd * 2 - 1
     ys = 1 - (np.arange(Ht) + 0.5) / Ht * 2
@@ -1731,6 +1957,7 @@ def render(w, eye, yaw, pitch, fov, size, path, maxd=420.0, step=0.5, glass_clea
         cc = np.clip(c, 0, [SX - 1, SY - 1, SZ - 1])
         ids = w.a[cc[:, 0], cc[:, 1], cc[:, 2]]
         hit = inb & opaque[ids]
+        hit &= ~(isslab[ids] & ((p[:, 1] - c[:, 1]) >= 0.5))          # a bottom slab is only half a block high
         out = ~inb
         if hit.any():
             hi = active[hit]
@@ -1772,23 +1999,38 @@ def previews(w, g, outdir, L=None):
     eye = (rx, ry + 1.62, rz)
     rail_profile(w, g, os.path.join(outdir, "rail_profile.png"))
     stats = {}
-    stats["reveal"] = render(w, eye, g.reveal_yaw, 8, 100, (900, 520), os.path.join(outdir, "view_reveal.png"), L=L)
     P = g.P
-    # a few more viewpoints
-    for nm in ("train_3", "train_8", "train_14", "train_20", "terminal"):
+    ra = w.anchors["reveal"]
+    W16 = (960, 540)                                   # 16:9, horizontal fov 102 = the game's default vertical 70
+    # the reveal exactly as the game shows it: standing on the wagon bed (1.62) and seated in the car (1.2), at the anchor's own yaw and pitch
+    stats["reveal"] = render(w, eye, ra["yaw"], ra["pitch"], 102, W16, os.path.join(outdir, "view_reveal.png"), L=L)
+    stats["reveal_seated"] = render(w, (rx, ry + 1.2, rz), ra["yaw"], ra["pitch"], 102, W16, os.path.join(outdir, "view_reveal_seated.png"), L=L)
+    # the ride: forward along the track and out to the right over the cavern
+    for nm in ("start", "wall_opens", "train_3", "train_8", "train_14", "train_20", "train_24", "terminal"):
         if nm in g.anchor_info:
             x, y, z = g.anchor_info[nm]
             i = int(np.argmin(np.hypot(P["x"] - x, P["z"] - z)))
-            yaw = math.degrees(math.atan2(-P["nx"][i], P["nz"][i]))
-            stats[nm] = render(w, (x, y + 1.62, z), yaw, 5, 100, (800, 450), os.path.join(outdir, f"view_{nm}.png"), L=L)
+            yaw = math.degrees(math.atan2(-P["tx"][i], P["tz"][i]))
+            stats[nm] = render(w, (x, y + 1.62, z), yaw, 0, 102, (800, 450), os.path.join(outdir, f"view_{nm}.png"), L=L)
+            if nm in ("train_8", "train_14", "train_24"):
+                stats[nm + "_right"] = render(w, (x, y + 1.2, z), yaw + 50, 8, 102, (800, 450), os.path.join(outdir, f"view_{nm}_right.png"), L=L)
+    ea = w.anchors["hq_entrance"]
+    stats["hq_entrance"] = render(w, (g.anchor_info["hq_entrance"][0], g.anchor_info["hq_entrance"][1] + 1.62, g.anchor_info["hq_entrance"][2]),
+                                  ea["yaw"], ea["pitch"], 102, W16, os.path.join(outdir, "view_hq_entrance.png"), L=L)
+    gx_ = getattr(g, "gate_x", 301)
+    stats["hq_gate"] = render(w, (gx_ + 14.0, 22.0, TZ + 0.5), 90.0, -12.0, 102, W16, os.path.join(outdir, "view_hq_gate.png"), L=L)
+    ta = g.anchor_info["terminal"]
+    stats["terminal_pyramid"] = render(w, (ta[0], ta[1] + 1.62, ta[2]), w.anchors["terminal"]["yaw"], -18.0, 102, W16,
+                                       os.path.join(outdir, "view_terminal_pyramid.png"), L=L)
     lyaw = math.degrees(math.atan2(-(LK[0] - rx), LK[1] - rz))
-    stats["reveal_lake"] = render(w, eye, lyaw, 14, 100, (900, 520), os.path.join(outdir, "view_reveal_lake.png"), L=L)
+    stats["reveal_lake"] = render(w, eye, lyaw, 14, 102, W16, os.path.join(outdir, "view_reveal_lake.png"), L=L)
     stats["reveal_wide"] = render(w, eye, g.reveal_yaw, 0, 140, (1000, 480), os.path.join(outdir, "view_reveal_wide.png"), L=L)
-    stats["from_nw"] = render(w, (70, 60, 80), -45, 10, 100, (900, 520), os.path.join(outdir, "view_overview_sw.png"), L=L)
-    stats["from_south"] = render(w, (160, 90, 290), 180, 14, 100, (900, 520), os.path.join(outdir, "view_overview_from_south.png"), L=L)
-    stats["from_west"] = render(w, (30, 80, 170), -90, 12, 100, (900, 520), os.path.join(outdir, "view_overview_from_west.png"), L=L)
-    stats["floor_north"] = render(w, (160, 40, 20), 0, 12, 100, (900, 520), os.path.join(outdir, "view_from_floor_north.png"), L=L)
-    stats["ground_lake"] = render(w, (200, 22, 215), 0, -4, 100, (900, 520), os.path.join(outdir, "view_ground_lake.png"), L=L)
+    stats["from_nw"] = render(w, (70, 60, 80), -45, 10, 102, W16, os.path.join(outdir, "view_overview_sw.png"), L=L)
+    stats["from_south"] = render(w, (160, 90, 290), 180, 14, 102, W16, os.path.join(outdir, "view_overview_from_south.png"), L=L)
+    stats["from_west"] = render(w, (30, 80, 170), -90, 12, 102, W16, os.path.join(outdir, "view_overview_from_west.png"), L=L)
+    stats["far_wall"] = render(w, (160, 40, 160), 180, 10, 102, W16, os.path.join(outdir, "view_far_wall_from_floor.png"), L=L)
+    stats["floor_north"] = render(w, (160, 40, 20), 0, 12, 102, W16, os.path.join(outdir, "view_from_floor_north.png"), L=L)
+    stats["ground_lake"] = render(w, (200, 22, 215), 0, -4, 102, W16, os.path.join(outdir, "view_ground_lake.png"), L=L)
     if L is not None:
         for k, v in stats.items():
             if v is not None and len(v):
@@ -1829,6 +2071,9 @@ if __name__ == "__main__":
     print(f"  pyramid points visible {sum(py.values())}/{len(py)}  (apex {py['apex']})")
     print(f"  lake points visible {sum(lk.values())}/{len(lk)}")
     print(f"  towers seen (>=1 of 3 heights) {sum(1 for v in tw.values() if v)}/{len(tw)}; per tower {list(tw.values())}")
+    eye2, sight2 = sight_report(w, g, 1.2)
+    py2, lk2, tw2 = sight2["pyramid"], sight2["lake"], sight2["towers"]
+    print(f"  seated eye (1.2): pyramid {sum(py2.values())}/{len(py2)}, lake {sum(lk2.values())}/{len(lk2)}, towers {sum(1 for v in tw2.values() if v)}/{len(tw2)}")
     t0 = time.time()
     L = compute_light(w)
     print(f"light computed in {time.time() - t0:.1f}s")

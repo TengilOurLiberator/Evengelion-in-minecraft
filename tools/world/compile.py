@@ -17,6 +17,11 @@ changes nothing, and in a real set most of the volume is air. After a set is cha
 Placement is a chain of small functions run a tick apart, so the server never stalls: for each group of tiles
 (a 2x2 block of tile columns) it forceloads the chunks, waits until they are loaded, then places the tiles a few at a
 time. The set's own commands run at the end, with everything still loaded, and then the forceload is released.
+
+After the tiles, the chain also gives the set its biome (worldgen.biome_items): the set's footprint plus a margin, over the
+whole build height, in squares of at most 14x14 chunks that are forceloaded like the tile stages and filled with `fillbiome`
+in bands of 128 blocks. A probe (worldgen.probe_lines: `execute if biome` at corners, centre, margin edge, above, below and
+at the set's anchors) then reports in the server log, before the forceload ends, whether the biome is where it should be.
 """
 import math
 import re

@@ -197,7 +197,7 @@ def build_prompt(out, ctx):
         f"positioned ^ ^-0.2 ^1.7 run function {NS}:story/prompt/put"])
     out.function("story/prompt/place", place)
     out.function("story/prompt/show", [fn("story/prompt/place"),
-                                       f"execute at {P()} run playsound minecraft:block.amethyst_block.chime master {PA()} ~ ~ ~ 0.5 1.6 0.5",
+                                       f"execute at {P()} run playsound angel:sfx.speak_chime master {PA()} ~ ~ ~ 0.6 1.0 0.5",
                                        fn("story/prompt/bar")])
     out.function("story/prompt/keep", [
         # in a vehicle the panel is moved every tick, otherwise every fifth

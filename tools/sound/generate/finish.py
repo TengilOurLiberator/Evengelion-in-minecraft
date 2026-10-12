@@ -177,9 +177,27 @@ def pulse_loop(x, e, L, log, want_downbeat=False):
         log["fallback"] = "no bar start in range"
     if not want_downbeat:
         s += N(0.03)       # like the procedural loops: no hit sits exactly on the join (the launch drive keeps its kick on sample 0)
+    else:
+        # the beat tracker's phase is where the onset energy peaks, a little after the hit starts: find where the kick really begins
+        # near the downbeat and start the cycle there, so the first sample of the cycle IS the kick
+        pass
     log["start_s"] = round(s / SR, 3)
     log["join_cost"] = round(c, 2)
-    return circular_pick(x2, s, L, xf), s, x2
+    cyc = circular_pick(x2, s, L, xf)
+    if want_downbeat:
+        # The tracker's phase is where onset energy peaks, not where the kick starts.  A seamless loop can be rolled round without
+        # breaking the join, so roll it until the loudest sharp onset of the first half second sits on sample 0.
+        m = au.mono(cyc)
+        w = N(0.004)
+        seg = np.concatenate([m, m[:N(0.5)]])[:N(0.5) + w + N(0.01)]
+        e5 = 10 * np.log10(np.array([np.mean(seg[i:i + w] ** 2) for i in range(0, len(seg) - w, N(0.001))]) + 1e-12)
+        rise = e5[8:] - e5[:-8]
+        cands = [i for i in range(min(len(rise), 500)) if rise[i] > 12.0 and (i == 0 or rise[i] >= rise[i - 1])]
+        best = max(cands, key=lambda i: e5[i + 8:i + 70].max() if i + 8 < len(e5) else -999) if cands else int(np.argmax(rise[:500]))
+        roll = max(0, (best + 4) * N(0.001) - N(0.006))
+        log["kick_roll_ms"] = round(roll / SR * 1000, 1)
+        cyc = np.roll(cyc, -roll, axis=0)
+    return cyc, s, x2
 
 
 def circular_pick(x, s, L, xf):
@@ -458,7 +476,7 @@ def do_music_launch(event, e, k, c, loop):
     if start < 0 or end > len(xb):
         raise RuntimeError("build too short for 20 s")
     build = xb[start:end].copy()
-    build = au.fade(build, 0.25, 0.03, "cos")
+    build = au.fade(au.fade(build, 0.008, 0.0, "lin"), 0.0, 0.03, "cos")
     long_x = np.concatenate([build, cyc, cyc])
     assert len(long_x) == c_long["samples"], (len(long_x), c_long["samples"])
     yl, yp = level_pair(long_x, cyc, Lc, c_long, c_loop, log, early_ramp=build_n)

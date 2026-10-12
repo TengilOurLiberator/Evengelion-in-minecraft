@@ -108,6 +108,10 @@ def main(argv=None):
     out.base = base
     written, removed = out.write(manifest)
     print(f"story: {summary['functions']} files ({written} changed, {removed} stale removed) in {summary['seconds']:.1f}s -> {base}")
+    if not args.out:
+        import cardfont                      # the title-card typeface lives in the resource pack: (re)write it with the datapack (idempotent)
+        changed = cardfont.write_assets()
+        print(f"card font angel:card: {len(changed)} resource-pack files changed")
     for n, title, steps in summary["scenes"]:
         print(f"  scene {n}: {title} ({steps} steps)")
     if ctx.missing_anchors:

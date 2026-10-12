@@ -132,11 +132,13 @@ def hills(site):
     # the sea in the gap between the two hills: beach slope from x~188, floor ~18 deep
     Xw = X + 7 * np.sin(Z * 0.07 + 1) + 3 * np.sin(Z * 0.21)          # a wobbly shore
     Zw = np.abs(Z - 128) + 6 * np.sin(X * 0.09)
-    s = np.clip((Xw - 186) / 18, 0, 1) ** 1.15 * (1 - ss((Zw - 26) / 24))
-    T = T * (1 - s) + (31.5 - 14.0 * np.clip((Xw - 186) / 16, 0, 1)) * s
-    # far headland that closes the bay at the east edge
+    bay_w = 26 + 0.24 * np.clip(X - 190, 0, 65)                       # the bay widens toward the open sea
+    s = np.clip((Xw - 186) / 18, 0, 1) ** 1.15 * (1 - ss((Zw - bay_w) / 26))
+    T = T * (1 - s) + (31.5 - 14.0 * np.clip((Xw - 186) / 16, 0, 1) - 1.5 * np.clip((X - 215) / 40, 0, 1)) * s
+    # the headlands flank the bay and run out to the east edge; between them there is open water all the way (no closing hill)
     ro = 0.8 + 0.2 * np.sin(Z * 0.11) * np.cos(Z * 0.047 + 1.3)
-    T = np.maximum(T, 19 + 42 * ss((X - 222) / 33) * ro)
+    closure = ss((np.abs(Z - 128) - 40) / 32)
+    T = np.maximum(T, (19 + 42 * ss((X - 222) / 33) * ro) * closure)
     return T
 
 
@@ -208,6 +210,16 @@ def sculpt(site, Tf):
         num[a0:a1, b0:b1] += wt * py
         den[a0:a1, b0:b1] += wt
     ry = np.where(den > 1e-9, num / np.maximum(den, 1e-9), ry)
+    # the stopping place "ridge": the outer strip of the carriageway on its sea side, within 8 blocks of the stop, is lowered by up to
+    # 1.4 blocks, so that the road's own edge no longer hides the ground below from a seated eye (the car's 4-wide path stays level)
+    X0, Z0 = np.meshgrid(np.arange(N, dtype=float), np.arange(N, dtype=float), indexing="ij")
+    ax, az = RIDGE[0] + 0.5, RIDGE[1] + 0.5
+    v = np.array([207.0 - ax, 63.5 - az])
+    tt = np.clip(((X0 - ax) * v[0] + (Z0 - az) * v[1]) / (v @ v), 0, 1)
+    dseg = np.hypot(X0 - (ax + tt * v[0]), Z0 - (az + tt * v[1]))
+    south = ((X0 - ax) * (-v[1]) + (Z0 - az) * v[0]) > 0
+    near = 1 - ss((np.hypot(X0 - ax, Z0 - az) - 6.5) / 4)
+    ry = ry - 1.6 * ss((dseg - 1.9) / 0.9) * south * near
     wgt = 1 - ss((dist - (hw + 1.3)) / 15)
     wgt[dist > hw + 1.3 + 15] = 0
     Tf = Tf * (1 - wgt) + (ry - 1) * wgt
@@ -232,8 +244,17 @@ def terrain(site):
     dd = np.hypot((X - PLATEAU[0]) / PLATEAU[2], (Z - PLATEAU[1]) / PLATEAU[3])
     kk = 1 - ss((dd - 1) * min(PLATEAU[2], PLATEAU[3]) / 12)
     Tf = Tf * (1 - kk) + (RIDGE_Y - 1 - 0.16 * np.clip(Z - 56, 0, None)) * kk
+    # the overlook: from the car's stopping place the ground falls away toward the sea within a few blocks, so that the town, the
+    # bay and the angel's spawn lie spread out below a seated eye instead of behind a long flat shelf (the road keeps its own shape)
+    ux, uz = 0.445, 0.896                                  # unit vector from the ridge toward the sea gap (230, 128)
+    s_ = (X - (RIDGE[0] + 0.5)) * ux + (Z - (RIDGE[1] + 0.5)) * uz
+    l_ = (X - (RIDGE[0] + 0.5)) * uz - (Z - (RIDGE[1] + 0.5)) * ux
+    wedge = ss((30 - np.abs(l_)) / 16) * ss((s_ - 3.5) / 4) * ss((site.road_dist - 6.0) / 5) * ss((45 - s_) / 15)
+    fall = np.maximum(RIDGE_Y - 1 - 1.15 * np.clip(s_ - 6, 0, None), 36 - 0.25 * np.clip(s_ - 17, 0, None))
+    fall = np.maximum(fall, 33.0)
     # the road has the last word: the levelled bench and hollow must not leave a bank beside the road where it leaves them
     Tf = Tf * (1 - site.road_wgt) + (site.road_y - 1) * site.road_wgt
+    Tf = np.minimum(Tf, Tf * (1 - wedge) + fall * wedge)                # (the overlook falls away beside the road, never under it)
     site.Tf = Tf
     T = np.rint(Tf).astype(int)
     # the road itself: half-block steps so the grade is walkable; slab_y marks the cells that carry a bottom slab
@@ -291,6 +312,10 @@ def lay_terrain(site):
     arr = np.where((arr == 0) & (Y <= 30) & (Y > Tn), ids["water"], arr)
     w.a[:] = arr.astype(np.uint16)
     site.wet = wet
+    # the sea runs out to the east edge of the set: an invisible barrier column at the edge keeps the water from flowing out into
+    # the void (the player sees open water, the surface running out to a clear horizon)
+    edge = w.a[N - 1]
+    edge[edge == ids["water"]] = w._id("barrier")
 
 
 # --------------------------------------------------------------------------------------------- shared drawing
@@ -467,11 +492,19 @@ def hall(S):
     S.occ[x0 - 2:x1 + 3, z0 - 2:z1 + 3] = True
     fy = PLAT_TOP                       # floor row
     top = fy + 6                        # roof row
-    w.fill(x0, fy, z0, x1, fy, z1, "smooth_stone")
+    # floor: a dark chequer that contrasts with the pale walls and the pale platform, with a bright yellow guide path from the platform
+    # door to the exit and white joint lines
     for x in range(x0, x1 + 1):
         for z in range(z0, z1 + 1):
-            if (x + z) % 5 == 0:
-                w.set(x, fy, z, "polished_andesite")
+            if abs(z - CL) <= 1:
+                b = "yellow_concrete"
+            elif abs(z - CL) == 2:
+                b = "white_concrete"
+            elif ((x // 2) + (z // 2)) % 2 == 0:
+                b = "gray_concrete"
+            else:
+                b = "polished_blackstone"
+            w.set(x, fy, z, b)
     # walls
     w.fill(x0, fy + 1, z0, x1, top - 1, z0, "white_concrete")
     w.fill(x0, fy + 1, z1, x1, top - 1, z1, "white_concrete")
@@ -552,6 +585,41 @@ def hall(S):
     for z in (CL - 7, CL + 7):
         for y in range(fy + 1, top - 1):
             w.set(58, y, z, "andesite_wall")
+    # --- the bright doorway: the east exit is framed in light (lit jambs, a lit porch roof, a white-and-yellow threshold), so the eye is
+    # drawn along the yellow guide path to the glowing opening
+    for z in (CL - 5, CL + 5):
+        for y in range(fy + 1, top):
+            w.set(x1, y, z, "sea_lantern")
+        for y in range(fy + 1, top - 3):
+            w.set(x1 + 1, y, z, "white_concrete")
+    for z in range(CL - 4, CL + 5):
+        w.set(x1, fy, z, "white_concrete")
+        w.set(x1 + 1, fy, z, "yellow_concrete")
+    for z in (CL - 6, CL, CL + 6):
+        for x in range(54, 59):
+            w.set(x, top - 1, z, "sea_lantern")
+    # lit ceiling in the hall too: lamp rows along the guide path
+    for x in range(x0 + 2, x1 - 1, 2):
+        for z in (CL - 3, CL + 3):
+            w.set(x, top - 1, z, "sea_lantern")
+    # --- the ticket-gate line reads from far off: an overhead board across the gates, with its name on both faces, and a green
+    # "go" light on every reader post
+    for z in range(z0 + 1, z1):
+        for y in (fy + 4, fy + 5):
+            w.set(gx, y, z, "blue_concrete" if y == fy + 4 else "white_concrete")
+    w.fill(gx, fy + 4, CL - 1, gx, fy + 5, CL + 1, "black_concrete")
+    place_wall_sign(w, gx + 1, fy + 4, CL, "east", [jp("改札口"), "TICKET GATES", "", ""], "birch")
+    place_wall_sign(w, gx - 1, fy + 4, CL, "west", [jp("改札口"), "TICKET GATES", "", ""], "birch")
+    for z in range(z0 + 1, z1):
+        if (z + 1 in passages) != (z - 1 in passages) and z not in passages:
+            w.set(gx, fy + 3, z, "lime_concrete")
+    # --- a timetable board on the pier left of the platform door: white sheet, blue frame, rows of departures struck through in red
+    for z in range(113, 120):
+        for y in range(fy + 1, fy + 5):
+            w.set(41, y, z, "blue_concrete" if (z in (113, 119) or y in (fy + 1, fy + 4)) else ("white_concrete" if (z + y) % 3 else "light_blue_concrete"))
+    for z in range(114, 119):
+        w.set(41, fy + 3, z, "red_concrete")
+    place_wall_sign(w, 40, fy + 2, 116, "west", [jp("時刻表"), "TIMETABLE", "ALL SERVICES", "SUSPENDED"], "birch")
 
 
 def train(S):
@@ -793,7 +861,7 @@ def hill_road(S):
         # guard rail where the ground falls away outside the shoulder
         sx = int(round(x + 3.2 * gx[x, z] / n[x, z]))
         sz = int(round(z + 3.2 * gz[x, z] / n[x, z]))
-        if 0 <= sx < N and 0 <= sz < N and T[sx, sz] <= t - 2 and dist[x, z] > 4.0 and z < 104:
+        if 0 <= sx < N and 0 <= sz < N and T[sx, sz] <= t - 2 and dist[x, z] > 4.0 and z < 104 and not (170 < x < 218 and z < 84):
             w.set(x, t + 1, z, "iron_bars")
     # a few white road-edge markers on the surface (every ~6 blocks of path) so the line of the road reads from the town
     A = S.road_path
@@ -820,8 +888,8 @@ def lookout(S):
         for z in range(cz - rz, cz + rz + 1):
             d = math.hypot((x - cx) / rx, (z - cz) / rz)
             if 0.88 <= d < 0.97 and z > cz + 2 and x > cx - 14 and not S.hill_road[x, z]:
-                if abs(x - RIDGE[0]) > 5 or abs(z - cz) < 3:
-                    w.set(x, int(T[x, z]) + 1, z, "stone_brick_wall" if (x + z) % 2 else "stone_brick_wall")
+                if abs(x - RIDGE[0]) > 17:                       # nothing at all in front of the car: only a knee-high kerb further off
+                    slab(w, x, int(T[x, z]) + 1, z, "stone_brick")
     # furniture on the verge. The road leaves the bench at its west end (it runs on through x 186..172, z 52..48 and down the
     # hill), so the bench and the map board stand on the north rim, z 45..46, well clear of the carriageway and of the car's
     # swept path (the north rim is also away from the south-east view to the sea)
@@ -940,6 +1008,93 @@ def tunnel(S):
     S.keep[PX0 - 8:PX1 + 9, 14:60] = True
 
 
+def hall_lighting(S):
+    """The car-train hall inside the hill: it used to be a black box (the only lamps sat on the 14-high ceiling, out of reach of their own
+    light).  Now: visible industrial lamps low on the walls and hung from chains, hidden light blocks at working height, hazard striping,
+    wall panels, sleepers under the rails, a control booth, and lamps in the gate passage with the hall behind it left darker."""
+    w = S.w
+    FY = HOLLOW_Y - 1
+    HX0, HX1, HZ0, HZ1 = 164, 218, 2, 20
+    top_y = FY + 14
+    GX0, GX1 = 183, 197
+    # --- wall panels and hazard skirting on both long walls (north wall z = 1, south wall z = 21 either side of the passage)
+    for x in range(HX0, HX1 + 1):
+        for z, face in ((HZ0 - 1, "south"), (HZ1 + 1, "north")):
+            if z == HZ1 + 1 and GX0 - 1 <= x <= GX1 + 1:
+                continue
+            seam = (x - HX0) % 6 == 0
+            panel = "light_gray_concrete" if ((x - HX0) // 6) % 2 == 0 else "gray_concrete"
+            for y in range(FY + 1, top_y - 2):
+                w.set(x, y, z, "iron_block" if seam else panel)
+            w.set(x, FY + 6, z, "blue_concrete")                                     # the stripe
+            w.set(x, FY + 1, z, "yellow_concrete" if (x // 2) % 2 == 0 else "black_concrete")
+            w.set(x, FY + 2, z, "yellow_concrete" if (x // 2) % 2 == 1 else "black_concrete")
+    # --- lamps: sea lanterns let into the walls at two heights, and lamps hung on chains over the platform and the track
+    for x in range(HX0 + 4, HX1 - 2, 6):
+        for z in (HZ0 - 1, HZ1 + 1):
+            if z == HZ1 + 1 and GX0 - 3 <= x <= GX1 + 3:
+                continue
+            for y in (FY + 4, FY + 9):
+                w.set(x, y, z, "sea_lantern")
+                w.set(x + 1, y, z, "sea_lantern")
+    for x in range(HX0 + 9, HX1 - 4, 10):
+        for z in (7, 16):
+            for y in range(top_y - 5, top_y + 1):
+                w.set(x, y, z, "iron_chain[axis=y]")
+            w.fill(x - 1, top_y - 7, z, x + 1, top_y - 6, z, "sea_lantern")
+    # hidden light at working height, a lamp every 6 blocks over the platform and the track (level 14: the hall is lit, not flooded)
+    for x in range(HX0 + 2, HX1, 6):
+        for z in (4, 8, 12, 16, 19):
+            if w.a[x, top_y - 6, z] <= 1:
+                w.set(x, top_y - 6, z, "light[level=14]")
+        for z in (6, 14):
+            if w.a[x, FY + 3, z] <= 1:
+                w.set(x, FY + 3, z, "light[level=13]")
+    # --- sleepers under the rails
+    for x in range(HX0, HX1 + 1, 2):
+        w.fill(x, FY - 2, 5, x, FY - 2, 10, "dark_oak_planks")
+    # --- column bases keep their hazard feet; add head bands
+    for x in range(HX0 + 4, HX1, 10):
+        for y in (top_y - 3, top_y - 2):
+            w.set(x, y, 15, "yellow_concrete" if y % 2 else "black_concrete")
+    # --- the control booth on the platform's west end (clear of the car's way: the car drives x 187..195)
+    bx0, bx1, bz0, bz1 = 168, 175, 13, 19
+    w.fill(bx0, FY + 1, bz0, bx1, FY + 5, bz1, "light_gray_concrete")
+    w.fill(bx0 + 1, FY + 1, bz0 + 1, bx1 - 1, FY + 4, bz1 - 1, "air")
+    w.fill(bx0 - 1, FY + 6, bz0 - 1, bx1 + 1, FY + 6, bz1 + 1, "gray_concrete")      # roof with an overhang
+    w.fill(bx0, FY + 1, bz0, bx1, FY + 1, bz0, "yellow_concrete")
+    for x in range(bx0 + 1, bx1):                                                    # the window band toward the track (north face)
+        for y in (FY + 2, FY + 3):
+            w.set(x, y, bz0, pane("x"))
+    for z in range(bz0 + 1, bz1):
+        for y in (FY + 2, FY + 3):
+            w.set(bx1, y, z, pane("z"))
+    w.fill(bx0 + 2, FY + 1, bz1 - 0, bx0 + 3, FY + 2, bz1, "air")                      # the door, south side
+    w.fill(bx0 + 1, FY + 1, bz0 + 1, bx1 - 1, FY + 1, bz0 + 2, "black_concrete")     # the console under the window
+    for x in range(bx0 + 2, bx1 - 1):
+        w.set(x, FY + 2, bz0 + 1, ["lime_concrete", "red_concrete", "yellow_concrete", "light_blue_concrete"][x % 4])
+    w.fill(bx0 + 2, FY + 4, bz0 + 2, bx1 - 2, FY + 4, bz1 - 2, "sea_lantern")        # ceiling light inside
+    w.fill(bx0, FY + 5, bz0, bx1, FY + 5, bz0, "blue_concrete")
+    place_wall_sign(w, bx0 + 3, FY + 5, bz0 - 1, "north", [jp("管制室"), "CONTROL", "", ""], "birch")
+    w.set(bx0 + 3, FY + 7, bz1 - 1, "iron_bars"); w.set(bx0 + 3, FY + 8, bz1 - 1, "iron_bars"); w.set(bx0 + 3, FY + 9, bz1 - 1, "end_rod[facing=up]")
+    # --- the gate passage: lamps in the ceiling and on both jambs, hazard stripes on the jambs; the hall behind stays the darker place
+    for x in range(GX0 + 1, GX1, 3):
+        for z in (14, 17, 20):
+            w.set(x, FY + 10, z, "sea_lantern")
+    for z in range(12, 23):
+        for x in (GX0 - 1, GX1 + 1):
+            for y in range(FY + 1, FY + 10):
+                if z >= 21:
+                    w.set(x, y, z, "yellow_concrete" if (y + z) % 3 else "black_concrete")
+                elif z in (14, 18):
+                    if y in (FY + 4, FY + 5):
+                        w.set(x, y, z, "sea_lantern")
+    # floodlights over the gate, on the portal wall's face (the blast gate leaves stand either side)
+    for x in range(180, 201, 5):
+        w.set(x, FY + 12, 23, "sea_lantern")
+    S.keep[HX0:HX1 + 1, HZ0 - 1:HZ1 + 2] = True
+
+
 # --------------------------------------------------------------------------------------------- buildings
 STYLES = [
     # wall, base course, trim, weight
@@ -1037,9 +1192,14 @@ def roof_gable(F, ytop, mat, pitch2, wall):
     return ytop + (half // 2 if pitch2 else half)
 
 
-def building(S, x0, z0, ex, ez, front, floors, style=None, roof=None, shop=True, rng=None):
+AWNINGS = [("warped", "birch"), ("red_nether_brick", "quartz"), ("acacia", "birch"), ("prismarine_brick", "quartz"),
+           ("mangrove", "birch"), ("cherry", "quartz"), ("crimson", "birch"), ("bamboo", "quartz")]
+
+
+def building(S, x0, z0, ex, ez, front, floors, style=None, roof=None, shop=True, rng=None, awning=False):
     """A low town building: shuttered shopfront below, windowed floors above, flat or tile roof.
-    Footprint [x0, x0+ex) x [z0, z0+ez); `front` is the side facing the street."""
+    Footprint [x0, x0+ex) x [z0, z0+ez); `front` is the side facing the street. awning=True hangs a striped shop awning (two rows, a
+    stair and a slab, colours from a private random stream so that the town's own random look stays as it was) over the pavement."""
     w = S.w
     rng = rng or S.rng
     F = Frame(w, x0, z0, ex, ez, front)
@@ -1085,6 +1245,15 @@ def building(S, x0, z0, ex, ez, front, floors, style=None, roof=None, shop=True,
     cu = U // 2 if abs(U // 2 - door_u) > 2 else (U - 3 if door_u < 3 else 2)
     x, z = F.at(cu, -1)
     place_wall_sign(w, x, y0 + 2, z, F.out, [jp(kind[0]), kind[1], "", ""], "birch")
+    if awning:
+        arng = random.Random(x0 * 131 + z0 * 7 + 5)
+        c1, c2 = arng.choice(AWNINGS)
+        for u in range(1, U - 1):
+            mat = c1 if u % 2 == 0 else c2
+            x, z = F.at(u, -1)
+            stair(w, x, y0 + 3, z, mat, F.inn)
+            x, z = F.at(u, -2)
+            slab(w, x, y0 + 3, z, mat)
     # protruding blade sign (a coloured trapdoor panel turned edge-on), at one end
     bu = U - 1 if door_u < 3 else 0
     side = RIGHT[F.out] if bu == U - 1 else LEFT[F.out]
@@ -1316,7 +1485,7 @@ def lanes_and_lots(S):
     for z0, z1 in ((98, 101), (155, 158)):                      # back lanes behind the two frontages
         w.fill(92, GY - 1, z0, 146, GY - 1, z1, ROAD)
 
-    def row(xa, xb, front, zf, dmin, dmax, gap=0.2, floors=(2, 3, 4), fw=(4, 4, 2)):
+    def row(xa, xb, front, zf, dmin, dmax, gap=0.2, floors=(2, 3, 4), fw=(4, 4, 2), awnings=True):
         x = xa
         while xb - x + 1 >= 6:
             wd = rng.randint(8, 14)
@@ -1325,7 +1494,7 @@ def lanes_and_lots(S):
             d = rng.randint(dmin, dmax)
             fl = rng.choices(floors, fw)[0]
             z0 = zf - d + 1 if front == "south" else zf
-            building(S, x, z0, wd, d, front, fl)
+            building(S, x, z0, wd, d, front, fl, awning=awnings)
             x += wd
             if rng.random() < gap:
                 x += 2
@@ -1393,14 +1562,19 @@ def wires(S, a, b, sag=1.5):
 def signal(S, x, z, arm_to, facing_head):
     """Traffic-signal mast on the pavement at (x, z) with an arm over the carriageway to z = arm_to; the heads face `facing_head`."""
     w = S.w
-    for y in range(GY, GY + 9):
+    # a thin mast, a short arm that reaches only over the kerb lane (never toward the middle of the carriageway), and one compact
+    # head 1 x 3 hanging from its end: black housing with three small dark lenses (power is off) on both faces
+    for y in range(GY, GY + 8):
         w.set(x, y, z, "andesite_wall")
     step = 1 if arm_to > z else -1
-    for zz in range(z, arm_to + step, step):
-        w.set(x, GY + 8, zz, bs("iron_bars", north=True, south=True))
-    for zz in (arm_to, (z + arm_to) // 2):
-        for dy, b in ((7, "red_concrete"), (6, "black_concrete"), (5, "black_concrete")):
-            w.set(x, GY + dy, zz, b)
+    zend = z + 3 * step
+    for zz in range(z + step, zend + step, step):
+        w.set(x, GY + 7, zz, bs("iron_bars", north=True, south=True))
+    for dy, lens in ((6, "crimson_button"), (5, "bamboo_button"), (4, "warped_button")):
+        w.set(x, GY + dy, zend, "black_concrete")
+        w.set(x + 1, GY + dy, zend, bs(lens, face="wall", facing="east", powered=False))
+        w.set(x - 1, GY + dy, zend, bs(lens, face="wall", facing="west", powered=False))
+    w.set(x, GY + 3, zend, "light_gray_concrete") if False else None
     S.occ[x, z] = True
 
 
@@ -1506,15 +1680,24 @@ def phone_booth(S, x0, z0):
                         w.set(x, yy, z, pane("x") if dz in (0, D - 1) else pane("z"))
             w.set(x, y + 3, z, "light_gray_concrete")
     w.fill(x0, y + 4, z0, x0 + 3, y + 4, z0 + D - 1, "white_concrete")
-    # the telephone: a green body on a steel post, handset lever, a shelf in front, a directory board beside it
+    # a booth you cannot miss: a bright white back wall with a lime telephone on it at eye level (two blocks tall: the body, a cyan
+    # display, a black handset cradle and a yellow coin box), a lamp over it, a yellow mat on the floor, and a lit green blade sign
     px = x0 + 1
-    w.set(px, y, z0 + 1, "iron_bars")
-    w.set(px, y + 1, z0 + 1, "green_concrete")
-    w.set(px, y + 2, z0 + 1, "light_gray_concrete")
-    w.set(px, y + 1, z0 + 2, bs("lever", face="wall", facing="south", powered=False))  # the handset
-    w.set(px + 1, y + 1, z0 + 1, "white_concrete")
-    w.set(px + 1, y + 2, z0 + 1, "white_concrete")
-    place_wall_sign(w, px + 1, y + 1, z0 + 2, "south", [jp("公衆電話"), "PUBLIC", "TELEPHONE", ""], "birch")
+    for xx in (px, px + 1):
+        for yy in range(y + 1, y + 3):
+            w.set(xx, yy, z0 + 1, "white_concrete")                    # back panel behind and beside the phone
+    w.set(px, y + 1, z0 + 1, "lime_concrete")                          # the telephone body (eye level: 33.5 .. 34.5 for a 34.1 eye)
+    w.set(px, y + 2, z0 + 1, "lime_concrete")
+    w.set(px + 1, y + 2, z0 + 1, bs("polished_blackstone_stairs", facing="east", half="top", shape="straight"))   # the handset on its cradle
+    w.set(px + 1, y + 1, z0 + 1, "yellow_concrete")                    # coin box
+    w.set(px, y + 3, z0 + 1, "sea_lantern")                            # lamp over the phone (in the roof row)
+    w.set(px + 1, y + 3, z0 + 1, "sea_lantern")
+    # the sign: a green blade on the south front, lit, with the name on it
+    for yy in range(y + 5, y + 9):
+        w.set(x0, yy, z0 + D - 1, "green_concrete")
+    w.set(x0, y + 9, z0 + D - 1, "sea_lantern")
+    place_wall_sign(w, x0 + 1, y + 5, z0 + D - 1, "east", [jp("公衆電話"), "PUBLIC", "TELEPHONE", ""], "birch")
+    place_wall_sign(w, x0 - 1, y + 5, z0 + D - 1, "west", [jp("公衆電話"), "PUBLIC", "TELEPHONE", ""], "birch")
     S.occ[x0 - 1:x0 + 5, z0 - 1:z0 + D + 1] = True
     return (x0 + 1.5, y + 0.5, z0 + 3.5), (x0 + 1.5, y + 1.5, z0 + 1.5)
 
@@ -1534,12 +1717,12 @@ def street_scene(S, with_car=False):
     # --- utility poles and wires along both pavements
     north = [pole(S, x, 121, 11) for x in (101, 129, 157)]
     south = [pole(S, x, 135, 11) for x in (105, 133, 161)]
+    # one clean, level run per side (the middle conductor only), no service drops across the road: wires of chain links read as
+    # dotted dashes, so there are as few of them as can be and none cross the centre of the street's views
     for a, b in zip(north, north[1:]):
-        wires(S, a, b)
+        wires(S, a[1:2], b[1:2], sag=0.0)
     for a, b in zip(south, south[1:]):
-        wires(S, a, b)
-    chain_line(w, 129, GY + 10, 121, 133, GY + 10, 135, sag=1.5)                 # a service drop across the road
-    chain_line(w, 129, GY + 10, 119, 133, GY + 10, 133, sag=1.5)
+        wires(S, a[1:2], b[1:2], sag=0.0)
     # stub poles into the forecourt and the back lanes
     pole(S, 60, 156, 10)
     pole(S, 60, 100, 10)
@@ -1638,6 +1821,79 @@ def street_scene(S, with_car=False):
         S.car_info = info
 
 
+def planter(S, x, z, sx, sz, kind=0):
+    """A raised brick planter sx x sz blocks with soil and flowers, a flowering shrub in the middle of the longer ones, brick corners."""
+    w = S.w
+    flowers = [("red_tulip", "orange_tulip", "pink_tulip"), ("cornflower", "azure_bluet", "allium"),
+               ("oxeye_daisy", "dandelion", "white_tulip"), ("poppy", "orange_tulip", "red_tulip")][kind % 4]
+    for dx in range(sx):
+        for dz in range(sz):
+            xx, zz = x + dx, z + dz
+            edge = dx in (0, sx - 1) or dz in (0, sz - 1)
+            w.set(xx, GY - 1, zz, "stone")
+            w.set(xx, GY, zz, "bricks" if edge else "grass_block")
+            if not edge:
+                w.set(xx, GY + 1, zz, flowers[(dx + dz) % 3])
+    if sx >= 4 or sz >= 4:
+        w.set(x + sx // 2, GY + 1, z + sz // 2, "flowering_azalea")
+    for dx in (0, sx - 1):
+        for dz in (0, sz - 1):
+            w.set(x + dx, GY + 1, z + dz, "bricks")
+    S.occ[x - 1:x + sx + 1, z - 1:z + sz + 1] = True
+
+
+def forecourt_dressing(S):
+    """Foreground interest for the view west from the street back to the station and along the forecourt, all kept off the car's
+    routes (the forecourt's south-east corner, x 74..98, z 129..146, stays empty): planters, a taxi rank with a lit sign, a bicycle rack,
+    banners on the arcades, bollards at the plaza's edge."""
+    w = S.w
+    for i, (x, z, sx) in enumerate(((72, 120, 5), (84, 120, 5), (65, 121, 4), (60, 134, 4))):
+        planter(S, x, z, sx, 3, i)
+    # lamp posts flanking the walking line: vertical rhythm along the forecourt (north side all the way, south side only west of the
+    # car's way)
+    for (x, z) in ((64, 125), (72, 125), (80, 125), (88, 125), (62, 131), (68, 131)):
+        for yy in range(GY, GY + 6):
+            w.set(x, yy, z, "andesite_wall")
+        w.set(x, GY + 6, z, "lantern[hanging=false]")
+        S.occ[x, z] = True
+    # taxi rank on the north side: bay lines first, then three yellow taxis under a lit sign
+    for xx in range(69, 92):
+        slab(w, xx, GY, 110, "smooth_sandstone")
+        slab(w, xx, GY, 113, "smooth_sandstone")
+    for xx in (70, 76, 83, 90):
+        for zz in (111, 112):
+            slab(w, xx, GY, zz, "smooth_sandstone")
+    for x in (71, 78, 85):
+        parked_car(w, x, GY, 111, "east", "yellow")
+        w.set(x + 2, GY + 3, 111, "sea_lantern")                       # the lit roof sign of a taxi
+    for yy in range(GY, GY + 5):                                       # the rank sign: a post, a blue board, a lamp
+        w.set(68, yy, 114, "andesite_wall")
+    w.fill(67, GY + 5, 114, 69, GY + 6, 114, "blue_concrete")
+    w.set(68, GY + 7, 114, "sea_lantern")
+    place_wall_sign(w, 68, GY + 6, 115, "south", [jp("タクシー"), "TAXI", "", ""], "birch")
+    place_wall_sign(w, 68, GY + 6, 113, "north", [jp("タクシー"), "TAXI", "", ""], "birch")
+    S.occ[66:93, 109:116] = True
+    # a bicycle rack in front of the hall exit
+    for z in (116, 118, 120, 122):
+        bike(S, 60, z, "x")
+    # banners on the arcade fronts (wall banners need a solid block behind them)
+    cols = ["red", "blue", "yellow", "green", "orange", "cyan", "white", "purple"]
+    k = 0
+    for x in range(61, 90, 5):
+        for (z, face, zb) in ((98, "south", 97), (158, "north", 159)):
+            y = GY + 6
+            bid = int(w.a[x, y, zb])
+            nm = (w.palette[bid] or "") if bid > 1 else ""
+            if any(t in nm for t in ("concrete", "terracotta", "calcite", "sandstone")) and "pane" not in nm:
+                w.set(x, y, z, bs("%s_wall_banner" % cols[k % len(cols)], facing=face))
+                k += 1
+    # slim bollards along the plaza's edge toward the street
+    for z in range(100, 156, 6):
+        if z < 118 or z > 150:
+            w.set(90, GY, z, "andesite_wall")
+            slab(w, 90, GY + 1, z, "red_nether_brick")
+
+
 def clutter(S):
     """Small things at eye level: potted plants and bins by the shop fronts, bollards at the crossing, curve mirrors."""
     w, rng = S.w, S.rng
@@ -1650,8 +1906,9 @@ def clutter(S):
         w.set(x, GY, z, "cauldron")                                       # a grey bin
     for x in (95, 99):                                                    # bollards at the crossing, red and white
         for z in (122, 135):                                              # (south pair one cell in from the kerb: the car slides in past it)
-            w.set(x, GY, z, "red_concrete")
-            w.set(x, GY + 1, z, "white_concrete")
+            w.set(x, GY, z, "andesite_wall")                                   # slim bollards: they used to be fat red-and-white cubes
+            w.set(x, GY + 1, z, "andesite_wall")
+            slab(w, x, GY + 2, z, "red_nether_brick")
     for x, z in ((111, 98), (121, 155)):                                  # curve mirrors at the lane corners
         for dy in range(4):
             w.set(x, GY + dy, z, "andesite_wall")
@@ -1832,8 +2089,10 @@ def build(w, with_car=False):
     hill_road(S)
     lookout(S)
     tunnel(S)
+    hall_lighting(S)
     lanes_and_lots(S)
     street_scene(S, with_car)
+    forecourt_dressing(S)
     clutter(S)
     pylons(S)
     keep_clear(S)
@@ -1883,14 +2142,14 @@ def _rgb(name):
 
 _THIN = ("glass", "bars", "chain", "rail", "carpet", "short_grass", "tall_grass", "fern", "poppy", "dandelion", "cornflower", "allium",
          "bluet", "tulip", "sign", "vine", "lever", "button", "lantern", "end_rod", "lightning_rod", "water", "banner",
-         "trapdoor", "door", "pressure_plate", "torch", "sapling", "flower", "kelp", "seagrass", "lily")
+         "trapdoor", "door", "pressure_plate", "torch", "sapling", "flower", "kelp", "seagrass", "lily", "barrier")
 
 
 def see_through(name):
     if name is None:
         return True
     n = name.replace("minecraft:", "")
-    return n == "air" or (any(t in n for t in _THIN) and n != "tinted_glass")
+    return n == "air" or n.startswith("light[") or (any(t in n for t in _THIN) and n != "tinted_glass")
 
 
 def _opaque_table(w):
@@ -1917,6 +2176,9 @@ def march(w, eye, d, maxd=400.0, opaque=None):
         if cell[1] >= w.size[1]:
             return None, t, None                 # left through the top: nothing can block any more
         if w.inside(*cell) and opaque[w.a[cell[0], cell[1], cell[2]]]:
+            nm = w.palette[w.a[cell[0], cell[1], cell[2]]] or ""
+            if "_slab[type=bottom" in nm and eye[1] + d[1] * t - cell[1] >= 0.5:      # a ray entering over the half block passes it
+                continue
             return cell.copy(), t, None
     return None, maxd, None
 
@@ -2069,6 +2331,36 @@ def void_check(w, eye, step_deg=3.0):
     return len(bad) / max(1, total), bad
 
 
+def bay_check(w, up=1.62, yaw_span=4.0, pitch_max=3.0):
+    """Rays from the 'street' eye toward the bay, yaw within +-yaw_span degrees of east, pitch 0..pitch_max degrees below the horizon
+    (the street is only 11 wide, so that is the window the buildings leave): every ray must end on the water (or its edge barrier) or
+    leave the set over water - never on a hill, a tree or a building.  Returns (rays, failures[(yaw_off, pitch, cell, block)])."""
+    ox, oy, oz = w.origin
+    a = w.anchors["street"]
+    eye = np.array([a["x"] - ox, a["y"] - oy + up, a["z"] - oz])
+    op = np.array([False, False] + [not (b is None or b.replace("minecraft:", "") == "air") for b in w.palette[2:]])
+    # solid for this test: everything that is not air or a plant-like thin thing; water and the barrier count as the sea
+    thin = ("short_grass", "tall_grass", "fern", "dandelion", "poppy", "cornflower", "azure_bluet", "oxeye_daisy", "allium", "lily_pad",
+            "iron_bars", "chain", "glass_pane", "end_rod", "lantern", "sign")
+    op = np.array([False, False] + [not any(t in b for t in thin) for b in w.palette[2:]])
+    fails, n = [], 0
+    for dy in np.arange(-yaw_span, yaw_span + 0.01, 1.0):
+        for pit in np.arange(0.0, pitch_max + 0.01, 0.5):
+            yr, pr = math.radians(-90.0 + dy), math.radians(pit)
+            d = np.array([-math.sin(yr) * math.cos(pr), -math.sin(pr), math.cos(yr) * math.cos(pr)])
+            hit, t, _ = march(w, eye, d, maxd=400.0, opaque=op)
+            n += 1
+            if hit is None:
+                continue
+            nm = (w.palette[w.a[tuple(hit)]] or "").replace("minecraft:", "")
+            if nm.startswith("water") or nm == "barrier":
+                continue
+            if hit[0] < 185:            # a steeper ray dips onto the street or the promenade before the sea: the town, not a hill
+                continue
+            fails.append((float(dy), float(pit), tuple(int(v) for v in hit), nm))
+    return n, fails
+
+
 def checks(w):
     """Eye-level sightline checks from the anchors, in local coordinates; prints and returns a list of (label, ok, hit)."""
     ox, oy, oz = w.origin
@@ -2120,6 +2412,10 @@ def main():
         print("  %-14s x=%-7s y=%-7s z=%-7s yaw=%s" % (k, v["x"] - origin[0], v["y"] - origin[1], v["z"] - origin[2], v["yaw"]))
     print("sightline checks:")
     checks(w)
+    n_rays, fails = bay_check(w)
+    print("bay check (street eye, yaw east +-4, pitch 0..-3: every ray must end on the sea or leave over it): %d rays, %d fail" % (n_rays, len(fails)))
+    for f in fails[:6]:
+        print("   FAIL", f)
     print("void checks (fraction of downward rays that leave the set):")
     for n in ("start", "street", "vision", "phone_use", "crash", "car_seat", "ridge", "ridge_blast", "gate", "cartrain", "angel_walk_4"):
         A = w.anchors[n]

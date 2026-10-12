@@ -1,0 +1,23 @@
+{
+  "providers": [
+    {
+      "type": "bitmap",
+      "file": "angel:font/card.png",
+      "ascent": 15,
+      "height": 18,
+      "chars": [
+        "ABCDEFGHIJKLMNOP",
+        "QRSTUVWXYZ012345",
+        "6789.,'-!?:;&\"\u0000\u0000",
+        "abcdefghijklmnop",
+        "qrstuvwxyz\u0000\u0000\u0000\u0000\u0000\u0000"
+      ]
+    },
+    {
+      "type": "space",
+      "advances": {
+        " ": 8
+      }
+    }
+  ]
+}

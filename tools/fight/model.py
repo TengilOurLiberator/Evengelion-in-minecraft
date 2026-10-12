@@ -1,4 +1,4 @@
-"""The Angel: a parametric skeleton of boxes.
+﻿"""The Angel: a parametric skeleton of boxes.
 
 Units: the model is 100 units tall, feet at y = 0, x to the monster's left (east when it faces south), y up,
 z forward.  `build()` makes the part list once; `pose_boxes(pose)` runs forward kinematics for a pose and returns
@@ -18,7 +18,11 @@ import math
 import numpy as np
 
 # ---------------------------------------------------------------- blocks used (name -> preview colour, glow)
-SKIN = "minecraft:dark_prismarine"       # the greenish skin (seen dim, it reads dark green-black)
+SKIN = "minecraft:warped_planks"         # the skin: a dark teal, a little lighter and more saturated than dark_prismarine
+RIM = "minecraft:white_concrete"         # pale moonlight rim on the upper edges (thin strips)
+GLOW = "minecraft:red_concrete"          # emissive red around the core
+VEIL = "minecraft:red_stained_glass"     # the soft red glow of the core falling on the chest and arms
+ORANGE_GLASS = "minecraft:orange_stained_glass"
 DARK = "minecraft:black_concrete"        # joints, hump, hands, feet, eye sockets
 BONE = "minecraft:bone_block"            # shoulder plates, ribs, mask
 CORE = "minecraft:red_concrete"          # the core
@@ -26,10 +30,13 @@ CORE_CRACKED = "minecraft:magma_block"
 EYE_OFF = "minecraft:black_concrete"
 EYE_ON = "minecraft:glowstone"
 
+# display brightness (block light, sky light) of each kind of block; a part's own `light` overrides it (an int or a pair)
+BRIGHT = {SKIN: (8, 10), DARK: (5, 7), BONE: (15, 15), RIM: (8, 11)}
 COLORS = {
-    SKIN: (30, 60, 50), DARK: (12, 14, 18), BONE: (226, 220, 196), CORE: (235, 40, 34),
+    SKIN: (43, 105, 99), DARK: (12, 14, 18), BONE: (226, 220, 196), CORE: (235, 40, 34),
     "minecraft:glowstone": (255, 214, 120), "minecraft:magma_block": (200, 80, 20),
-    "minecraft:red_stained_glass": (255, 70, 60),
+    "minecraft:red_stained_glass": (255, 70, 60), RIM: (207, 213, 214), GLOW: (240, 50, 40),
+    ORANGE_GLASS: (255, 160, 60),
 }
 
 # ---------------------------------------------------------------- skeleton: bone -> (parent, pivot in parent frame)
@@ -142,6 +149,37 @@ def build():
         for i in range(3):
             P(f"f{i}a{s}", f"f{i}a{s}", (0, -4.4, 0), (1.25, 9.4, 1.25), DARK)
             P(f"f{i}b{s}", f"f{i}b{s}", (0, -4.2, 0), (1.0, 8.9, 1.0), BONE)
+    # ---- night presence (added last so that the part numbers of everything above stay the same)
+    # pale rim light on the upper edges: thin strips on top of the chest, the hump, the hips, and along the outer edge
+    # of the arms and thighs
+    P("rimChest", "chest", (0, 22.95, 0.0), (24.0, 0.45, 9.4), RIM)
+    P("rimHump", "chest", (0, 28.95, -3.2), (11.8, 0.45, 6.8), RIM)
+    P("rimPelvis", "hips", (0, 4.15, 0), (14.0, 0.4, 8.0), RIM)
+    mirror("rimUarm", "uarm", (1.85, -13.0, 0), (0.45, 26.0, 1.3), RIM)
+    mirror("rimFarm", "farm", (1.5, -15.3, 0.2), (0.4, 29.0, 1.2), RIM)
+    mirror("rimThigh", "thigh", (3.35, -12.3, 0.2), (0.45, 24.5, 1.5), RIM)
+    # the core lights its surroundings: a frame of emissive red strips just in front of the socket ...
+    P("coreGlowU", "chest", (0, 9.4, 7.5), (8.6, 0.8, 0.9), GLOW, tag="coreglow", light=15)
+    P("coreGlowD", "chest", (0, 0.4, 7.5), (8.6, 0.8, 0.9), GLOW, tag="coreglow", light=15)
+    P("coreGlowL", "chest", (4.7, 4.9, 7.5), (0.8, 8.6, 0.9), GLOW, tag="coreglow", light=15)
+    P("coreGlowR", "chest", (-4.7, 4.9, 7.5), (0.8, 8.6, 0.9), GLOW, tag="coreglow", light=15)
+    # ... and a soft red veil of glass over the chest and on the inner side of the upper arms
+    P("veilChest", "chest", (0, 8.0, 6.1), (17.5, 13.5, 0.4), VEIL, tag="veil", light=13)
+    mirror("veilUarm", "uarm", (-2.0, -9.5, 0.2), (0.4, 14.0, 4.6), VEIL, tag="veil", light=11)
+    # ---- the eyes blaze while it charges: bigger emissive boxes that grow with the pose key "eyeg"
+    P("eyeGlowL", "chest", (3.9, 21.8, 10.1), (4.8, 5.6, 1.6), EYE_ON, rot=(0, -20, 0), tag="eyeglow", light=15)
+    P("eyeGlowR", "chest", (-3.9, 21.8, 10.1), (4.8, 5.6, 1.6), EYE_ON, rot=(0, 20, 0), tag="eyeglow", light=15)
+    P("eyeHaloL", "chest", (3.9, 21.8, 11.2), (7.4, 8.4, 1.0), ORANGE_GLASS, rot=(0, -20, 0), tag="eyeglow", light=15)
+    P("eyeHaloR", "chest", (-3.9, 21.8, 11.2), (7.4, 8.4, 1.0), ORANGE_GLASS, rot=(0, 20, 0), tag="eyeglow", light=15)
+    # ---- the gathering glow in front of the mask (pose key "gather" = its size); on the hips frame so that it
+    # stays straight ahead of the mask at the height of the mask, however far the body leans
+    gc = (0, 22.0, 38.0)
+    P("gatherA", "hips", gc, (4.0, 4.0, 4.0), EYE_ON, tag="gather", light=15)
+    P("gatherB", "hips", gc, (4.0, 4.0, 4.0), EYE_ON, rot=(0, 45, 0), tag="gather", light=15)
+    P("gatherC", "hips", gc, (4.0, 4.0, 4.0), EYE_ON, rot=(45, 0, 0), tag="gather", light=15)
+    P("gatherD", "hips", gc, (4.0, 4.0, 4.0), EYE_ON, rot=(0, 0, 45), tag="gather", light=15)
+    P("gatherHalo", "hips", gc, (9.0, 9.0, 2.5), ORANGE_GLASS, rot=(0, 45, 0), tag="gather", light=15)
+    P("gatherRing", "hips", (0, 22.0, 34.0), (15.0, 15.0, 0.6), ORANGE_GLASS, tag="gather", light=15)
     return PARTS
 
 
@@ -224,6 +262,10 @@ def pose_boxes(pose, ground=True):
             size = size * corek
         if part["tag"] == "halo":
             size = size * corek
+        if part["tag"] == "eyeglow":
+            size = size * max(pose.get("eyeg", 0.0), 0.001)
+        if part["tag"] == "gather":
+            size = size * max(pose.get("gather", 0.0), 0.001)
         blk = part["block"]
         if part["tag"] == "eye" and pose.get("eyes"):
             blk = EYE_ON
@@ -286,20 +328,36 @@ def pose_def():
     P["idle_b"] = dict(base, spine=(6, 1, 0), chest=(8, -1.5, 0), puff=0.035,
                        uarmL=(13, 6, 0), uarmR=(7, -4, 0), farmL=(20, -2, 0), farmR=(14, 2, 0), jawo=3, core=1.06,
                        hips=(0, 0, 0, 0.0, 0, 0))
-    # hunched and damaged: folded forward, arms dangling, pulsing
-    reg = dict(base, spine=(18, 0, 0), chest=(26, 0, 0), thighL=(18, 2, 0), shinL=(-30, 0, 0), footL=(12, 0, 0),
+    # hunched and damaged: folded forward, one shoulder plate hanging, the other cocked up, arms dangling; the chest
+    # breathes slowly (puff over 8 key frames = 80 ticks) while the core flickers (a different size every frame)
+    reg = dict(base, spine=(-18, 0, 0), chest=(-26, 0, 0), thighL=(18, 2, 0), shinL=(-30, 0, 0), footL=(12, 0, 0),
                thighR=(18, -2, 0), shinR=(-30, 0, 0), footR=(12, 0, 0),
                uarmL=(24, 8, 0), uarmR=(24, -8, 0), farmL=(26, -2, 0), farmR=(26, 2, 0),
-               shoulderL=(0, 0, -4), shoulderR=(0, 0, 4), curlL=24, curlR=24, jawo=6, puff=0.0, core=1.0)
+               shoulderL=(-16, 10, -24), shoulderR=(12, -8, 20), curlL=24, curlR=24, jawo=6, puff=0.0, core=1.0)
     P["regen_a"] = reg
-    P["regen_b"] = dict(reg, puff=0.06, core=1.22, chest=(24, 0, 0), spine=(17, 0, 0),
+    P["regen_b"] = dict(reg, puff=0.06, core=1.22, chest=(-24, 0, 0), spine=(-17, 0, 0),
                         uarmL=(27, 10, 0), uarmR=(27, -10, 0), jawo=9)
-    # eyes lit, standing tall with the chest pushed out and the arms drawn back and out
-    P["charge"] = dict(base, spine=(-2, 0, 0), chest=(-6, 0, 0), thighL=(3, 3, 0), thighR=(3, -3, 0), shinL=(-6, 0, 0),
-                       shinR=(-6, 0, 0), footL=(3, 0, 0), footR=(3, 0, 0),
-                       uarmL=(-14, 24, 0), uarmR=(-14, -24, 0), farmL=(12, -4, 0), farmR=(12, 4, 0),
-                       curlL=30, curlR=30, jawo=10, puff=0.05, core=1.15, eyes=1)
-    # the thrust: right arm cocked back, body twisted, then arm driven straight out
+    breath = (0.0, 0.015, 0.035, 0.055, 0.06, 0.045, 0.02, 0.005)
+    flick = (1.0, 0.62, 1.28, 0.8, 1.32, 0.55, 1.2, 0.9)
+    for i in range(8):
+        sway = ((0, 2, 0), (1, 3, 0), (2, 4, 1), (2, 3, 2), (1, 1, 2), (0, -1, 1), (-1, -2, 0), (-1, 0, 0))[i]
+        P[f"regen_{i}"] = dict(reg, puff=breath[i], core=flick[i], jawo=5 + 5 * breath[i] * 20,
+                               chest=(-26 + 30 * breath[i], sway[0], sway[2]), spine=(-18 + 12 * breath[i], 0, 0),
+                               shoulderL=(-16 + 4 * sway[1], 10, -24), shoulderR=(12 + 3 * sway[0], -8, 20),
+                               uarmL=(24 + sway[1], 8 + sway[0], 0), uarmR=(24 + sway[0], -8 - sway[1], 0))
+    # charging: leaning forward over its feet, the arms drawn back and out, the eyes blazing up and a glow gathering
+    # in front of the mask; three stages (the generator plays them 0, 10 and 24 ticks into the charge)
+    chg = dict(base, spine=(-8, 0, 0), chest=(-12, 0, 0), thighL=(8, 3, 0), thighR=(8, -3, 0), shinL=(-14, 0, 0),
+               shinR=(-14, 0, 0), footL=(6, 0, 0), footR=(6, 0, 0),
+               uarmL=(-26, 26, 0), uarmR=(-26, -26, 0), farmL=(34, -6, 0), farmR=(34, 6, 0), handL=(14, 0, 0),
+               handR=(14, 0, 0), curlL=36, curlR=36, jawo=14, puff=0.05, core=1.15, eyes=1, eyeg=0.65, gather=0.35)
+    P["charge"] = chg
+    P["charge_2"] = dict(chg, spine=(-11, 0, 0), chest=(-16, 0, 0), uarmL=(-34, 28, 0), uarmR=(-34, -28, 0),
+                         farmL=(40, -8, 0), farmR=(40, 8, 0), jawo=20, puff=0.06, core=1.28, eyeg=1.05, gather=0.8)
+    P["charge_3"] = dict(chg, spine=(-14, 0, 0), chest=(-20, 0, 0), thighL=(11, 3, 0), thighR=(11, -3, 0),
+                         shinL=(-20, 0, 0), shinR=(-20, 0, 0), uarmL=(-44, 32, 0), uarmR=(-44, -32, 0),
+                         farmL=(46, -10, 0), farmR=(46, 10, 0), curlL=44, curlR=44, jawo=26, puff=0.07, core=1.4,
+                         eyeg=1.45, gather=1.4)    # the thrust: right arm cocked back, body twisted, then arm driven straight out
     P["windup"] = dict(base, spine=(6, 0, -14), chest=(8, 0, -18), thighL=(10, 3, 0), thighR=(-4, -3, 0), shinL=(-16, 0, 0),
                        shinR=(-14, 0, 0), footL=(6, 0, 0), footR=(2, 0, 0),
                        uarmR=(-36, -8, 0), farmR=(-62, 0, 0), handR=(10, 0, 0), curlR=6,
@@ -320,20 +378,20 @@ def pose_def():
                            shinR=(-44, 0, 0), footL=(16, 0, 0), footR=(16, 0, 0),
                            uarmL=(14, -34, 0), uarmR=(14, 34, 0), farmL=(12, -64, 0), farmR=(12, 64, 0),
                            curlL=30, curlR=30, jawo=14, eyes=1, puff=0.07, core=1.2)
-    # dying: knees buckle, the arms hang, then it folds backward
-    P["die_1"] = dict(base, spine=(10, 0, 0), chest=(14, 0, 0), thighL=(40, 4, 0), thighR=(36, -4, 0), shinL=(-70, 0, 0),
-                      shinR=(-66, 0, 0), footL=(26, 0, 0), footR=(24, 0, 0),
-                      uarmL=(-8, 14, 0), uarmR=(-8, -14, 0), farmL=(6, 0, 0), farmR=(6, 0, 0), curlL=6, curlR=6, jawo=30,
-                      core=0.8)
-    P["die_2"] = dict(base, spine=(26, 0, 0), chest=(42, 0, 0), thighL=(84, 8, 0), thighR=(84, -8, 0), shinL=(-120, 0, 0),
-                      shinR=(-120, 0, 0), footL=(36, 0, 0), footR=(36, 0, 0),
-                      uarmL=(-26, 22, 0), uarmR=(-26, -22, 0), farmL=(0, 0, 0), farmR=(0, 0, 0), curlL=4, curlR=4, jawo=34,
-                      core=0.6)
-    P["die_3"] = dict(base, spine=(-8, 0, 0), chest=(-40, 0, 0), thighL=(86, 10, 0), thighR=(86, -10, 0), shinL=(-124, 0, 0),
-                      shinR=(-124, 0, 0), footL=(36, 0, 0), footR=(36, 0, 0),
-                      uarmL=(-50, 40, 0), uarmR=(-50, -40, 0), farmL=(-10, 0, 0), farmR=(-10, 0, 0), curlL=2, curlR=2,
-                      jawo=40, core=0.5)
-    # walking: two key poses, planted-forward on one leg and trailing (knee bent, lifted) on the other
+    # dying: a clear collapse. The knees buckle, it drops onto both knees (shins flat behind it), then slumps
+    # forward over them, mask down, arms trailing on the ground: a heap, not a standing figure
+    P["die_1"] = dict(base, spine=(-8, 0, 0), chest=(-10, 0, 0), thighL=(34, 4, 0), thighR=(30, -4, 0), shinL=(-64, 0, 0),
+                      shinR=(-58, 0, 0), footL=(22, 0, 0), footR=(20, 0, 0),
+                      uarmL=(-6, 16, 0), uarmR=(-6, -16, 0), farmL=(8, 0, 0), farmR=(8, 0, 0), curlL=6, curlR=6, jawo=30,
+                      core=0.8, eyes=0)
+    P["die_2"] = dict(base, spine=(-22, 0, 0), chest=(-30, 0, 0), thighL=(6, 6, 0), thighR=(6, -6, 0), shinL=(-150, 0, 0),
+                      shinR=(-150, 0, 0), footL=(60, 0, 0), footR=(60, 0, 0),
+                      uarmL=(-12, 22, 0), uarmR=(-12, -22, 0), farmL=(10, 0, 0), farmR=(10, 0, 0), curlL=4, curlR=4,
+                      jawo=36, core=0.6)
+    P["die_3"] = dict(base, spine=(-52, 0, 0), chest=(-66, 4, 0), thighL=(6, 8, 0), thighR=(6, -8, 0), shinL=(-152, 0, 0),
+                      shinR=(-152, 0, 0), footL=(60, 0, 0), footR=(60, 0, 0),
+                      uarmL=(30, 24, 0), uarmR=(26, -26, 0), farmL=(24, 0, 0), farmR=(30, 0, 0), curlL=2, curlR=2,
+                      jawo=40, core=0.45, shoulderL=(-14, 6, -22), shoulderR=(10, -6, 18))    # walking: two key poses, planted-forward on one leg and trailing (knee bent, lifted) on the other
     st = 21.0   # thigh swing
     def walk(sgn):
         # sgn = +1: left leg forward
@@ -377,4 +435,9 @@ if __name__ == "__main__":
         bs = pose_boxes(poses()[k])
         ys = [b["centre"][1] for b in bs]
         print(f"{k:10s} max y {max(ys):6.1f}  core {core_centre(poses()[k]).round(1)}")
+
+
+
+
+
 

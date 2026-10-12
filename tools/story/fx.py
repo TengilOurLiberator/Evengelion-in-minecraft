@@ -20,6 +20,7 @@ AC_PHASE = [0.0, 90.0, 180.0, 270.0]
 AC_R = [52.0, 58.0, 50.0, 56.0]
 AC_H = [6.0, 15.0, -3.0, 10.0]
 HIT_TICK, FALL_TICK, FALL_FRAMES = 190, 215, 85
+CRASH_LEAD = 26                 # ticks: sfx.crash's impact is 1.3 s into the sound
 VOLLEY = 36                     # ticks between the volleys of one aircraft; the four are staggered
 VOLLEY_AT = [6, 15, 24, 33]
 
@@ -49,22 +50,21 @@ def birds(ctx, x0=104, x1=150, y=75.0, n=14, seed=7):
     reg(ctx, "story/fx/birds_fly", fly, True)
     reg(ctx, "story/fx/birds_kill", ["kill @e[tag=angel.bird]"], True)
     sx, sz = (x0 + x1) / 2, 128.0
+    # the flock's sound (sfx.birds_up, 4.5 s) comes from the nearest wires, 8 blocks into the run
     return spawn + [f"schedule function {NS}:story/fx/birds_fly 3t", f"schedule function {NS}:story/fx/birds_kill 100t",
-                    play_at("minecraft:entity.parrot.fly", sx, y, sz, 3.0, 1.1), play_at("minecraft:entity.bat.takeoff", sx, y, sz, 3.0, 1.3)]
+                    play_at("angel:sfx.birds_up", x0 + 8.0, y, sz, 2.5, 1.0, 0.0)]
 
 
 # --------------------------------------------------------------------------------------------------- the ground jolt
 def jolt(ctx):
     """A deep, far-off thump and dust shaken loose around the player.  The camera is NOT shaken: that is for the stomach's sake in VR."""
-    lines = [play_at("minecraft:entity.generic.explode", 200, 64, 128, 8.0, 0.45, 0.9),
-             play_at("minecraft:entity.warden.emerge", 200, 64, 128, 8.0, 0.5, 0.8),
+    lines = [play_player("angel:sfx.jolt", 1.0),
              f"execute at {P()} run particle minecraft:block{{block_state:\"minecraft:dirt\"}} ~ ~0.1 ~ 3 0.1 3 0.15 40 force",
              f"execute at {P()} run particle minecraft:dust_plume ~ ~0.5 ~ 4 0.5 4 0.03 60 force",
              f"execute at {P()} run particle minecraft:falling_dust{{block_state:\"minecraft:stone\"}} ~ ~4 ~ 5 1.5 5 0.0 50 force",
              f"schedule function {NS}:story/fx/jolt2 14t"]
     ctx.fx_scheduled.append("story/fx/jolt2")
-    reg(ctx, "story/fx/jolt2", [play_at("minecraft:entity.generic.explode", 190, 64, 128, 6.0, 0.35, 0.8),
-                                f"execute at {P()} run particle minecraft:dust_plume ~ ~0.5 ~ 4 0.5 4 0.03 40 force",
+    reg(ctx, "story/fx/jolt2", [f"execute at {P()} run particle minecraft:dust_plume ~ ~0.5 ~ 4 0.5 4 0.03 40 force",
                                 f"execute at {P()} run particle minecraft:falling_dust{{block_state:\"minecraft:stone\"}} ~ ~4 ~ 5 1.5 5 0.0 30 force"])
     return lines
 
@@ -104,15 +104,13 @@ def aircraft_setup(ctx, scale=2.0):
             f"schedule function {NS}:story/fx/impact 13t append"])
     ctx.fx_scheduled.append("story/fx/impact")
     reg(ctx, "story/fx/tracer", [f"particle minecraft:end_rod ^ ^ ^{k} 0 0 0 0 1 force" for k in range(5, 60, 3)]
-        + [f"particle minecraft:flame ^ ^-0.5 ^3 0.2 0.2 0.2 0.02 4 force",
-           f"playsound minecraft:entity.firework_rocket.launch ambient {PA()} ~ ~ ~ 4 0.85 0.3"])
+        + [f"particle minecraft:flame ^ ^-0.5 ^3 0.2 0.2 0.2 0.02 4 force"])
     reg(ctx, "story/fx/impact", [
         f"execute at @e[tag=angel.cmark,limit=1] run particle minecraft:explosion ~{random.Random(1).randint(-4, 4)} ~{random.Random(2).randint(-12, 12)} ~ 5 7 5 0 3 force",
-        f"execute at @e[tag=angel.cmark,limit=1] run particle minecraft:flash{{color:[1.0,0.85,0.5,1.0]}} ~ ~ ~ 0 0 0 0 1 force",
-        f"execute at @e[tag=angel.cmark,limit=1] run playsound minecraft:entity.generic.explode ambient {PA()} ~ ~ ~ 6 1.3 0.35"])
+        f"execute at @e[tag=angel.cmark,limit=1] run particle minecraft:flash{{color:[1.0,0.85,0.5,1.0]}} ~ ~ ~ 0 0 0 0 1 force"])
     # the hit: smoke from the third aircraft; then it leaves its orbit and falls
     tick.append(f"execute {sc('#fx.t', str(HIT_TICK))} run function {NS}:story/fx/ac3_hit")
-    reg(ctx, "story/fx/ac3_hit", [sset("#fx.smoke", 1), play_at("minecraft:entity.generic.explode", 150, 100, 128, 5.0, 1.0, 0.4)])
+    reg(ctx, "story/fx/ac3_hit", [sset("#fx.smoke", 1), play_at("angel:sfx.explosion_far", 150, 100, 128, 1.5, 1.1, 0.0)])
     tick.append(f"execute {sc('#fx.t', str(FALL_TICK))} run function {NS}:story/fx/ac3_fall")
     ctx.fx_flags = getattr(ctx, "fx_flags", set()) | {"smoke", "fall", "air"}
     return start, rigs, tick
@@ -156,11 +154,13 @@ def crash_functions(ctx, crash_xyz, frames):
     fall_tick = [sadd("#fx.c")] + lines + [
         f"execute at @e[tag=angel.rig_ac3d,tag=angel.pt_fuselage,limit=1] run particle minecraft:large_smoke ~ ~ ~ 0.6 0.6 0.6 0.02 8 force",
         f"execute at @e[tag=angel.rig_ac3d,tag=angel.pt_fuselage,limit=1] run particle minecraft:flame ~ ~ ~ 0.5 0.5 0.5 0.03 6 force",
-        f"execute {sc('#fx.c', str(len(frames) - 1))} run function {NS}:story/fx/impact_crash"]
+        f"execute {sc('#fx.c', str(len(frames) - 1))} run function {NS}:story/fx/impact_crash",
+        # sfx.crash is 8 s: the falling scream runs for 1.3 s and the impact lands at 1.3 s, so it starts 26 ticks before the last frame
+        f"execute {sc('#fx.c', str(max(0, len(frames) - 1 - CRASH_LEAD)))} run "
+        + play_at("angel:sfx.crash", x, y, z, 1.0, 1.0, 0.0)]
     reg(ctx, "story/fx/fall_tick", fall_tick)
     reg(ctx, "story/fx/ac3_fall", ["tag @e[tag=angel.rig_ac3] add angel.rig_ac3d", "tag @e[tag=angel.rig_ac3d] remove angel.rig_ac3",
-                                   sset("#fx.c", 0), sset("#fx.fall", 1), sset("#fx.smoke", 0),
-                                   play_at("minecraft:entity.firework_rocket.twinkle", 120, 90, 140, 6.0, 0.6, 0.4)])
+                                   sset("#fx.c", 0), sset("#fx.fall", 1), sset("#fx.smoke", 0)])
     ctx.fx_tick += [f"execute if score #fx.fall {OBJ} matches 1 run function {NS}:story/fx/fall_tick",
                     f"execute if score #fx.smoke {OBJ} matches 1 at @e[tag=angel.rig_ac3,tag=angel.pt_fuselage,limit=1] run "
                     f"function {NS}:story/fx/smoke_tick",
@@ -177,9 +177,7 @@ def crash_functions(ctx, crash_xyz, frames):
               f"particle minecraft:flame {num(x)} {num(y + 1)} {num(z)} 4 2 4 0.1 120 force",
               f"particle minecraft:large_smoke {num(x)} {num(y + 3)} {num(z)} 3 3 3 0.08 120 force",
               f"particle minecraft:block{{block_state:\"minecraft:gray_concrete\"}} {num(x)} {num(y + 1)} {num(z)} 4 1 4 0.5 80 force",
-              play_at("minecraft:entity.generic.explode", x, y, z, 10.0, 0.8, 0.9),
-              play_at("minecraft:entity.dragon_fireball.explode", x, y, z, 8.0, 0.7, 0.7),
-              play_at("minecraft:entity.lightning_bolt.impact", x, y, z, 6.0, 0.6, 0.6)]
+              play_at("angel:sfx.explosion_near", x, y, z, 0.8, 1.0, 0.0)]
     rnd = random.Random(11)
     pieces = [("gray_concrete", (-1.8, 0, -0.5), (1.8, 0.9, 0.9)), ("black_concrete", (0.6, 0, -2.2), (2.1, 0.5, 0.3)),
               ("light_gray_concrete", (-3.4, 0, 1.2), (-1.8, 0.35, 2.7)), ("black_concrete", (2.2, 0, 0.9), (3.0, 1.1, 1.7)),
@@ -271,3 +269,4 @@ def dust_at(x, y, z, n=40, spread=1.5):
 def flash_burst():
     """A white-out: flash particles right in front of the player's eyes, a few ticks apart (three are scheduled by the caller)."""
     return [f"execute at {P()} anchored eyes positioned ^ ^ ^0.4 run particle minecraft:flash{{color:[1.0,1.0,1.0,1.0]}} ~ ~ ~ 0 0 0 0 1 force"]
+

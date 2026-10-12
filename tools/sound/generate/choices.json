@@ -1,0 +1,143 @@
+{
+ "install": {
+  "music.dread": [
+   6,
+   "only candidate that is a low, steady bed with slow regular throbs (like the brief's sub heartbeat); the others are dense ticking or sectioned"
+  ],
+  "music.road": [
+   2,
+   "steady 112 bpm pulse locked to 32 bars, level swing 3.4 dB, no gaps; cand1 has 7 s of silence, cand3 had words detected"
+  ],
+  "music.father": [
+   4,
+   "continuous very low drone with a slow swell about every 20 s (breathing), no beat; others tick, drift or have sections"
+  ],
+  "music.decision": [
+   3,
+   "104 bpm pulse aligned so the last 24 beats are the loop cycle; long file builds from sparse hits to dense; cand1/2 failed the leading-silence contract"
+  ],
+  "music.decision_loop": [
+   3,
+   "same generation as music.decision cand3 (shared gain, hand-off continuous)"
+  ],
+  "music.resolve": [
+   3,
+   "smooth sustained pad that steps from one chord to another and fades; the others are chord stabs or end in silence"
+  ],
+  "music.launch": [
+   2,
+   "build with a rising line and a clear step into the drive, kick on the first sample after 20.000 s; cand1 was preferred on the build but its loop file had a word detected after the kick alignment (Bye.), so the whole pair moved to cand2"
+  ],
+  "music.launch_loop": [
+   2,
+   "drive cycle of the same generation, 16 bars at 144 bpm, kick on sample 0, steady (4 dB swing)"
+  ],
+  "music.fight": [
+   2,
+   "152 bpm, kick and low hits, two breakdown sections like the brief; cand1 is a flat wall of hits"
+  ],
+  "music.fight_final": [
+   1,
+   "172 bpm, constant maximum intensity and brighter top end; cand2 has a 4 s near-silent hole, cand3 had words detected"
+  ],
+  "music.defeat": [
+   1,
+   "one decaying low cluster with no rhythm; cand2/3 are repeating chord hits"
+  ],
+  "amb.cicadas": [
+   2,
+   "energy concentrated 3.5-9 kHz like the procedural bed, least low-frequency contamination"
+  ],
+  "amb.town_empty": [
+   1,
+   "the only one with discrete bell-like strikes (the crossing bell of the cue) over wind"
+  ],
+  "amb.geofront": [
+   2,
+   "broad airy/waterfall spectrum closest to the procedural cavern bed"
+  ],
+  "amb.cage": [
+   1,
+   "uniform low room tone with faint far events; cand2/3 change timbre abruptly in the second half"
+  ],
+  "amb.city_night": [
+   1,
+   "wind-dominated spectrum like the procedural bed, no tone lines"
+  ],
+  "sfx.birds_up": [
+   1,
+   "broadband flock with wing-flap transients"
+  ],
+  "sfx.gunfire_far": [
+   1,
+   "separate shots and short bursts with decaying echoes"
+  ],
+  "sfx.jet_pass": [
+   3,
+   "smooth bell-shaped Doppler-like swell with no thump at the start"
+  ],
+  "sfx.explosion_far": [
+   3,
+   "boom with long decaying rumble, no tone line"
+  ],
+  "sfx.explosion_near": [
+   3,
+   "crack, boom and a debris tail"
+  ],
+  "sfx.crash": [
+   2,
+   "loud impact decaying over the full length; cand1 is a flat wall of noise that stops abruptly"
+  ],
+  "sfx.car_roll": [
+   5,
+   "series of crunching impacts diminishing from the first sample (variant prompt); round 1 gave an engine-like drone"
+  ],
+  "sfx.rig_tear": [
+   3,
+   "metallic burst and decay; cand2 is a metronomic tick artefact"
+  ],
+  "sfx.rig_crash": [
+   1,
+   "series of metal clanks like a truss bouncing, plus one last bump"
+  ],
+  "sfx.hand_rise": [
+   1,
+   "low water/creak rumble, no speech detected"
+  ],
+  "sfx.giant_hit": [
+   2,
+   "thud with sustained low body"
+  ],
+  "sfx.giant_punch": [
+   2,
+   "wide, thick impact"
+  ],
+  "sfx.impact_above": [
+   2,
+   "clean deep boom decaying through a long rumble"
+  ],
+  "sfx.impact_above_hard": [
+   3,
+   "clean heavy boom; cand2 had speech-like detection"
+  ],
+  "sfx.gate_close": [
+   5,
+   "variant prompt: grinding slide for about 4 s, then the massive thud and decay (round 1 candidates all put the thud first)"
+  ],
+  "sfx.door_boom": [
+   2,
+   "metallic boom with ringing decay; cand1 had words detected"
+  ],
+  "sfx.cross": [
+   4,
+   "variant prompt: only candidate with a slowly rising line and a swell late in the sound; no voices"
+  ]
+ },
+ "keep_procedural": {
+  "music.cage": "every candidate is gated or ticking, with abrupt cut-offs between chord blocks; the procedural continuous pad matches the brief better",
+  "music.victory": "no candidate is a chord blooming from nothing: noise only, or chord stabs with long holes",
+  "sfx.siren": "generated sirens fade in and out within the 20 s and are noisy; the procedural two-cycle tone loop is cleaner and the datapack loops it",
+  "sfx.klaxon": "no candidate has three clean pulses in 4 s (the datapack repeats it every 11 s relying on that); the one with two pulses had words detected",
+  "music.descent": "not regenerated: its bloom must land at exactly 8.00 s"
+ }
+}

@@ -1,4 +1,4 @@
-﻿"""The world's own data: the biomes (one per set, plus the void), the day clock and its timeline, the dimension type.
+"""The world's own data: the biomes (one per set, plus the void), the day clock and its timeline, the dimension type.
 
 Adapted from Genesis (tools/build_datapack.py): the world is the ordinary overworld made by the flat generator, so
 the dimension type is overridden in place (data/minecraft/dimension_type/overworld.json) rather than a new
@@ -39,9 +39,12 @@ SKY_DEFAULT = 6000
 if os.environ.get("ANGEL_ATMOSPHERE") == "off":           # the way the world looked before the atmosphere work (for before/after pictures)
     SKY_TICKS = {"outskirts": 6000, "city": 18000, "geofront": 18000, "hq": 18000}
 
-# the vanilla timeline's night multiplier of visual/fog_color (keyframes 13670..22330): used to write the city's fog colour
-# as the colour that is wanted at midnight
-NIGHT_FOG_MUL = (0x0f, 0x0f, 0x16)
+# The city is the one set that sees night (and, in the last scene, the dawn), so the dimension's timeline (a copy of the vanilla
+# day, see timeline()) is bent to the city's night: its fog at midnight is NIGHT_FOG (the timeline's multiplier is NIGHT_FOG
+# divided by the city biome's fog colour, so the biome keeps a colour that is right for the day) and the moonlight is weaker,
+# so that the set's rim and the far mountains melt into the dark. Sets held at noon (every other set) never see this.
+NIGHT_FOG = "#05070c"
+NIGHT_SKY_LIGHT_FACTOR = 0.10          # vanilla 0.24
 
 GAMERULES = [("advance_weather", "false"), ("spawn_mobs", "false"), ("spawn_monsters", "false"), ("spawn_phantoms", "false"),
              ("spawn_wandering_traders", "false"), ("spawn_patrols", "false"), ("spawn_wardens", "false"),
@@ -52,7 +55,6 @@ SPAWN_CATEGORIES = ["ambient", "axolotls", "creature", "misc", "monster", "under
 
 # ---------------------------------------------------------------- the look of each set
 # keys of "attr" are environment attributes without the "minecraft:visual/" prefix; "effects" is the biome's effects block.
-# "fog_color_at_night" (city): the colour wanted at the night multiplier; the biome stores it divided by that multiplier.
 ATMOSPHERE = {
     "void": {            # everything that is not a set: what the world looked like before, so nothing there changes
         "attr": {"sky_color": "#78a7ff"},
@@ -60,25 +62,26 @@ ATMOSPHERE = {
         "temperature": 0.8,
     },
     "outskirts": {       # summer noon, hot and clear
-        "attr": {"sky_color": "#3f86f5", "fog_color": "#dfe9ee", "fog_start_distance": 70.0, "fog_end_distance": 300.0,
+        "attr": {"sky_color": "#3f86f5", "fog_color": "#dfe9ee", "fog_start_distance": 90.0, "fog_end_distance": 320.0,
                  "cloud_color": "#fff4f8ff", "water_fog_color": "#1c78b8"},
-        "effects": {"water_color": "#2fa6e2", "grass_color": "#6fc22c", "foliage_color": "#43a82a", "dry_foliage_color": "#c9a233"},
+        "effects": {"water_color": "#2fa6e2", "grass_color": "#78cf2a", "foliage_color": "#4cb82c", "dry_foliage_color": "#c9a233"},
         "temperature": 0.9,
     },
-    "city": {            # deep night: sky black, fog blue-black, so that the set's edge and the far mountains dissolve
-        "attr": {"sky_color": "#000000", "fog_color_at_night": "#04060b", "fog_start_distance": 24.0, "fog_end_distance": 190.0},
+    "city": {            # deep night (the colours below are the day's: the timeline darkens sky to black and fog to NIGHT_FOG)
+        "attr": {"sky_color": "#78a7ff", "fog_color": "#d5e0ec", "fog_start_distance": 30.0, "fog_end_distance": 230.0,
+                 "cloud_color": "#00ffffff"},
         "effects": {"water_color": "#1b3a73"},
         "temperature": 0.8,
     },
     "geofront": {        # the lit cavern: dusty late-afternoon gold; sky and fog the same colour, so beyond fog is glow, not night
-        "attr": {"sky_color": "#d9a040", "fog_color": "#d9a040", "fog_start_distance": 60.0, "fog_end_distance": 230.0,
-                 "sky_light_factor": 0.0},
+        "attr": {"sky_color": "#e0aa55", "fog_color": "#e0aa55", "fog_start_distance": 100.0, "fog_end_distance": 300.0,
+                 "cloud_color": "#00ffffff", "sky_light_factor": 0.0},
         "effects": {"water_color": "#3f76e4"},
         "temperature": 0.8,
     },
     "hq": {              # the interior: black, slightly cold; the sky does not light it
         "attr": {"sky_color": "#000000", "fog_color": "#000000", "fog_start_distance": 30.0, "fog_end_distance": 140.0,
-                 "ambient_light_color": "#0b0f18", "sky_light_factor": 0.0},
+                 "cloud_color": "#00ffffff", "ambient_light_color": "#0e131e", "sky_light_factor": 0.0},
         "effects": {"water_color": "#3f76e4"},
         "temperature": 0.8,
     },
@@ -97,11 +100,11 @@ def biome_id(name):
     return f"{NS}:{name}"
 
 
+def _rgb(h):
+    return [int(h[i:i + 2], 16) for i in (1, 3, 5)]
+
+
 def _attr_value(key, value, name):
-    if key == "fog_color_at_night":
-        target = [int(value[i:i + 2], 16) for i in (1, 3, 5)]
-        value = "#" + "".join(f"{min(255, round(t * 255 / m)):02x}" for t, m in zip(target, NIGHT_FOG_MUL))
-        key = "fog_color"
     return f"minecraft:visual/{key}", value
 
 
@@ -116,14 +119,30 @@ def biome(name):
             "has_precipitation": False, "temperature": a["temperature"]}
 
 
+def timeline():
+    """angel:sky: the vanilla day, with the city's night (see NIGHT_FOG). ANGEL_ATMOSPHERE=off leaves it as vanilla."""
+    day = copy.deepcopy(mcdata.vanilla("timeline/day.json"))
+    day["clock"] = CLOCK
+    if os.environ.get("ANGEL_ATMOSPHERE") == "off":
+        return day
+    day_fog = _rgb(ATMOSPHERE["city"]["attr"]["fog_color"])
+    mul = "#" + "".join(f"{min(255, round(t * 255 / d)):02x}" for t, d in zip(_rgb(NIGHT_FOG), day_fog))
+    for k in day["tracks"]["minecraft:visual/fog_color"]["keyframes"]:
+        if k["ticks"] in (13670, 22330):                 # the night plateau
+            k["value"] = mul
+    for k in day["tracks"]["minecraft:visual/sky_light_factor"]["keyframes"]:
+        if k["ticks"] in (13140, 22860):
+            k["value"] = NIGHT_SKY_LIGHT_FACTOR
+    return day
+
+
 def files():
     """{path relative to the pack root: json value}"""
     dim = copy.deepcopy(mcdata.vanilla("dimension_type/overworld.json"))
     dim["default_clock"] = CLOCK
     dim["timelines"] = [f"{NS}:sky"]
 
-    day = copy.deepcopy(mcdata.vanilla("timeline/day.json"))
-    day["clock"] = CLOCK
+    day = timeline()
 
     out = {f"data/{NS}/worldgen/biome/{name}.json": biome(name) for name in ATMOSPHERE}
     out.update({
@@ -179,6 +198,8 @@ def biome_region(origin, size):
 def biome_items(set_name, origin, size):
     """The chain items (see compile.make_chain) that fill a set's box plus margin with its biome, full build height:
     square stages that are forceloaded one after the other, each filled in bands of BIOME_BAND blocks."""
+    if os.environ.get("ANGEL_BIOME_FILL") == "off":           # for timing the placement without the biome stages
+        return []
     x1, z1, x2, z2 = biome_region(origin, size)
     items = []
     bands = []
@@ -219,6 +240,8 @@ def probe_points(set_name, origin, size, anchors):
 
 def probe_lines(set_name, origin, size, anchors):
     """Commands that count the probe points holding the set's biome and say the result in the server log."""
+    if os.environ.get("ANGEL_BIOME_FILL") == "off":
+        return []
     pts = probe_points(set_name, origin, size, anchors)
     lines = ["scoreboard players set #bp angel_world 0"]
     lines += [f"execute in minecraft:overworld if biome {x} {y} {z} {biome_id(set_name)} run scoreboard players add #bp angel_world 1"

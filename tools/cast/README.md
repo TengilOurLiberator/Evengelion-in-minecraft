@@ -46,8 +46,9 @@ Ids: `misato ritsuko gendo rei rei_uniform medic1 medic2`. The objective is `ang
 | Call | Does |
 |---|---|
 | `function angel:cast/summon {id:"misato"}` | at the executor's position and yaw (pitch 0), standing, looking at the player. Summoning again replaces the old one. |
-| `function angel:cast/remove {id:"misato"}` | removes it (and its own seat) |
-| `function angel:cast/remove_all` | removes every cast entity: characters, gurney, seats |
+| `function angel:cast/remove {id:"misato"}` | removes it (and its own seat). Instant and invisible: see "Removing" below |
+| `function angel:cast/remove_all` | removes every cast entity: characters, gurney, seats (same quiet removal) |
+| `function angel:cast/scale {id:"gendo",scale:1.6}` | makes a character bigger or smaller (the `scale` attribute, 0.0625 to 16; checked live on a mannequin: reads back 1.6). A fresh `summon` is back at 1. The lying pose's 0.9 / 0.125 shift is not compensated: scale standing characters |
 | `function angel:cast/walk {id:"misato",x:1.5,y:65,z:2.5,speed:0.2}` | walks in a straight line to x,z at `speed` blocks per tick, facing the way it goes (walking animation: the client animates any entity that is moving), stepping up and down blocks, slabs and stairs, and stops there. **Arrival: `scoreboard players get #arrived_misato angel.cast` is 0 from the start of the walk and 1 once it stands still on the spot** (a few ticks after it gets there; it first settles onto the floor). `y` is only used as a last resort (below). |
 | `function angel:cast/stop {id:"misato"}` | stops a walk where it is (the arrived score stays 0) |
 | `function angel:cast/look {id:"misato",mode:"player"}` | turns (12 degrees a tick at most; head and body together) to face the nearest player within 96 blocks, while standing still. Mode `"ahead"` stops it. Default after summon: player. Not while walking (it resumes at arrival) and not while lying. |
@@ -94,14 +95,32 @@ The mannequin only knows `standing, crouching, swimming, fall_flying, sleeping` 
   seat position and her body extends 1.8 blocks behind the seat; on the gurney the seat is the mattress's foot end.
   Order for the gurney: `gurney`, `summon rei`, `mount rei angel.seat_gurney`, `pose rei lying`, `gurney_crew`.
 
+**The rule for the lying direction (read from the 26.3 client, `LivingEntityRenderer.setupRotations`, `LivingEntity.tick`/`tickHeadTurn`):**
+the sleeping pose draws the body with the feet at the entity's position and the head 1.8 blocks away in the direction
+(-cos a, sin a) (x, z), where `a` is the *client's body rotation* `yBodyRot`, not the Rotation we write. The server never
+sends it: the client takes it from the head yaw when the entity first appears and afterwards only clamps it to within 50 degrees of
+`Rotation[0]` (a rider never "walks", so nothing else turns it). So writing `Rotation[0] = -90 - facing` only leaves the body
+somewhere in -50..+50 of that: Rei lay across the gurney. Now `align_yaw` drives the clamp: Rotation = a+50 for 6 ticks (body pushed up to
+a..a+100), a-50 for 6 ticks (pushed down to exactly a), then a. The character is invisible meanwhile (12 ticks; state `#np/#nt/#na`
+per character; `walk`, `unlie` cancel it). It runs on `lie`, `unlie`, `mount` and when `gurney_move` turns the gurney, so a lying
+rider stays along the gurney, head at the head end, while it turns and rolls. Crew: medic1 at the foot end, medic2 at the head end, both on
+the left, 0.4 clear of the mattress edge.
+
 ### Looking
 
 `look` needs a player: it picks `@p` within 96 blocks. With nobody online it does nothing. The turn logic was run
 in tests with a marker standing in for the player (12 degrees a tick, shortest way round, pitch kept within 30).
 
+## Removing
+
+`kill` on a mannequin plays the death fall with the red flash, and a world save in that second logs "Invalid pose: dying" (its pose
+cannot be written). `cast/vanish` (used by `remove`, `remove_all`, and a re-summon) therefore takes its tags away, puts it 2000 blocks
+below the world, sets `DeathTime:19s` and kills it there: gone within a tick, unseen, no log lines (tested, also with a forced save).
+
 ## Skins
 
-Seven 64x64 skins (`skins.py`), the modern layout with outer layers, all our own drawings from plain descriptions.
+Seven 64x64 skins (`skins.py`), the modern layout with outer layers, all our own drawings from plain descriptions: flat colours,
+shading only where form asks for it (under the chin, folds, hems, collar edges), no random speckle, faces readable at 6 blocks.
 `render.py` is a small software renderer for the preview (both layers on the model, four angles and a far view);
 `preview/sheet.png` is the sheet, `preview/gurney.png` the gurney drawn flat with the patient and crew outlined.
 

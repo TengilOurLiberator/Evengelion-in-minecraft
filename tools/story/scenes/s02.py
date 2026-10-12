@@ -1,27 +1,56 @@
-"""Scene 2, The road.
+"""Scene 2, The road, staged to cue-sheet.md.
 
-The blue car drives out of town and up the hill road to the ridge (2.01-2.04, a WAIT after 2.02).  On the ridge Misato sees the aircraft
-withdraw (2.05, 2.06); the army's mine goes off: a white-out, a delayed deep blast, a mushroom cloud over the monster, which starts to
-regrow.  The car ends on its side, the boy and Misato beside it (2.07, WAIT, 2.08, 2.09).  They push (touch, punch or right-click the car);
-it rolls back onto its wheels (2.10, 2.11), they get in and drive on down to the gate (2.12-2.16, Ritsuko on the telephone).
+The blue car drives out of town and up the hill road to the ridge (2.01-2.04, a WAIT after 2.02): amb.car_interior, music.road, the siren
+(from the old town, positional) falling behind as the distance grows.  On the ridge the engine stops, the music with it, and the wind comes
+in (2.05, 2.06).  The mine, timed to sfx.mine (9.000 s: whine 0.0-0.4, DIGITAL SILENCE 0.4-2.4, blast at 2.4, tail to 9.0):
+
+    tick   0   every sound stopped (beds, music, siren, whatever else is sounding), sfx.mine starts, the white-out begins with the whine
+    tick   8   the whine has ended
+    tick  8-48 TWO FULL SECONDS in which nothing plays: the view is white, thins to veil at tick 20, clears at tick 34 on the silent fireball;
+               nothing is scheduled to make a sound in this window (the checker proves it)
+    tick  48   the blast lands: black at once (the shock wave's dust at the player), the car goes over
+    tick  50   in the dark the car lies on its side, the boy and Misato on their feet beside it, the cloud grows; sfx.car_roll starts
+    tick 108   sfx.ears_ringing starts (8 s, under 2.07) as the picture comes back (blindness 4 s from tick 48: clear at tick 128)
+    tick 180   the sfx.mine tail ends; the town's air (amb.town_empty) comes back slowly, over 6 s; no music until the drive resumes
+
+Pushing the car is the first thing the boy does with his hands (2.09 counts them in): sfx.car_drop lands with the car on its wheels, then
+the doors, sfx.car_start, amb.car_interior back and music.road again as the drive resumes (2.12-2.16, Ritsuko on the telephone).  In the
+distance the Angel stands in the crater, glowing (an outline in orange, through the hill if the hill is in the way) and regrowing (pose
+`regenerating`, a flame at the crater); the call is paced so that the car limps down to the gate as the call ends.
 
 Beats: 20 on the road, 21 from the blast, 22 once back on the road.
 """
 import math
 
+import numpy as np
+
 import carfx
 import fx
+import launch_shell as sh
 import paths
+from audio import sfx
 from context import (actionbar, cast_look, cast_mount, cast_remove, cast_summon, play_at, play_player, ride_passenger, tp_player)
-from core import blind, P, PA, angdiff, fn, local_to_world, num, sset, QI
-from engine import C, Cond
-from motion import Path
+from core import NS, OBJ, blind, P, PA, T, angdiff, fn, local_to_world, num, sset, QI
+from engine import C, Cond, Nudges
+from motion import Path, leg_frames
 from models import DOOR_OPEN_DEG
+from scenes.s01 import SIREN_AT, SIREN_VOL
 
 N = 2
 TITLE = "The road"
 
 LIE_YAW = 100.0
+BLAST = 48                  # ticks from the start of sfx.mine to the blast (2.400 s)
+WHITE_VEIL = 1.0            # seconds: the white thins to a veil (still silent)
+WHITE_OFF = 1.7             # seconds: the white is gone, the silent fireball is in view
+BLACK_FOR = 4               # seconds of blindness from the blast: dark for three, back over the last (clear at tick 128)
+GLOW_COLOUR = 16744448      # 0xFF7F00, the outline of the Angel in the crater
+
+
+def nudge(who):
+    """A reminder when the boy says nothing: the prompt is already there, this repeats it on the action bar with the soft chime."""
+    return Nudges(first=16.0, repeat=24.0, loop_from=0, cmds=[[actionbar(f"Say something to {who}: speak, or angel:story/skip.", "gray"),
+                                                              sfx("sfx.speak_chime", vol=0.8)]])
 
 
 def build(s, ctx):
@@ -31,6 +60,9 @@ def build(s, ctx):
     car = ctx.rig("car")
     probe = ctx.probe("outskirts")
     arrive_pose = (arrive["x"], arrive["y"], arrive["z"], arrive["yaw"], 0.0)
+
+    def span(lid, gap=True):
+        return (ctx.lines[lid].ticks + (T(0.4) if gap else 0)) / 20.0
 
     # ---------------------------------------------------------------- route 1: town to the ridge, fast and a little wild
     pts, warns = paths.grounded(probe, paths.to_ridge_xz(ctx), arrive["y"])
@@ -46,11 +78,20 @@ def build(s, ctx):
     pts2, warns2 = paths.grounded(probe, paths.ridge_to_gate_xz(ctx), by)
     for w in warns2:
         ctx.warn("scene 2 ridge_to_gate: " + w)
-    to_gate = ctx.new_route("to_gate", car)
     base_yaw = Path(pts2).heading(0.0)
-    to_gate.add_leg("limp", Path(pts2), vmax=3.2, a_acc=0.6, a_dec=0.9, a_lat=1.3, smooth=0.6,
-                    yaw_fn=lambda t, b: b + angdiff(LIE_YAW, base_yaw) * max(0.0, 1 - t / 3.0) ** 2)
+    limp_kw = dict(a_acc=0.6, a_dec=0.9, a_lat=1.3, smooth=0.6, yaw_fn=lambda t, b: b + angdiff(LIE_YAW, base_yaw) * max(0.0, 1 - t / 3.0) ** 2)
+    # the call (2.12-2.16) is paced so that the car limps down to the gate as it ends: pick the speed that takes that long
+    call_secs = 1.0 + sum(span(f"2.{n}") for n in range(12, 17)) - 0.4
+    lo, hi = 1.2, 3.2
+    for _ in range(14):
+        mid = (lo + hi) / 2.0
+        secs = len(leg_frames(Path(pts2), mid, **limp_kw)[0]) / 20.0
+        lo, hi = (lo, mid) if secs < call_secs else (mid, hi)
+    limp_v = max(2.3, min(3.2, round((lo + hi) / 2.0, 2)))   # never slower than 2.3 blocks/s: the last seconds of the call may be said at the gate
+    to_gate = ctx.new_route("to_gate", car)
+    to_gate.add_leg("limp", Path(pts2), vmax=limp_v, **limp_kw)
     gate_pose = to_gate.pose(to_gate.end)
+    ctx.warn(f"scene 2: the call lasts {call_secs:.1f} s; the car limps down at {limp_v} blocks/s and takes {to_gate.seconds():.1f} s")
 
     player_spot, misato_spot = carfx.lie_stand_spots(lie_pose, side_blocks=7.0, fwd=(-0.8, 1.6))
     py_ = probe.surface(player_spot[0], player_spot[1], by) or by
@@ -60,6 +101,30 @@ def build(s, ctx):
     roof = local_to_world((cx_, by, cz_), LIE_YAW, 0.0, -4.3, 0.0, 0.0)          # the roof of the car lying on its right side
     lie_centre = local_to_world((cx_, by, cz_), LIE_YAW, 0.0, -3.0, 0.0, 0.0)
     mine = (walk4["x"], walk4["y"], walk4["z"])
+
+    # how much of the call the Angel's upper body is in line of sight from the car (it stands 70 to 100 blocks off, behind the ridge's shoulder)
+    fr = np.array(to_gate.frames)
+    seen = []
+    for i in range(0, len(fr), 20):
+        eye = fr[i, :3] + np.array([0.0, 1.6, 0.0])
+        tgt = np.array([mine[0], mine[1] + 50.0, mine[2]])
+        d = tgt - eye
+        n = int(np.linalg.norm(d) / 0.5)
+        seen.append(all(not probe.solid(*(eye + d * (k / n))) for k in range(1, n)))
+    ctx.warn(f"scene 2: the Angel's upper body is in line of sight from the car for {100 * sum(seen) // max(1, len(seen))} % of the call "
+             f"(the orange outline shows through the hill for the rest)")
+
+    # ---------------------------------------------------------------- the Angel in the crater: glowing and regrowing, a flame at the crater
+    glow_on = f"execute as @e[type=minecraft:block_display,tag=angel.part] run data merge entity @s {{Glowing:1b,glow_color_override:{GLOW_COLOUR}}}"
+    glow_off = "execute as @e[type=minecraft:block_display,tag=angel.part] run data merge entity @s {Glowing:0b}"
+    ctx.extra_functions["story/fx/crater_tick"] = [
+        f"particle minecraft:flame {num(mine[0])} {num(mine[1] + 2.0)} {num(mine[2])} 7 2 7 0.02 3 force",
+        f"particle minecraft:lava {num(mine[0])} {num(mine[1] + 1.0)} {num(mine[2])} 6 1 6 0.0 1 force",
+        f"particle minecraft:campfire_signal_smoke {num(mine[0])} {num(mine[1] + 6.0)} {num(mine[2])} 4 3 4 0.01 1 force"]
+    ctx.fx_tick.append(f"execute if score #fx.crater {OBJ} matches 1 run function {NS}:story/fx/crater_tick")
+    ctx.fx_flags.add("crater")
+    crater_on = [glow_on, sset("#fx.crater", 1)]
+    crater_off = [glow_off, sset("#fx.crater", 0)]
 
     # ================================================================ setup (for a jump; a hand-over from scene 1 skips it)
     sx, sy, sz = carfx.seat_world(arrive_pose, "passenger")
@@ -73,21 +138,26 @@ def build(s, ctx):
          f"execute positioned {num(walk4['x'])} {num(walk4['y'])} {num(walk4['z'])} rotated 90 0 run function angel:angel/summon {{height:60}}",
          sset("#beat", 20), sset("#present_misato", 1), sset("#present_ritsuko", 0), sset("#present_gendo", 0), sset("#present_rei", 0),
          note="car, Misato at the wheel, the boy beside her, the monster inland")
+    s.do(*ctx.audio.start("loop", "siren", at=SIREN_AT, vol=SIREN_VOL), *ctx.audio.start("bed", "town_empty"),
+         note="(a jump only) the siren from the old town and the town's air, as scene 1 leaves them")
     s.sleep(1.4)
     s.setup_done()
 
     # ================================================================ the drive
     s.beat(20)
-    s.do(*carfx.door_cmds(car, arrive_pose, False, 8), cast_look("misato", "ahead"), note="the door shuts")
+    s.do(*carfx.door_cmds(car, arrive_pose, False, 8), cast_look("misato", "ahead"), note="the door shuts (sfx.car_door)")
+    s.bed("car_interior", fade=2.0, note="the car's bed replaces the town's (the siren goes on, from behind)")
     s.sleep(0.8)
-    s.do(*to_ridge.start_cmds(), note="she drives fast and badly, out of town and up into the hills")
+    s.do(*to_ridge.start_cmds(), *ctx.audio.start("music", "road"), note="she drives fast and badly, out of town and up into the hills; music.road")
     s.sleep(1.2)
     s.say("2.01")
     s.say("2.02")
-    s.wait_answer(speaker="misato", prompt="answer Misato")
+    s.wait_answer(speaker="misato", prompt="answer Misato", nudges=nudge("Misato"))
     s.say("2.03")
     s.say("2.04")
     s.until(to_ridge.cond_done(), est=to_ridge.seconds(), timeout=120, note="the car reaches the ridge and stops")
+    s.do(*ctx.audio.stop("music"), *ctx.audio.start("bed", "town_empty", fade=3.0, out="car_interior", out_fade=1.6),
+         note="engine off: the music stops with it, the engine bed ramps down and the wind on the ridge comes in")
     s.sleep(0.8)
 
     # ================================================================ the ridge: the planes pull back
@@ -100,37 +170,41 @@ def build(s, ctx):
     ctx.fx_scheduled.append("story/s2/f_cleanup_air")
     s.function("cleanup_air", ["kill @e[tag=angel.cmark]"] + [f"kill @e[tag=angel.rig_ac{i}]" for i in range(1, 5)])
     s.say("2.05")
+    s.say("2.06", gap=0)
 
-    # ---------------------------------------------------------------- the mine (timeline from the start of 2.06)
-    flash = fx.flash_burst()
-    for k in range(5):
-        s.after(4.0 + 0.15 * k, *flash, note=f"white-out {k}")
-    s.after(4.7, blind(5.2), note="then dark, for the swap")
+    # ---------------------------------------------------------------- THE MINE (everything below is relative to this tick, T0)
     spawn_cloud, cloud_sched = fx.mushroom(ctx, (mine[0], mine[1], mine[2]))
+    ctx.extra_functions["story/s2/whiteout"] = sh.box_shell("angel.mwhite", "white_concrete", None, (4.0, 4.0, 4.0), bright=15)
+    at_eyes = f"execute at {P()} anchored eyes positioned ^ ^ ^ run "
     lie_cmds = [sset("#ride", 0), f"ride {P()} dismount", cast_remove("misato"), "kill @e[tag=angel.rig_car]",
                 *ctx.rig_spawn(car, "side", lie_pose, carfx.roll_motions(car, 90.0)),
                 tp_player(player_spot[0], py_, player_spot[1]),
                 cast_summon("misato", misato_spot[0], my_, misato_spot[1], face_car), cast_look("misato", "player"),
                 sset("#beat", 21),
                 f"function angel:angel/pose {{pose:\"regenerating\"}}",
-                *spawn_cloud, *cloud_sched,
                 f'summon minecraft:interaction {num(lie_centre[0])} {num(by)} {num(lie_centre[2])} '
                 f'{{Tags:["angel.story","angel.ia_push"],width:7.4f,height:4.4f,response:1b}}']
-    s.after(4.9, *lie_cmds, note="in the dark: the car on its side, the boy and Misato on their feet beside it, the cloud, the monster regrowing")
-    s.after(5.1, *fx.dust_at(lie_centre[0], by + 0.3, lie_centre[2], 60, 3.0))
-    # the sound arrives well after the light
-    s.after(6.9, play_at("minecraft:entity.generic.explode", mine[0], mine[1] + 20, mine[2], 12.0, 0.4, 1.0),
-            play_at("minecraft:entity.lightning_bolt.thunder", mine[0], mine[1] + 20, mine[2], 12.0, 0.5, 1.0),
-            play_at("minecraft:entity.dragon_fireball.explode", mine[0], mine[1] + 20, mine[2], 12.0, 0.4, 1.0), note="the deep blast, late")
-    s.after(7.6, f"execute at {P()} run particle minecraft:dust_plume ~ ~0.5 ~ 5 1 5 0.03 80 force",
+    s.do(fn("story/snd/silence"),                                                   # tick 0: every sound stopped ...
+         sfx("sfx.mine", vol=4.0),                                                  # ... the mine begins (whine, then 2 s of nothing, then the blast)
+         at_eyes + fn("story/s2/whiteout"), *fx.flash_burst(), *spawn_cloud, *cloud_sched,
+         note="T0: SILENCE (stopsound everything), sfx.mine, the white-out begins with the whine, the fireball and cloud are built behind it")
+    s.quiet(0.4, 2.4, note="sfx.mine: digital silence from 0.4 s to 2.4 s; the checker proves nothing else is scheduled to sound in it")
+    s.after(WHITE_VEIL, sh.set_block("angel.mwhite", "white_stained_glass"), note="tick 20: the white thins to a veil (still silent)")
+    s.after(WHITE_OFF, sh.kill("angel.mwhite"), note="tick 34: the white is gone: the fireball over the monster, in silence")
+    s.after(BLAST / 20.0, blind(BLACK_FOR),
+            f"execute at {P()} run particle minecraft:dust_plume ~ ~0.5 ~ 5 1 5 0.03 80 force",
             f"execute at {P()} run particle minecraft:falling_dust{{block_state:\"minecraft:dirt\"}} ~ ~5 ~ 6 2 6 0.0 60 force",
-            play_at("minecraft:entity.generic.explode", ridge_pose[0], ridge_pose[1] + 3, ridge_pose[2], 6.0, 0.35, 0.8), note="the wave arrives")
-    s.say("2.06")
-    s.sleep(2.6, note="the white fades, the sound arrives, the dark lifts")
+            note="tick 48: THE BLAST arrives (sfx.mine at 2.400 s): black at once, the shock wave's dust; the car goes over")
+    s.after((BLAST + 2) / 20.0, *lie_cmds, sfx("sfx.car_roll", at=(lie_centre[0], by + 1.0, lie_centre[2]), vol=1.5),
+            note="tick 50, in the dark: the car lies on its side, the boy and Misato beside it; sfx.car_roll (the car goes over twice)")
+    s.after((BLAST + 4) / 20.0, *fx.dust_at(lie_centre[0], by + 0.3, lie_centre[2], 60, 3.0))
+    s.after(5.4, sfx("sfx.ears_ringing", vol=1.0), note="tick 108: the ringing begins as the picture comes back (8 s, under 2.07)")
+    s.after(9.0, *ctx.audio.start("bed", "town_empty", fade=6.0), note="tick 180: the blast's tail has ended: the town's air comes back slowly (6 s); no music")
+    s.sleep((BLAST + BLACK_FOR * 20) / 20.0, note="the dark lifts (clear at tick 128)")
 
     # ================================================================ on the ground
     s.say("2.07")
-    s.wait_answer(speaker="misato", prompt="answer Misato")
+    s.wait_answer(speaker="misato", prompt="answer Misato", nudges=nudge("Misato"))
     s.say("2.08")
     s.say("2.09")
     ia_push = "@e[tag=angel.ia_push,limit=1]"
@@ -140,14 +214,14 @@ def build(s, ctx):
             nag=(10.0, 14.0, [fn("say/2_09")]), timeout=50, on_done=cleanup_push, est=5.0, hint=("Push the car.", []), hint_after=25,
             note="the boy pushes (touch, punch or right-click); Misato repeats 2.09 after 10 s")
     s.beat(22)
-    # the car rolls back onto its wheels, over two seconds, in eight short interpolations
+    # the car rolls back onto its wheels, over two seconds, in eight short interpolations; sfx.car_drop lands with it
     keys = carfx.roll_keyframes(car, 90.0, 0.0, 40, 8)
-    s.do(play_at("minecraft:block.anvil.land", lie_centre[0], by + 1, lie_centre[2], 1.5, 0.5, 0.5),
-         play_at("minecraft:entity.iron_golem.damage", lie_centre[0], by + 1, lie_centre[2], 2.0, 0.6, 0.5), note="the car starts to go over")
+    s.do(play_at("minecraft:entity.iron_golem.damage", lie_centre[0], by + 1, lie_centre[2], 1.0, 0.6, 0.0),
+         note="the car starts to go over (no library event for the strain: a soft vanilla creak stands in)")
     for delay, cmds in keys:
         s.after(delay / 20.0 + 0.05, *cmds)
-    s.after(2.2, play_at("minecraft:block.anvil.land", lie_centre[0], by, lie_centre[2], 2.0, 0.7, 0.6),
-            *fx.dust_at(cx_, by + 0.2, cz_, 70, 3.2), "kill @e[tag=angel.new]")
+    s.after(2.05, sfx("sfx.car_drop", at=(lie_centre[0], by + 1.0, lie_centre[2]), vol=1.5),
+            *fx.dust_at(cx_, by + 0.2, cz_, 70, 3.2), "kill @e[tag=angel.new]", note="sfx.car_drop: the car lands on its wheels")
     s.sleep(2.6)
     s.say("2.10")
     # both get in: Misato first (the door opens), then the boy
@@ -162,12 +236,16 @@ def build(s, ctx):
     s.until([C.near(dx, dy, dz, 2.2, est=5), C.data(ia_car, "interaction", est=5), C.data(ia_car, "attack", est=5)],
             timeout=20, on_done=[f"kill {ia_car}", *ride_passenger()], est=5.0, hint=("Get in the car.", []), hint_after=8,
             note="get back in (walk to the door, or touch the car)")
-    s.do(*carfx.door_cmds(car, upright, False, 8))
-    s.sleep(0.7)
+    s.do(*carfx.door_cmds(car, upright, False, 8), note="the door shuts (sfx.car_door)")
+    s.sleep(0.5)
+    s.do(sfx("sfx.car_start", vol=1.2), note="sfx.car_start: the starter, the engine catching")
+    s.after(2.0, *ctx.audio.start("bed", "car_interior", fade=2.0), note="the engine has caught: the car's bed comes back")
+    s.sleep(3.2, note="the engine settles")
 
     # ================================================================ down to the gate
-    s.do(*to_gate.start_cmds(), note="she drives on with the windscreen cracked")
+    s.do(*to_gate.start_cmds(), *ctx.audio.start("music", "road"), note="the drive resumes with the windscreen cracked: music.road again")
     s.sleep(1.0)
+    s.do(*crater_on, note="the Angel in the crater: orange outline, flame at the crater (it is regrowing)")
     s.say("2.12")
     s.do(sset("#present_ritsuko", 2), note="Ritsuko, on the telephone")
     s.say("2.13")
@@ -176,6 +254,7 @@ def build(s, ctx):
     s.say("2.15")
     s.say("2.16")
     s.until(to_gate.cond_done(), est=to_gate.seconds(), timeout=90, note="the car reaches the gate")
+    s.do(*crater_off, *ctx.audio.stop("music"), note="the car stops at the gate: the music stops, the Angel is left behind")
     s.sleep(0.8)
     s.next_scene(3)
 
@@ -183,3 +262,4 @@ def build(s, ctx):
 def carfx_door_open(car):
     from models import door_motion
     return {"door": door_motion(DOOR_OPEN_DEG)}
+

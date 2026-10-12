@@ -32,11 +32,25 @@ class Clock:
         self.ref = 0.0
         self.limit = 0
         self.on = False
+        self.sched = []                # [(time, limit)]: raises of the route limit scheduled by `s.after` steps
 
-    def advance(self, t):
+    def _step(self, t):
         if self.on:
             self.n = min(self.limit, self.n + (t - self.ref) * TPS)
         self.ref = t
+
+    def advance(self, t):
+        while self.sched and self.sched[0][0] <= t:
+            tt, lim = self.sched.pop(0)
+            self._step(max(tt, self.ref))
+            self.limit = lim
+        self._step(t)
+
+    def copy(self):
+        c = Clock()
+        c.__dict__.update(self.__dict__)
+        c.sched = list(self.sched)
+        return c
 
 
 def walk_scene(ctx, scene, report, take=()):
@@ -89,6 +103,11 @@ def walk_scene(ctx, scene, report, take=()):
             i += 1
         elif k == "after":
             timers.append((t + st.sec, st.note or "timed effect"))
+            for c in st.cmds:
+                m = re.search(r"scoreboard players set #mv\.limit angel\.story (-?\d+)", c)
+                if m:
+                    clk.sched.append((t + st.sec, int(m.group(1))))
+                    clk.sched.sort()
             i += 1
         elif k == "goto":
             i = scene.labels[st.label]
@@ -125,15 +144,21 @@ def walk_scene(ctx, scene, report, take=()):
             for c in st.conds:
                 if hasattr(c, "route"):
                     clk.advance(t)
+                    cl = clk.copy()
+                    t_ev = t
+                    while cl.limit < c.frame and cl.sched:          # a raise of the limit that a timer will make
+                        t_ev, lim = cl.sched.pop(0)
+                        cl.advance(t_ev)
+                        cl.limit = lim
                     if clk.route != c.route.id or not clk.on:
                         report.error(f"scene {scene.n} step {i}: waits for route {c.route.name} frame {c.frame}, but that route is not playing")
                         cand = None
-                    elif c.frame > clk.limit:
+                    elif c.frame > cl.limit:
                         report.error(f"scene {scene.n} step {i}: DEADLOCK: waits for route {c.route.name} frame {c.frame} but the limit is "
                                      f"frame {clk.limit}")
                         cand = None
                     else:
-                        cand = max(0.0, (c.frame - clk.n) / TPS)
+                        cand = max(0.0, (t_ev - t) + (c.frame - cl.n) / TPS)
                 else:
                     cand = c.est
                 if cand is not None and (best is None or cand < best):
@@ -254,6 +279,171 @@ def check_commands(out, report):
         report.warn(f"command syntax: ... and {len(bad) - 30} more")
 
 
+SOUND_LINE = re.compile(r"(?:^|\s)(playsound|stopsound)\s")
+EVENT_RE = re.compile(r"\bangel:([a-z_]+\.[A-Za-z0-9_.]+)")
+CALL_RE = re.compile(r"(?<!schedule )function angel:([A-Za-z0-9_/.\-]+)")
+SCHED_AT_RE = re.compile(r"schedule function angel:([A-Za-z0-9_/.\-]+) (\d+)t")
+
+
+def check_sounds(out, report):
+    """Every angel: sound event that any generated function plays or stops exists in the pack's sounds.json."""
+    from core import SOUNDS
+    import json
+    try:
+        with open(SOUNDS, encoding="utf-8") as f:
+            have = set(json.load(f))
+    except (OSError, ValueError) as e:
+        report.error(f"cannot read sounds.json: {e}")
+        return
+    used = {}
+    for rel, text in out.files.items():
+        if not rel.endswith(".mcfunction"):
+            continue
+        for line in text.splitlines():
+            if line.startswith("#") or not SOUND_LINE.search(line):
+                continue
+            for ev in EVENT_RE.findall(line.split("playsound", 1)[-1] if "playsound" in line else line.split("stopsound", 1)[-1]):
+                used.setdefault(ev, set()).add(rel.split("/function/")[-1])
+    missing = {e: sorted(w)[:3] for e, w in used.items() if e not in have}
+    for e, w in sorted(missing.items()):
+        report.error(f"sound event angel:{e} is played or stopped by {w} but is not in sounds.json")
+    report.note(f"sounds: {len(used)} angel: events played or stopped by the story, all present in sounds.json" if not missing else
+                f"sounds: {len(used) - len(missing)} of {len(used)} angel: events present in sounds.json")
+    vanilla = {}
+    for rel, text in out.files.items():
+        if rel.endswith(".mcfunction"):
+            where = "/".join(rel.split("/function/")[-1].split("/")[:2])
+            for line in text.splitlines():
+                m = re.search(r"playsound (minecraft:[a-z_.]+)", line) if not line.startswith("#") else None
+                if m:
+                    vanilla.setdefault(m.group(1).replace("minecraft:", ""), set()).add(where)
+    if vanilla:
+        report.note("vanilla stand-in sounds still played (event: where): " + "; ".join(f"{e}: {', '.join(sorted(w))}" for e, w in sorted(vanilla.items())))
+    return used
+
+
+def sounds_in(out, lines, t0, depth=0, seen=None):
+    """[(tick, description)] of every sound that `lines` (a function body) can start, following function calls and scheduled functions."""
+    events = []
+    if depth > 8:
+        return events
+    for line in lines:
+        if line.startswith("#"):
+            continue
+        if "playsound" in line:
+            m = re.search(r"playsound (\S+)", line)
+            events.append((t0, f"playsound {m.group(1) if m else '?'}"))
+        for m in SCHED_AT_RE.finditer(line):
+            body = out.files.get(f"data/angel/function/{m.group(1)}.mcfunction")
+            if body is not None:
+                events += sounds_in(out, body.splitlines(), t0 + int(m.group(2)), depth + 1)
+        for m in CALL_RE.finditer(line):
+            if "$(" in m.group(1):
+                continue
+            body = out.files.get(f"data/angel/function/{m.group(1)}.mcfunction")
+            if body is not None:
+                events += sounds_in(out, body.splitlines(), t0, depth + 1)
+    return events
+
+
+def check_quiet(ctx, out, report):
+    """A `s.quiet(a, b)` step declares a window of seconds in which nothing may sound.  Every step that runs in the same instant as it (the timed
+    effects `s.after` that follow it, up to the first step that takes time) is followed through every function it calls and schedules."""
+    n_windows = 0
+    for scene in ctx.scenes:
+        for i, st in enumerate(scene.steps):
+            q = getattr(st, "quiet", None)
+            if not q:
+                continue
+            n_windows += 1
+            lo, hi = int(round(q[0] * TPS)), int(round(q[1] * TPS))
+            events = []
+            j = i + 1
+            while j < len(scene.steps):
+                nx = scene.steps[j]
+                if nx.kind == "after":
+                    body = out.files.get(f"data/angel/function/{nx.path}.mcfunction", "").splitlines()
+                    events += sounds_in(out, body, T(nx.sec))
+                elif nx.kind == "do":
+                    events += sounds_in(out, nx.cmds, 0)
+                else:
+                    break
+                j += 1
+            bad = [(t, d) for t, d in events if lo < t < hi]
+            near = sorted((t, d) for t, d in events if t <= hi + 6)
+            for t, d in bad:
+                report.error(f"scene {scene.n}: a sound ({d}) is scheduled at tick {t}, inside the quiet window ticks {lo}..{hi}")
+            if not bad:
+                report.note(f"scene {scene.n} quiet window ticks {lo}..{hi}: no sound starts inside it (the sounds that do start around it: "
+                            + ", ".join(f"tick {t} {d.split(':')[-1]}" for t, d in near) + ")")
+    return n_windows
+
+
+def check_descent(ctx, report):
+    """music.descent's bloom (tick 160) must land on geofront.reveal: the ticks from the music's start to the reveal frame, from the steps."""
+    d = getattr(ctx, "descent", None)
+    scene = next((s for s in ctx.scenes if s.n == 3), None)
+    if not d or not scene:
+        return
+    t_music = t_release = None
+    clock = 0
+    for st in scene.steps:
+        if st.kind == "do" and any("music_descent/start" in c for c in st.cmds):
+            t_music = 0
+        if st.kind == "after" and any("music_descent/start" in c for c in st.cmds):
+            t_music = T(st.sec)
+        if st.kind == "do" and any("mv.limit" in c and f" {ctx.routes['geofront_ride'].end} " in c + " " for c in st.cmds):
+            t_release = 0
+        if st.kind == "after" and any("mv.limit" in c for c in st.cmds):
+            t_release = T(st.sec)
+    if t_music is None or t_release is None:
+        report.error("scene 3: cannot find the music.descent start and the wagon's release in the steps")
+        return
+    ticks = (t_release - t_music) + (d["reveal"] - d["station"])
+    if ticks != d["bloom"]:
+        report.error(f"scene 3: music.descent starts {ticks} ticks before the reveal, its bloom is at tick {d['bloom']}")
+    else:
+        report.note(f"scene 3: music.descent reaches its bloom exactly on geofront.reveal: music at tick 0, wagon let go at tick {t_release - t_music} "
+                    f"(from rest at frame {d['station']}), reveal frame {d['reveal']} at tick {ticks} = {ticks / 20.0:.2f} s; wall_opens at tick "
+                    f"{t_release - t_music + d['wall'] - d['station']}")
+
+
+def check_cards(ctx, out, report):
+    """The card font exists (definition, atlas, licence) and has every character the cards use."""
+    import json
+    import cardfont
+    problems = []
+    for path in (cardfont.OUT_JSON, cardfont.OUT_PNG, cardfont.OUT_LICENSE):
+        import os
+        if not os.path.isfile(path):
+            problems.append(f"missing {os.path.relpath(path, cardfont.ROOT)} (run tools/story/cardfont.py)")
+    try:
+        with open(cardfont.OUT_JSON, encoding="utf-8") as f:
+            fj = json.load(f)
+        bm = fj["providers"][0]
+        if bm.get("type") != "bitmap" or not (0 < bm["ascent"] <= bm["height"]) or any(len(r) != len(bm["chars"][0]) for r in bm["chars"]):
+            problems.append("card.json: the bitmap provider is malformed")
+    except (OSError, ValueError, KeyError, IndexError) as e:
+        problems.append(f"card.json: {e}")
+    for key in ctx.cards:
+        for t in (key[0], key[1] or ""):
+            if key[2] == cardfont.FONT_ID and not cardfont.covers(t):
+                problems.append(f"card {t!r} has characters outside the font")
+    for p in problems:
+        report.error("cards: " + p)
+    if not problems:
+        report.note(f"cards: {len(ctx.cards)} cards, all in font {cardfont.FONT_ID} (card.json + card.png present, every character covered)")
+
+
+def waits_without_nudge(ctx, report):
+    rows = []
+    for scene in ctx.scenes:
+        for st in scene.steps:
+            if st.kind == "wait" and not getattr(st, "nudges", None):
+                rows.append(f"{scene.n}:{st.index}")
+    report.note("waits with no nudge (only the speak prompt and angel:story/skip): " + (", ".join(rows) if rows else "none"))
+
+
 def comfort(route):
     f = np.array(route.frames, float)
     v = np.hypot(np.diff(f[:, 0]), np.diff(f[:, 2])) * TPS
@@ -351,6 +541,11 @@ def main_check(ctx, out):
     print(f"all scenes: {total:.0f}s ({total / 60:.1f} min) of story with answers assumed {CFG.answer_est:.0f}s")
     check_lines(ctx, scenes_said, report)
     check_functions(out, ctx, report)
+    check_sounds(out, report)
+    check_quiet(ctx, out, report)
+    check_descent(ctx, report)
+    check_cards(ctx, out, report)
+    waits_without_nudge(ctx, report)
     check_commands(out, report)
     for l in check_routes(ctx, report):
         print(l)

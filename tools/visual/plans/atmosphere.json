@@ -3,16 +3,20 @@
  "shots": [
   {"name": "outskirts_street_east", "steps": ["function angel:world/sky_outskirts", {"tp": "outskirts.street", "yaw": -90, "pitch": 0}], "settle": 5},
   {"name": "outskirts_aerial", "steps": [{"tp": [60, 110, 128], "look_at": [210, 35, 128]}], "settle": 6},
-  {"name": "outskirts_ridge_sea", "steps": [{"tp": "outskirts.ridge", "yaw": -90, "pitch": 2}], "settle": 5},
+  {"name": "outskirts_ridge", "steps": [{"tp": "outskirts.ridge", "look_at": [228.5, 70, 128.5]}], "settle": 5},
 
   {"name": "geofront_reveal", "steps": ["function angel:world/sky_geofront", {"tp": "geofront.reveal"}], "settle": 8},
   {"name": "geofront_overview_west", "steps": [{"tp": [2045, 70, 160], "look_at": [2235, 25, 160]}], "settle": 8},
   {"name": "geofront_overview_south", "steps": [{"tp": [2160, 60, 285], "look_at": [2210, 30, 150]}], "settle": 6},
-  {"name": "geofront_floor_far_wall", "steps": [{"tp": [2160, 40, 40], "yaw": 180, "pitch": 3}], "settle": 6},
+  {"name": "geofront_terminal", "steps": [{"tp": "geofront.terminal"}], "settle": 6},
 
   {"name": "city_aerial_overview", "steps": ["function angel:world/sky_city", {"tp": [1160, 210, -40], "look_at": [1160, 40, 150]}], "settle": 8},
   {"name": "city_giant_avenue", "steps": [{"tp": "city.launch_top", "off": [0, 25, 0], "look_at": [1160, 75, -80]}], "settle": 6},
-  {"name": "city_edge_west", "steps": [{"tp": [1040, 90, 160], "look_at": [930, 70, 160]}], "settle": 6},
+  {"name": "city_street_north", "steps": [{"tp": [1160, 66, 200], "yaw": 180, "pitch": 0}], "settle": 6},
+  {"name": "city_edge_south", "steps": [{"tp": [1160, 140, 200], "look_at": [1160, 50, 360]}], "settle": 6},
+
+  {"name": "city_dawn_avenue", "steps": ["time of angel:day set 23400", {"tp": "city.launch_top", "off": [0, 25, 0], "look_at": [1160, 75, -80]}, {"wait": 2}], "settle": 6},
+  {"name": "city_day_avenue", "steps": ["time of angel:day set 6000", {"wait": 2}], "settle": 6},
 
   {"name": "hq_start", "steps": ["function angel:world/sky_hq", {"tp": "hq.start"}], "settle": 8},
   {"name": "hq_dock", "steps": [{"tp": "hq.dock"}], "settle": 6},

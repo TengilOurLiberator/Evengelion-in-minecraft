@@ -219,6 +219,7 @@ class Session:
             raise RuntimeError("world build failed:\n" + r.stdout[-2500:] + r.stderr[-1500:])
         shutil.copytree(out, self.srv.dp, dirs_exist_ok=True)
         planmod.ANCHORS = os.path.join(tmp, "pack", "anchors.json")
+        self.world_tmp = tmp                       # removed in close()
         log("world pack laid over the scratch datapack")
 
     def save_logs(self, out):
@@ -246,6 +247,9 @@ class Session:
             os.remove(PIDFILE)
         except OSError:
             pass
+        if getattr(self, "world_tmp", None):
+            import shutil
+            shutil.rmtree(self.world_tmp, ignore_errors=True)
 
 
 def main():

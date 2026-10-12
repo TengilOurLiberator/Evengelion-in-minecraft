@@ -1,0 +1,25 @@
+Card typeface of Angel Attack (resource pack font "angel:card")
+================================================================
+
+The glyphs of assets/angel/textures/font/card.png are rendered (condensed horizontally and spaced out) from
+
+    KaTeX_Main-Bold.ttf      capitals, digits, punctuation
+    KaTeX_Main-Regular.ttf   lower case
+
+which are Computer Modern Roman, redistributed in the KaTeX project, and carry this notice in their own name tables
+(name IDs 0, 13 and 14, read from the files in tools/story/fonts/):
+
+    Copyright (c) 2009-2010 Design Science, Inc. (<www.mathjax.org>)
+    Copyright (c) 2014-2018 Khan Academy (<www.khanacademy.org>),
+    with Reserved Font Name KaTeX_Main.
+
+    This Font Software is licensed under the SIL Open Font License, Version 1.1.
+    This license available with a FAQ at:
+    http://scripts.sil.org/OFL
+
+The SIL Open Font License 1.1 permits using, studying, copying, embedding and redistributing the font software, including in
+products that are sold, as long as the copyright notice and licence are kept with it and the font software itself is not sold
+on its own; the full text is at the URL above (https://openfontlicense.org/). The pack ships only bitmap glyphs drawn from the
+fonts, under a different name ("Angel Card"), not the font files.
+
+No Windows system font (Times New Roman, Georgia ...) is used anywhere: those are not redistributable.

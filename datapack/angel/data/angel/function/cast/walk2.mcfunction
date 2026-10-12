@@ -3,6 +3,8 @@ execute if entity @s[tag=angel.mounted] run ride @s dismount
 $kill @e[type=minecraft:armor_stand,tag=angel.autoseat_$(id)]
 tag @s remove angel.mounted
 tag @s remove angel.sitting
+$scoreboard players set #np_$(id) angel.cast 0
+effect clear @s minecraft:invisibility
 data merge entity @s {immovable:0b,NoGravity:0b}
 $summon minecraft:marker ^ ^ ^$(speed) {Tags:["angel.tmp"]}
 execute store result score #ax angel.cast run data get entity @s Pos[0] 100000

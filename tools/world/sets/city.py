@@ -149,7 +149,10 @@ SIDES = {             # (t along the side, q blocks out from the plate) -> (x, z
 # contour roads on the inner slopes: (side, t from, t to, road level).  The stretch behind the monster's avenue
 # (x 126..194 on the north side) is left dark so the silhouette reads.
 ROAD_SEGS = [("N", 56, 122, 50), ("N", 198, 262, 55), ("W", 58, 128, 47), ("W", 192, 262, 57),
-             ("E", 52, 126, 56), ("E", 186, 258, 45), ("S", 34, 46, 46), ("S", 278, 288, 50)]
+             ("E", 52, 126, 56), ("E", 186, 258, 45), ("S", 34, 46, 46), ("S", 278, 288, 50),
+             # the high roads near the crest: the part of the ridge that shows above the roofs from the streets
+             ("N", 62, 124, 92), ("N", 196, 262, 96), ("W", 66, 132, 94), ("W", 190, 256, 90),
+             ("E", 64, 128, 95), ("E", 184, 252, 91)]
 
 
 def rim_heights():
@@ -165,10 +168,11 @@ def rim_heights():
     n2 = pink_noise((SX, SZ), 1.5, 102)
     nr = pink_noise((SX, SZ), 2.6, 104)
     mx = smoothstep(44, 66, xs) * smoothstep(276, 254, xs)
-    crest = np.maximum(108 + 20 * nr, 98)
-    crest = np.maximum(crest * (1 - 0.06 * mx * smoothstep(280, 296, zs)), 94)   # a little lower behind the lake
+    crest = np.maximum(114 + 18 * nr, 106)
+    crest = np.maximum(crest * (1 - 0.06 * mx * smoothstep(280, 296, zs)), 100)   # a little lower behind the lake
     inner = 32 + (crest - 32) * smoothstep(0, RIM_CREST, dp)
-    outer = RIM_FOOT + (crest - RIM_FOOT) * smoothstep(0, RIM_EDGE, e)
+    ew = np.maximum(e + 4.0 * pink_noise((SX, SZ), 1.4, 106) * smoothstep(0, 6, e), 0.0)   # crags on the outer flank
+    outer = RIM_FOOT + (crest - RIM_FOOT) * smoothstep(0, RIM_EDGE, ew)
     ring = np.minimum(inner, outer)
     te = smoothstep(0, 6, e)
     amp = np.clip((ring - 32) / 40, 0, 1)
@@ -212,10 +216,50 @@ def plan_rim_roads(h):
     return roads
 
 
+def plan_rim_cabins(h, roads, n=22):
+    """Level a pad for each cabin (edits h) on the inner slopes; returns [(x0, z0, w, d, base)]."""
+    rng = Random(SEED + 78)
+    used = np.zeros((SX, SZ), bool)
+    for rd in roads:
+        f = SIDES[rd["side"]]
+        for (t, qc) in rd["cells"]:
+            for dq in range(-4, 5):
+                x, z = f(t, qc + dq)
+                used[x, z] = True
+    ex = np.minimum(np.arange(SX), SX - 1 - np.arange(SX))[:, None]
+    ez = np.minimum(np.arange(SZ), SZ - 1 - np.arange(SZ))[None, :]
+    e = np.minimum(ex, ez)
+    out = []
+    for _ in range(1500):
+        if len(out) >= n:
+            break
+        side = rng.choice("NNWWEE")
+        t = rng.randint(40, 280)
+        if side == "N" and 120 <= t <= 200:
+            continue
+        q = rng.randint(3, 19)
+        horiz = side in "NS"
+        w_, d_ = (6, 5) if horiz else (5, 6)
+        x0, z0 = SIDES[side](t, q)
+        x1, z1 = x0 + w_, z0 + d_
+        if x0 < 3 or z0 < 3 or x1 > SX - 3 or z1 > SZ - 3:
+            continue
+        if used[x0 - 2:x1 + 2, z0 - 2:z1 + 2].any() or (e[x0 - 2:x1 + 2, z0 - 2:z1 + 2] < RIM_EDGE + 4).any():
+            continue
+        base = int(h[(x0 + x1) // 2, (z0 + z1) // 2])
+        if base < 36 or base > 104:
+            continue
+        used[x0 - 2:x1 + 2, z0 - 2:z1 + 2] = True
+        h[x0 - 1:x1 + 1, z0 - 1:z1 + 1] = base
+        out.append((x0, z0, w_, d_, base))
+    return out
+
+
 def build_terrain(c):
     w, rng = c.w, c.rng
     h, aux = rim_heights()
     c.rim_roads = plan_rim_roads(h)
+    c.rim_cabins = plan_rim_cabins(h, c.rim_roads)
     c.rim_h = h
     e, lm = aux["e"], aux["lm"]
     roadmask = np.zeros((SX, SZ), bool)
@@ -253,7 +297,7 @@ def build_terrain(c):
                 top, sub = "sand", "sand"
                 if rr[i, j] < 0.25:
                     top = "gravel"
-            elif e[i, j] < RIM_EDGE + 1 or hh >= 98 or sl >= 4:
+            elif e[i, j] < RIM_EDGE + 1 or hh >= 92 or sl >= 6 or (sl >= 4 and hh >= 62):
                 top = sub = rock[rk[i, j]]
             elif hh >= 80 and sl >= 2:
                 top = rock[rk[i, j]]
@@ -263,7 +307,7 @@ def build_terrain(c):
             else:
                 top = "podzol" if rr[i, j] < 0.18 else "grass_block"
                 sub = "dirt"
-                if (sl <= 2 and hh < 84 and rr[i, j] > 0.975 and hh > 33 and not roadmask[i, j]
+                if (sl <= 3 and hh < 80 and rr[i, j] > 0.965 and hh > 33 and not roadmask[i, j]
                         and e[i, j] > RIM_EDGE + 3):
                     trees.append((i, hh, j))
             core = "deepslate" if hh > 70 else "stone"
@@ -315,46 +359,14 @@ def rim_life(c, h, e):
                 c.put(x, y + 2, z, "iron_chain[axis=y]")
                 c.put(x, y + 3, z, head)
 
-    # cabins
-    used = np.zeros((SX, SZ), bool)
-    for rd in c.rim_roads:
-        f = SIDES[rd["side"]]
-        for (t, qc) in rd["cells"]:
-            for dq in range(-3, 4):
-                x, z = f(t, qc + dq)
-                used[x, z] = True
-    placed = 0
-    for _ in range(400):
-        if placed >= 16:
-            break
-        side = rng.choice("NNWWEESS")
-        t = rng.randint(40, 280)
-        if side == "N" and 124 <= t <= 196:
-            continue
-        if side == "S" and 40 <= t <= 280:
-            continue
-        q = rng.randint(2, 15)
-        horiz = side in "NS"
-        w_, d_ = (6, 5) if horiz else (5, 6)
-        x0, z0 = SIDES[side](t, q)
+    # cabins on their levelled pads (plan_rim_cabins): stone base, plank walls, a flat roof, a few lit windows
+    for (x0, z0, w_, d_, base) in c.rim_cabins:
         x1, z1 = x0 + w_, z0 + d_
-        if x0 < 2 or z0 < 2 or x1 > SX - 2 or z1 > SZ - 2:
-            continue
-        if CITY[0] - 2 < x0 < CITY[1] and CITY[0] - 2 < z0 < CITY[1]:
-            continue
-        sub = h[x0:x1, z0:z1]
-        if sub.max() - sub.min() > 5 or sub.min() < 33 or used[x0 - 1:x1 + 1, z0 - 1:z1 + 1].any():
-            continue
-        if (e[x0:x1, z0:z1] < RIM_EDGE + 3).any():
-            continue
-        used[x0 - 1:x1 + 1, z0 - 1:z1 + 1] = True
-        base = int(sub.max())
         wall = rng.choice(("dark_oak_planks", "spruce_planks", "stone_bricks"))
         for x in range(x0, x1):
             for z in range(z0, z1):
                 hh = int(h[x, z])
                 c.box(x, hh - 1, z, x + 1, base, z + 1, "stone_bricks")
-        # the plate's centre is where the windows look
         for x in range(x0, x1):
             for z in range(z0, z1):
                 edge = x in (x0, x1 - 1) or z in (z0, z1 - 1)
@@ -366,7 +378,6 @@ def rim_life(c, h, e):
                     else:
                         c.put(x, base + dy, z, "air")
                 c.put(x, base + 3, z, "deepslate_tile_slab[type=bottom]")
-        placed += 1
     # lit windows on the outer flanks (seen from outside the box and from the air)
     n = 0
     for _ in range(2000):
@@ -632,15 +643,22 @@ def build_launch(c):
         c.put(u, ST - 4, 164, "sea_lantern")
         c.put(155, ST - 4, u, "sea_lantern")
         c.put(164, ST - 4, u, "sea_lantern")
-    # the frame at street level: posts with amber lamps
-    for (px, pz) in ((150, 150), (169, 150), (150, 169), (169, 169)):
-        c.box(px, ST, pz, px + 1, ST + 3, pz + 1, "iron_block")
-        c.put(px, ST + 3, pz, "shroomlight")
-    # raised lip of the opening (half-blocks)
+    # raised lip of the opening (half-blocks) with guide lights all round its rim: a lit block every third cell,
+    # amber at the corners and the middles
     for u in range(152, 168):
         for (px, pz) in ((u, 152), (u, 167), (152, u), (167, u)):
             c.put(px, ST, pz, "yellow_concrete_slab[type=bottom]" if ((px + pz) // 2) % 2 == 0
                   else "black_concrete_slab[type=bottom]")
+    for u in range(154, 167, 3):
+        for (px, pz) in ((u, 152), (u, 167), (152, u), (167, u)):
+            c.put(px, ST, pz, "sea_lantern")
+    for (px, pz) in ((152, 152), (167, 152), (152, 167), (167, 167)):
+        c.put(px, ST, pz, "shroomlight")
+    # approach lights set flush in the deck along the avenue axis, two rows leading to the opening (north and south)
+    for k in range(5):
+        for xx in (156, 163):
+            c.put(xx, ST - 1, 145 - 4 * k, "sea_lantern" if k % 2 == 0 else "ochre_froglight")
+            c.put(xx, ST - 1, 174 + 4 * k, "sea_lantern" if k % 2 == 0 else "ochre_froglight")
     # the retracted door leaves lying beside the opening, half a block proud of the street
     for (lx0, lx1) in ((134, 150), (170, 186)):
         for x in range(lx0, lx1):
@@ -657,6 +675,34 @@ def build_launch(c):
         for z in (153, 166):
             for x in range(lx0 + 2, lx1 - 2, 4):
                 c.put(x, ST - 1, z, "sea_lantern")
+    # big stencilled leaf numbers painted on the retracted doors (the tops point north, so they read from the south)
+    for k, (lx0, lx1) in enumerate(((134, 150), (170, 186))):
+        for x in range(lx0 + 2, lx1 - 2):
+            for z in range(152, 168):
+                c.put(x, ST, z, "black_concrete_slab[type=bottom]")
+        g = GLYPHS[str(k + 1)]
+        for r in range(7):
+            for q in range(5):
+                if g[r][q] == "1":
+                    for a in range(2):
+                        for b in range(2):
+                            c.put(lx0 + 3 + q * 2 + a, ST, 153 + r * 2 + b, "yellow_concrete_slab[type=bottom]")
+    # the frame at street level: a pylon at each corner, a tapering steel tower with hazard bands, amber lamps in
+    # the faces, a red beacon on top (drawn last so the door leaves do not cut into the bases)
+    for (px, pz) in ((150, 150), (169, 150), (150, 169), (169, 169)):
+        for dx in (-1, 0, 1):
+            for dz in (-1, 0, 1):
+                for y in range(ST, ST + 7):
+                    if y in (ST + 2, ST + 3):
+                        nm = hazard_name(dx + dz + px, y)
+                    else:
+                        nm = "iron_block" if y < ST + 2 else "gray_concrete"
+                    c.put(px + dx, y, pz + dz, nm)
+        c.box(px, ST + 7, pz, px + 1, ST + 13, pz + 1, "iron_block")
+        for (dx, dz) in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            c.put(px + dx, ST + 5, pz + dz, "shroomlight")
+        c.put(px, ST + 13, pz, "red_stained_glass")
+        c.put(px, ST + 14, pz, "light[level=14]")
 
 
 # ------------------------------------------------------------------ facades and roofs
@@ -1250,6 +1296,82 @@ def armored_spec(c, rng, chevron=False):
     return sp
 
 
+GLYPHS = {   # 5 x 7 digits, rows top to bottom
+    "0": ("01110", "10001", "10011", "10101", "11001", "10001", "01110"),
+    "1": ("00100", "01100", "00100", "00100", "00100", "00100", "01110"),
+    "2": ("01110", "10001", "00001", "00110", "01000", "10000", "11111"),
+    "3": ("11110", "00001", "00001", "01110", "00001", "00001", "11110"),
+    "4": ("00010", "00110", "01010", "10010", "11111", "00010", "00010"),
+    "5": ("11111", "10000", "11110", "00001", "00001", "10001", "01110"),
+    "6": ("00110", "01000", "10000", "11110", "10001", "10001", "01110"),
+    "7": ("11111", "00001", "00010", "00100", "01000", "01000", "01000"),
+    "8": ("01110", "10001", "10001", "01110", "10001", "10001", "01110"),
+    "9": ("01110", "10001", "10001", "01111", "00001", "00010", "01100"),
+}
+
+
+def face_pt(rect, y0, face, u, v, out=0):
+    """The block at (u, v) of a wall: u counts left to right as seen from outside, v up from y0; out = blocks off the
+    wall (negative = inside).  face in n, s, e, w names the side the wall looks to."""
+    x0, z0, x1, z1 = rect
+    if face == "n":
+        return (x1 - 1 - u, y0 + v, z0 - out)
+    if face == "s":
+        return (x0 + u, y0 + v, z1 - 1 + out)
+    if face == "e":
+        return (x1 - 1 + out, y0 + v, z1 - 1 - u)
+    return (x0 - out, y0 + v, z0 + u)
+
+
+def stencil(c, rect, y0, face, text, u0, v0, scale, name, plate=None, pad=1):
+    """Big stencilled digits on a wall (u0, v0 = lower left of the first digit), on an optional plate behind them."""
+    n = len(text)
+    wd, ht = (5 * n + (n - 1)) * scale, 7 * scale
+    if plate:
+        for u in range(u0 - pad, u0 + wd + pad):
+            for v in range(v0 - pad, v0 + ht + pad):
+                p = face_pt(rect, y0, face, u, v)
+                c.put(p[0], p[1], p[2], plate)
+    for k, ch in enumerate(text):
+        g = GLYPHS[ch]
+        for r in range(7):
+            for q in range(5):
+                if g[r][q] != "1":
+                    continue
+                for a in range(scale):
+                    for b in range(scale):
+                        u = u0 + (k * 6 + q) * scale + a
+                        v = v0 + (6 - r) * scale + b
+                        p = face_pt(rect, y0, face, u, v)
+                        c.put(p[0], p[1], p[2], name)
+
+
+def vent_panel(c, rect, y0, face, u0, v0, wd, ht):
+    """A louvred vent: steel frame, alternating grille and dark slats."""
+    for u in range(wd):
+        for v in range(ht):
+            edge = u in (0, wd - 1) or v in (0, ht - 1)
+            nm = "iron_block" if edge else ("copper_grate" if v % 2 else "black_concrete")
+            p = face_pt(rect, y0, face, u0 + u, v0 + v)
+            c.put(p[0], p[1], p[2], nm)
+
+
+def red_lamp(c, rect, y0, face, u, v, level=12):
+    """A red warning light: red glass in the wall with a hidden light block just behind it, so the glass glows."""
+    p = face_pt(rect, y0, face, u, v)
+    c.put(p[0], p[1], p[2], "red_stained_glass")
+    q = face_pt(rect, y0, face, u, v, -1)
+    c.put(q[0], q[1], q[2], "light[level=%d]" % level)
+
+
+def ledge(c, rect, y0, face, v, name="polished_blackstone_slab[type=bottom]"):
+    """A half-block shelf one block proud of the wall, the whole width: relief and a shadow line."""
+    L = (rect[2] - rect[0]) if face in "ns" else (rect[3] - rect[1])
+    for u in range(L):
+        p = face_pt(rect, y0, face, u, v, 1)
+        c.put(p[0], p[1], p[2], name)
+
+
 def shutter_front(c, x0, z0, x1, z1, y0, face, width, top_v, bot_v, open_half):
     """A roller-shutter in one face of an armored block.  face in n,s,e,w."""
     I = c.I
@@ -1334,6 +1456,18 @@ def build_weapon(c, lot, which):
     shutter_front(c, x0, z0, x1, z1, ST, face, 24, 20, 5, open_half=(which == 1))
     if which == 1:
         gun_inside(c, x0, z0, x1, z1, ST, face, 24, 5, 20)
+    # lit observation slits above the shutter and dotted light bars at both ends of the wall that faces the avenue
+    rect = (x0, z0, x1, z1)
+    L = (x1 - x0) if face in "ns" else (z1 - z0)
+    for v in (23, 24):
+        for u in range(2, L - 2):
+            if (u % 5) < 3:
+                p = face_pt(rect, ST, face, u, v)
+                c.put(p[0], p[1], p[2], "ochre_froglight" if (u // 5) % 3 else "glowstone")
+    for u in (1, L - 2):
+        for v in range(2, 23, 2):
+            p = face_pt(rect, ST, face, u, v)
+            c.put(p[0], p[1], p[2], "sea_lantern")
     # roof: radar, vents, red lights
     roof_clutter(c, x0, z0, x1, z1, ST + H, c.rng, 4, H, sp)
     # missile-rack roof boxes
@@ -1383,7 +1517,53 @@ def build_bunker(c, lot, idx):
         for k in range(3):
             c.ring(x0 + k, z0 + k, x1 - k, z1 - k, ST + H + 1 + k, "gray_concrete", 1)
         shutter_front(c, x0, z0, x1, z1, ST, "e", 8, 14, 3, open_half=False)
+    bunker_decor(c, lot["rect"], idx, H)
     lot["height"] = H
+
+
+def bunker_decor(c, rect, idx, H):
+    """Detail that reads at both scales on a cover block: big stencilled numbers on the plate of each plaza-facing
+    wall, a roller shutter and ledges, louvred vents, red warning lights, bollard lights round the foot and corner
+    beacons on the roof."""
+    x0, z0, x1, z1 = rect
+    cx, cz = (x0 + x1) / 2.0, (z0 + z1) / 2.0
+    fz = "s" if cz < 160 else "n"           # the wall that faces the avenue axis (seen from the launch top)
+    fx = "e" if cx < 160 else "w"           # the wall that faces the plaza centre sideways
+    oz = "n" if fz == "s" else "s"
+    ox = "w" if fx == "e" else "e"
+    num = str(idx + 1)
+    L = 14
+    for face in (fz, fx):
+        stencil(c, rect, ST, face, num, 2, 11, 2, "yellow_concrete", plate="black_concrete")
+        # a frame of stencilled corner marks round the plate
+        for (u, v) in ((0, 9), (13, 9), (0, 26), (13, 26)):
+            p = face_pt(rect, ST, face, u, v)
+            c.put(p[0], p[1], p[2], "yellow_concrete")
+        ledge(c, rect, ST, face, 10)
+        ledge(c, rect, ST, face, 25)
+        for (u, v) in ((1, 14), (12, 14), (1, 21), (12, 21)):
+            red_lamp(c, rect, ST, face, u, v)
+        # bollards with lit tops at the foot, on the plaza side
+        for u in (1, 4, 7, 10, 13):
+            p = face_pt(rect, ST, face, u, 0, 2)
+            c.put(p[0], ST, p[2], "black_concrete")
+            c.put(p[0], ST + 1, p[2], "ochre_froglight" if u % 2 else "shroomlight")
+    # the avenue wall gets a roller shutter, the sideways one louvred vents
+    shutter_front(c, x0, z0, x1, z1, ST, fz, 8, 9, 2, open_half=False)
+    for u0 in (1, 8):
+        vent_panel(c, rect, ST, fx, u0, 2, 5, 8)
+    # the outer walls: vents, warning lights, ledges
+    for face in (oz, ox):
+        if not (idx == 3 and face == "e"):
+            vent_panel(c, rect, ST, face, 4, 3, 6, 8)
+            ledge(c, rect, ST, face, 10)
+        for (u, v) in ((1, 16), (12, 16), (1, 23), (12, 23)):
+            red_lamp(c, rect, ST, face, u, v)
+    # roof corner beacons
+    for (px, pz) in ((x0, z0), (x1 - 1, z0), (x0, z1 - 1), (x1 - 1, z1 - 1)):
+        c.put(px, ST + H + 1, pz, "iron_block")
+        c.put(px, ST + H + 2, pz, "red_stained_glass")
+        c.put(px, ST + H + 3, pz, "light[level=14]")
 
 
 def build_power(c):
@@ -1496,6 +1676,8 @@ def sidewalk_lamps(c):
     pl = c.plaza
     for (a, b) in ROADS:
         for (lo, hi, axis) in ((CITY[0] + 8, CITY[1] - 8, 0), (CITY[0] + 8, CITY[1] - 8, 1)):
+            if axis == 0 and (a, b) == MAIN:
+                continue                      # the main avenue has its own lamps and masts: avenue_lighting
             for t in range(lo, hi, 18):
                 for side_ in (a, b - 1):
                     if axis == 0:
@@ -1510,6 +1692,118 @@ def sidewalk_lamps(c):
                     if near or pl[x, z]:
                         continue
                     lamp_post(c, x, z, 10, "glowstone" if (a, b) != MAIN else "sea_lantern")
+
+
+AVENUE = (146, 174)          # the main avenue's x range; the monster walks down it from angel_start (z 50) to the plaza
+
+
+def avenue_lamp(c, x, z, sgn, h=9):
+    """A kerb lamp with a short arm over the carriageway.  sgn +1 leans towards +x, -1 towards -x."""
+    for i in range(h):
+        c.put(x, ST + i, z, "iron_chain[axis=y]")
+    c.put(x, ST + h - 1, z, "iron_block")
+    c.put(x + sgn, ST + h, z, "iron_block")
+    c.put(x, ST + h, z, "iron_block")
+    c.put(x + 2 * sgn, ST + h, z, "sea_lantern")
+    c.put(x + 2 * sgn, ST + h - 1, z, "light[level=13]")
+
+
+def avenue_mast(c, x, z, sgn, h=34):
+    """A tall floodlight mast on the kerb (2 x 2) with a boom over the carriageway ending in a lit bank."""
+    xs = (x, x + 1)
+    for y in range(h):
+        nm = "black_concrete" if y % 8 in (6, 7) else "gray_concrete"
+        for xx in xs:
+            for zz in (z, z + 1):
+                c.put(xx, ST + y, zz, nm)
+    ya = ST + h
+    # boom: two blocks out from the inner face of the mast, 2 deep
+    inner = x + 1 if sgn > 0 else x
+    for k in range(1, 3):
+        for zz in (z, z + 1):
+            c.put(inner + sgn * k, ya - 1, zz, "iron_block")
+    tip = inner + sgn * 2
+    for zz in (z, z + 1):
+        for yy in (ya - 3, ya - 2):
+            c.put(tip, yy, zz, "sea_lantern")
+        c.put(inner + sgn, ya, zz, "red_stained_glass")
+    c.put(tip, ya - 4, z, "light[level=15]")
+    c.put(tip - sgn, ya - 4, z, "light[level=14]")
+    c.put(inner + sgn, ya + 1, z, "light[level=12]")
+
+
+def avenue_lighting(c, lots):
+    """Light the avenue from the plaza to angel_start so that something 30-60 blocks tall is seen against it: kerb lamps on
+    both sides, floodlight masts, lit windows on the facades that face it, floodlight banks on the roofs and a few
+    hidden light blocks beside the walking corridor (x 155..165 stays clear for the giant).  Moderate levels."""
+    w = c.w
+    I = c.I
+    rng = np.random.default_rng(31)
+    x0, x1 = AVENUE
+    # kerb lamps, staggered, along the north and south reaches (the sidewalk mask says where there is a kerb)
+    for (za, zb) in ((34, 112), (208, 288)):
+        for k, z in enumerate(range(za, zb, 8)):
+            for (x, sgn, off) in ((x0 + 1, 1, 0), (x1 - 2, -1, 4)):
+                zz = z + off
+                if zz >= zb or not (c.road[x, zz] and c.side[x, zz]) or c.plaza[x, zz]:
+                    continue
+                avenue_lamp(c, x, zz, sgn)
+    # floodlight masts on the monster's reach
+    for (x, z, sgn) in ((x0, 40, 1), (x1 - 2, 49, -1), (x0, 78, 1), (x1 - 2, 90, -1), (x0, 102, 1), (x1 - 2, 108, -1)):
+        if c.side[x, z] and c.side[x + 1, z + 1]:
+            avenue_mast(c, x, z, sgn)
+    # lit windows: the dark windows of the facades that face the avenue light up more often
+    dark = I("tinted_glass")
+    warm = [I(n) for n, _ in LIT_WARM]
+    pw = np.array([p for _, p in LIT_WARM], float)
+    pw /= pw.sum()
+    cool = [I(n) for n, _ in LIT_COOL]
+    pc = np.array([p for _, p in LIT_COOL], float)
+    pc /= pc.sum()
+    zlo, zhi = 33, 113
+    for (xa, xb, step) in ((x0 - 18, x0, -1), (x1, x1 + 18, 1)):
+        blk = w.a[xa:xb, :, zlo:zhi]
+        arr = blk[::-1] if step < 0 else blk                      # scan from the avenue inward
+        solid = arr > 1
+        first = np.argmax(solid, axis=0)
+        has = solid.any(axis=0)
+        ids = np.take_along_axis(arr, first[None], axis=0)[0]
+        yy = np.arange(SY)[:, None]
+        zz = np.arange(zlo, zhi)[None, :]
+        grp = rng.random(((SY + 1) // 2 + 1, (zhi - zlo) // 2 + 2))
+        tone = rng.random(grp.shape)
+        g = grp[(yy // 2), ((zz - zlo) // 2)]
+        t = tone[(yy // 2), ((zz - zlo) // 2)]
+        sel = has & (ids == dark) & (yy >= ST + 3) & (yy < ST + 75) & (g < 0.40)
+        pick_w = rng.choice(len(warm), size=sel.shape, p=pw)
+        pick_c = rng.choice(len(cool), size=sel.shape, p=pc)
+        newid = np.where(t < 0.62, np.array(warm, np.uint16)[pick_w], np.array(cool, np.uint16)[pick_c])
+        ys, zs_ = np.nonzero(sel)
+        for y, zq in zip(ys, zs_):
+            f = int(first[y, zq])
+            xi = (xb - 1 - f) if step < 0 else (xa + f)
+            w.a[xi, y, zlo + zq] = newid[y, zq]
+    # floodlight banks on the roofs along the avenue: lit blocks on the parapet, light sources out over the street
+    for (xe, sgn) in ((x0 - 1, 1), (x1, -1)):
+        for z in range(36, 108, 13):
+            col = w.a[xe, :, z]
+            ys = np.nonzero(col > 1)[0]
+            if not len(ys):
+                continue
+            yt = int(ys.max())
+            if yt < ST + 8:
+                continue
+            for dz in range(3):
+                c.put(xe, yt + 1, z + dz, "iron_block")
+                c.put(xe, yt + 2, z + dz, "sea_lantern")
+            c.put(xe + sgn, yt + 2, z + 1, "light[level=15]")
+            c.put(xe + 6 * sgn, yt + 1, z + 1, "light[level=14]")
+            c.put(xe + 6 * sgn, yt - 8, z + 1, "light[level=11]")
+    # hidden light blocks just outside the giant's corridor, in tiers up the avenue, so the monster's body is lit
+    for z in range(36, 112, 9):
+        for xl in (153, 167):
+            for k, dy in enumerate((10, 22, 34, 46, 58)):
+                c.put(xl, ST + dy, z + (4 if k % 2 else 0), "light[level=12]")
 
 
 def plaza_masts(c):
@@ -1704,6 +1998,7 @@ def build(w):
     blade_signs(c, lots)
     sidewalk_lamps(c)
     gate_and_vehicles(c)
+    avenue_lighting(c, lots)
     dirt_under_cover(w)
 
     # ---------------- anchors
@@ -1744,7 +2039,8 @@ def _color_table(w):
     }
     emis = {"sea_lantern": (215, 250, 245), "glowstone": (255, 215, 130), "redstone_lamp": (255, 190, 110),
             "shroomlight": (255, 140, 60), "ochre_froglight": (255, 235, 130), "verdant_froglight": (150, 255, 160),
-            "pearlescent_froglight": (255, 170, 235), "end_rod": (255, 255, 255), "lantern": (255, 200, 100)}
+            "pearlescent_froglight": (255, 170, 235), "end_rod": (255, 255, 255), "lantern": (255, 200, 100),
+            "red_stained_glass": (235, 40, 40)}
     spec = {"stone": (110, 112, 116), "deepslate": (55, 55, 62), "tuff": (90, 92, 85), "andesite": (130, 130, 128),
             "polished_andesite": (140, 140, 138), "polished_deepslate": (60, 60, 68), "grass_block": (60, 105, 55),
             "podzol": (80, 60, 40), "dirt": (100, 75, 50), "sand": (200, 190, 140), "gravel": (120, 115, 112),
@@ -1758,8 +2054,7 @@ def _color_table(w):
             "iron_trapdoor": (180, 182, 186), "iron_bars": (120, 122, 126), "lightning_rod": (180, 100, 70),
             "iron_chain": (60, 60, 66), "stone_brick_wall": (110, 110, 110), "iron_door": (190, 190, 190),
             "deepslate_tile": (45, 45, 52), "blackstone": (36, 33, 40), "cobbled_deepslate": (62, 62, 68),
-            "dark_oak_planks": (62, 46, 28), "spruce_planks": (110, 80, 50), "red_stained_glass": (200, 40, 40),
-            "copper_bulb": (255, 190, 120), "lantern": (255, 200, 100), "polished_blackstone_slab": (35, 32, 38), "polished_blackstone_brick": (40, 38, 45), "stone_brick": (115, 115, 115)}
+            "dark_oak_planks": (62, 46, 28), "spruce_planks": (110, 80, 50), "polished_blackstone_slab": (35, 32, 38), "polished_blackstone_brick": (40, 38, 45), "stone_brick": (115, 115, 115)}
     rgb = np.zeros((len(w.palette), 3), np.float32)
     em = np.zeros(len(w.palette), bool)
     skip = np.zeros(len(w.palette), bool)

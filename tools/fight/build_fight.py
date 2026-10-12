@@ -1,4 +1,4 @@
-"""Build the Angel (the monster) and the boss fight into the Angel Attack datapack.
+﻿"""Build the Angel (the monster) and the boss fight into the Angel Attack datapack.
 
     python build_fight.py             write the functions, damage type and block tag; remove what an earlier build wrote
     python build_fight.py --check     build into a temporary folder and only run the checks
@@ -133,7 +133,7 @@ def main():
     if a.previews:
         import preview
         os.makedirs(preview.OUT, exist_ok=True)
-        for n in ("idle_a", "charge", "thrust", "wrap_close", "regen_a", "die_2", "walk_l"):
+        for n in ("idle_a", "charge", "charge_2", "charge_3", "thrust", "wrap_close", "regen_0", "regen_2", "die_1", "die_2", "die_3", "walk_l"):
             preview.sheet(n, model.poses()[n])
         say("previews written")
     return 1 if (nb or nm) else 0
@@ -141,3 +141,4 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
+

@@ -1,4 +1,4 @@
-"""HQ - the underground headquarters: corridors, the flooded approach, THE CAGE with the giant's head, the entry plug
+﻿"""HQ - the underground headquarters: corridors, the flooded approach, THE CAGE with the giant's head, the entry plug
 and the launch shaft.  192 x 160 x 192 (x east, y up, z south); every coordinate below is local to the set.
 
 PLAN (top view, x ->, z v; bottom-left of the box is the north-west corner)
@@ -8,15 +8,22 @@ PLAN (top view, x ->, z v; bottom-left of the box is the north-west corner)
     z  22..141   x 56..132  THE CAGE      interior x 64..128, z 24..137, y 6..111 (floor 5, roof 112); centre line x = 96
                             red-orange coolant (tinted glass over magma) y 7..36; the giant's head 15 wide, 27 tall (chin y 46,
                             crown y 72, horn tip y 75), z 40..62, its face plane z 59, eyes y 61..64;
-                            the umbilical bridge deck y 53, x 94..98 (rails on 93 and 99), z 64..137, its last 8 rows (z 64..71)
-                            open grating down the middle; the player stops at z 72.5, 13.5 from the face plane;
-                            the commander's booth high on the north wall to the east of the head: x 106..124, z 24..44, y 94..104
+                            the umbilical bridge deck y 53, x 94..98 (rails on 93 and 99), z 71..137, ending in a hazard lip (no end
+                            rail, no grating; invisible barriers at z 70); the player stops at z 72.5, 13.5 from the face plane;
+                            the commander's booth hangs beside the head's right cheek, level with the east catwalk: x 105..121,
+                            z 50..58, y 62..73, window facing south (24 blocks from the stop, 22 degrees up, 41 degrees to the right)
     z 142..188   x  9..150  B: THE FLOODED CHAMBER  y 33..79, lake surface y 50, catwalk deck y 53, dock west, cage door north
     z 142..188   x  0..189  A: THE CORRIDORS  two levels: U (floor y 130) and L (floor y 106), tall escalator void between
 
 Walking order: start (lobby, east, x 176) -> west along the corridor -> moving-walkway hall -> loop ring (passes the same
 orange door twice) -> escalator hall (down) -> lower corridor -> elevator lobby (x 11) -> car (x 5) ~~ lowered ~~ dock
 (x 14, y 53) -> catwalk east -> cage door (96, 143) -> bridge north -> face (96.5, 72.5).
+
+LIGHT (all of it is deliberate; the set is capped so that no skylight can reach any interior cell - see skylight_check):
+    corridors   hidden level-15 light blocks on the floor cells and along the walls: 12..15 everywhere, near neutral white
+    flood/cage  always-on amber run-lights (RUN_LIGHTS) along every walkway edge, a glow under the coolant, red emergency lamps
+                (EMERGENCY, level 10) on walls and pylons and a rim of hidden light round the giant's head
+    cage lamps  CAGE_LIGHTS / BOOTH_LIGHTS stay off until the story switches them on; EYE_GLOW is the optional glow with the eyes
 
 Run this file to build and write checks + previews:  python hq.py [--quick]
 """
@@ -213,9 +220,9 @@ def tables(w):
         if any(t in nm for t in _THIN) and "glass" not in nm.replace("glass_pane", "") and nm != "sea_lantern":
             kind[i], alpha[i] = 3, (0.35 if "grate" in nm else (0.6 if "bars" in nm else 0.45))
         elif "glass" in nm and "pane" not in nm:
-            kind[i], alpha[i] = 2, 0.45
+            kind[i], alpha[i] = 2, (0.12 if nm == "glass" else (0.8 if nm == "tinted_glass" else 0.45))     # clear glass is nearly clear
         elif "pane" in nm:
-            kind[i], alpha[i] = 3, 0.45
+            kind[i], alpha[i] = 3, (0.15 if nm == "glass_pane" else 0.45)
         else:
             kind[i] = 1
         emit[i] = _EMIT.get(nm, 0)
@@ -259,6 +266,7 @@ def lightmap_rgb(lv, gamma=0.5):
     b = lv / (4.0 - 3.0 * lv)
     c = np.stack([b, b * ((b * 0.6 + 0.4) * 0.6 + 0.4), b * (b * b * 0.6 + 0.4)], axis=-1)
     c = c * (1 - gamma) + (1.0 - (1.0 - c) ** 4) * gamma
+    c = np.maximum(c, np.array([14, 19, 30], np.float32) / 255.0)         # the hq biome's ambient_light_color #0e131e: the floor of the dark
     return np.clip(c, 0.0, 1.0).astype(np.float32)
 
 
@@ -790,11 +798,20 @@ def hand_cells(raised, ref=(CX, BRIDGE_Y, SHIELD_Z)):
         _tube(None, cells, [shoulder, (rx - 12, ry - 3, (SHOULDER_Z + rz - 2) // 2), wrist], 4.3, 3.0, arm_col)
         for x in range(rx - 4, rx + 5):          # cuff
             pass
-        # hand: palm-down roof 9 wide, 7 long, fingers pointing south
+        # hand: palm-down roof 11 wide, 7 long, fingers pointing south.  From below (where the player stands) the palm reads as
+        # armour: violet with a darker pattern, dark knuckle joints, a lime rim and lime fingertips.
         y0 = ry + 8
         for x in range(rx - 5, rx + 6):
             for z in range(rz - 4, rz + 3):
-                cells[(x, y0, z)] = BLACK                               # palm (underside)
+                if x in (rx - 5, rx + 5) or z == rz - 4:
+                    ub = LIME                                              # rim of the palm
+                elif z == rz + 2:
+                    ub = PURPLE_DARK                                       # knuckle line at the finger roots
+                elif (x - rx) % 4 == 0 and z <= rz:
+                    ub = PURPLE                                            # tendon grooves
+                else:
+                    ub = PURPLE_LIT
+                cells[(x, y0, z)] = ub                                     # palm (underside)
                 cells[(x, y0 + 1, z)] = PURPLE
                 cells[(x, y0 + 2, z)] = PURPLE_LIT if (x + z) % 6 else LIME   # back of the hand
         for x in range(rx - 5, rx + 6):
@@ -805,15 +822,16 @@ def hand_cells(raised, ref=(CX, BRIDGE_Y, SHIELD_Z)):
                 z = rz + 3 + dz
                 dropy = 1 if dz >= ln - 2 else 0
                 for x in (fx, fx + 1):
-                    cells[(x, y0 + 1 - dropy, z)] = PURPLE
+                    joint = dz % 3 == 2 and dz < ln - 1
+                    cells[(x, y0 + 1 - dropy, z)] = PURPLE_DARK if joint else PURPLE_LIT      # underside of the finger
                     cells[(x, y0 + 2 - dropy, z)] = PURPLE_LIT if dz % 3 != 2 else LIME
                     if dz == ln - 1:
-                        cells[(x, y0 - dropy + 1, z)] = BLACK
-                        cells[(x, y0 + 2 - dropy, z)] = BLACK
+                        cells[(x, y0 - dropy + 1, z)] = LIME                                  # lime fingertips
+                        cells[(x, y0 + 2 - dropy, z)] = LIME
         for k in range(4):                        # thumb on the west side, angled down
             for x in (rx - 8 + 0, rx - 7, rx - 6):
                 for z in (rz - 2 + k // 2, rz - 1 + k // 2):
-                    cells[(x, y0 + 1 - (k // 2), z + k)] = PURPLE
+                    cells[(x, y0 + 1 - (k // 2), z + k)] = LIME if k == 3 else (PURPLE_DARK if k == 2 else PURPLE_LIT)
                     cells[(x, y0 + 2 - (k // 2), z + k)] = PURPLE_LIT
     else:
         shoulder = (rx - 15, ry - 17, SHOULDER_Z)
@@ -833,7 +851,7 @@ def hand_cells(raised, ref=(CX, BRIDGE_Y, SHIELD_Z)):
                     cells[(x, y0 + 1, z)] = PURPLE
                     cells[(x, y0 + 2, z)] = PURPLE_LIT if dz % 3 != 2 else LIME
                     if dz == ln - 1:
-                        cells[(x, y0 + 2, z)] = BLACK
+                        cells[(x, y0 + 2, z)] = LIME_DARK
         for k in range(4):
             for x in (rx - 6, rx - 5):
                 cells[(x, y0 + 1, rz - 1 + k)] = PURPLE
@@ -921,7 +939,7 @@ def giant_lights(w):
         lx = CX + sgn * 13 if sgn > 0 else CX - 13
         for y in (58, 62, 66):
             lamp(w, lx, y, 44)
-        for z in (50, 56):
+        for z in (46, 50):                       # (56 was inside the raised forearm)
             CAGE_LIGHTS.append((CX + sgn * 12, 44, z, bs("light", level=12)))
     CAGE_LIGHTS.append((CX, 46, 58, bs("light", level=12)))
     for sgn in (-1, 1):
@@ -943,7 +961,7 @@ FONT = {
 }
 
 
-def stencil(w, text, plane, u0, v0, axis, step, scale, block):
+def stencil(w, text, plane, u0, v0, axis, step, scale, block, solid_only=False):
     """Write text on a wall.  axis 'x': the wall plane is x == plane and text runs along z; axis 'z': plane is a z and text runs along x.
     step is +1/-1, the direction u moves from one letter to the next as seen reading left to right."""
     u = u0
@@ -958,10 +976,10 @@ def stencil(w, text, plane, u0, v0, axis, step, scale, block):
                         for su in range(scale):
                             uu = u + step * (c * scale + su)
                             vv = v0 + (4 - r) * scale + sy
-                            if axis == "x":
-                                w.set(plane, vv, uu, block)
-                            else:
-                                w.set(uu, vv, plane, block)
+                            cell = (plane, vv, uu) if axis == "x" else (uu, vv, plane)
+                            if solid_only and w.get(*cell) in (AIR, None):
+                                continue                 # a numeral must stay on the wall: never float in the room beside it
+                            w.set(*cell, block)
         u += step * 4 * scale
 
 
@@ -974,14 +992,20 @@ def lamp(w, x, y, z, on=LAMP_ON, group=None):
 
 
 def hazard(u, v):
-    return YELLOW if ((u + v) // 2) % 2 == 0 else BLACK
+    """Yellow and dark-grey hazard stripes.  (The dark stripe used to be black concrete, which is pure black in any light and
+    left half of every deck and wall band invisible.)"""
+    return YELLOW if ((u + v) // 2) % 2 == 0 else "gray_concrete"
 
 
 def emergency_lamp(w, x, y, z, hidden):
-    """Dim red lamp that stays on: a red glass block with a hidden light block at `hidden` (inside the structure)."""
+    """Red lamp that stays on: a red glass block with a hidden light block (level EMERGENCY_LEVEL) at `hidden`, which must be open
+    air - if it is not, no lamp is built.  True if built."""
+    if w.get(hidden[0], hidden[1], hidden[2]) != AIR:
+        return False
     w.set(x, y, z, "red_stained_glass")
-    w.set(hidden[0], hidden[1], hidden[2], bs("light", level=7))
+    w.set(hidden[0], hidden[1], hidden[2], bs("light", level=EMERGENCY_LEVEL))
     EMERGENCY.append((x, y, z))
+    return True
 
 
 # ================================================================================================ THE CAGE
@@ -1067,15 +1091,24 @@ def build_cage(w):
     # ---------------- ceiling-height emergency lamps near the bridge start
     emergency_lamp(w, 92, 56, Z2, (92, 57, Z2))
     emergency_lamp(w, 100, 56, Z2, (100, 57, Z2))
+    cage_lights_baseline(w)
+    wall_detail(w)
+
+
+BRIDGE_END = 71                # first deck row (z) at the giant's end: the deck stops one block short of the stop's feet
 
 
 def build_bridge(w):
-    z0, z1 = 64, 142
-    # deck 5 wide (x 94..98), rails on 93 and 99, from the south door to just short of the giant
+    z0, z1 = BRIDGE_END, 142
+    # deck 5 wide (x 94..98), rails on 93 and 99, from the south door to the stop; it ends in a hazard lip and a clear
+    # view of the giant's jaw (no end rail, no grating: from the stop's eye the deck edge is 47 degrees below the horizon,
+    # under the chin tip).  Invisible barrier blocks keep walkers on the deck.
     for z in range(z0, z1 + 1):
         for x in range(94, 99):
-            b = "gray_concrete"
-            if x in (94, 98):
+            b = "light_gray_concrete"
+            if z == z0:
+                b = hazard(x, 0)
+            elif x in (94, 98):
                 b = hazard(z, 0)
             elif x == 96 and z % 4 < 2:
                 b = YELLOW
@@ -1085,31 +1118,19 @@ def build_bridge(w):
             for y in (BRIDGE_Y + 1, BRIDGE_Y + 2):
                 if z <= CAGE["z2"]:
                     w.set(x, y, z, "iron_bars")
-    # end rail
     for x in range(93, 100):
-        for y in (BRIDGE_Y + 1, BRIDGE_Y + 2):
-            w.set(x, y, z0, "iron_bars")
-        w.set(x, BRIDGE_Y, z0, "iron_block")
-    # the last stretch of the deck is open grating down the middle: from the stop one looks through it at the giant's jaw
-    for z in range(z0, z0 + 8):
-        for x in (95, 96, 97):
-            w.set(x, BRIDGE_Y, z, "waxed_copper_grate")
-    # under-girder and pillars into the coolant (the girder starts after the grating so the chin stays in view)
-    box(w, 95, BRIDGE_Y - 3, z0 + 8, 97, BRIDGE_Y - 1, CAGE["z2"], "gray_concrete")
-    for z in range(z0 + 6, CAGE["z2"], 14):
+        for y in (BRIDGE_Y + 1, BRIDGE_Y + 2, BRIDGE_Y + 3):
+            w.set(x, y, z0 - 1, "barrier")
+    # under-girder and pillars into the coolant
+    box(w, 95, BRIDGE_Y - 3, z0, 97, BRIDGE_Y - 1, CAGE["z2"], "gray_concrete")
+    for z in range(84, CAGE["z2"], 14):
         box(w, 95, FLOOR_C + 1, z, 97, BRIDGE_Y - 4, z + 1, "gray_concrete")
-        pass
-        # braces
-        for k in range(1, 5):
-            pass
-    for z in range(z0 + 6, CAGE["z2"], 14):
+    for z in range(84, CAGE["z2"], 14):
         for k in range(1, 6):
             w.set(95 - k, BRIDGE_Y - 3 - k + 1, z, "gray_concrete")
             w.set(97 + k, BRIDGE_Y - 3 - k + 1, z, "gray_concrete")
-    # lamp posts every 6 on both rails
-    for z in range(z0 + 10, CAGE["z2"] - 2, 7):
-        if 70 <= z <= 80:                      # no lamp posts beside the stop and the marks: they would stand in the line to the booth
-            continue
+    # lamp posts every 7 on both rails
+    for z in range(81, CAGE["z2"] - 2, 7):
         for x in (93, 99):
             w.set(x, BRIDGE_Y + 3, z, "iron_bars")
             lamp(w, x, BRIDGE_Y + 4, z)
@@ -1119,7 +1140,7 @@ def build_bridge(w):
     gz = GURNEY_Z
     for x in range(CAGE["x1"], 93):
         for z in range(gz, gz + 3):
-            w.set(x, BRIDGE_Y, z, "gray_concrete" if z == gz + 1 else hazard(x, 0))
+            w.set(x, BRIDGE_Y, z, "light_gray_concrete" if z == gz + 1 else hazard(x, 0))
         for z in (gz - 1, gz + 3):
             w.set(x, BRIDGE_Y, z, "iron_block")
             w.set(x, BRIDGE_Y + 1, z, "iron_bars")
@@ -1134,7 +1155,7 @@ def build_bridge(w):
     carve(w, 94, BRIDGE_Y + 1, CAGE["z2"] + 1, 98, BRIDGE_Y + 5, 142)
     for z in range(CAGE["z2"] + 1, 143):
         for x in range(93, 100):
-            w.set(x, BRIDGE_Y, z, "gray_concrete" if 94 <= x <= 98 else "iron_block")
+            w.set(x, BRIDGE_Y, z, "light_gray_concrete" if 94 <= x <= 98 else "iron_block")
         for x in (93, 99):
             for y in range(BRIDGE_Y + 1, BRIDGE_Y + 7):
                 w.set(x, y, z, WALLP)
@@ -1271,61 +1292,88 @@ def build_roof(w):
         box(w, 94, 105, dz + 1, 98, 105, dz + 1, "iron_bars")
 
 
-# The commander's booth: high on the north wall and well off to the east of the head, so that from the stop (and the marks
-# beside it) there is a clear line to him over the giant's shoulder.  Its front is one big pane and its floor is glass at the
-# front, so a person standing near the window shows from his feet to his head to someone looking up from the bridge.
-BOOTH = dict(x1=106, x2=124, z1=24, z2=44, y0=94)
-BOOTH_STAND = (115.5, 42.5)       # where the commander stands (x, z), feet on the floor row Y0 + 1
-BOOTH_H = 8                       # height of the window
+# The commander's booth: a control balcony hanging beside the giant's right cheek (east of the head), its floor level with the
+# east wall catwalk (y 62) and its big window facing south, down the bridge.  From the stop (13.5 from the face) it is about
+# 24 blocks away, 22 degrees above the horizontal and 41 degrees to the right of straight ahead: face and booth both fit in a
+# headset view.  The middle of the window is open air (no glass, no mullion can cross him); glazed wings stand either side.
+# Behind him the whole back wall is a field of lamps in a white frame, so that he shows as a dark figure with lit edges.
+BOOTH = dict(x1=105, x2=121, z1=50, z2=58, y0=62)
+BOOTH_STAND = (110.5, 57.5)       # where the commander stands (x, z), feet on the floor row Y0 + 1: half a block behind the window plane (z 58)
+BOOTH_H = 8                       # height of the window (rows Y0 + 1 .. Y0 + 8)
+BOOTH_OPEN = (109, 117)           # the open middle of the window (x range, inclusive)
 
 
 def build_booth(w):
     X1b, X2b, Zb1, Zb2, Y0 = BOOTH["x1"], BOOTH["x2"], BOOTH["z1"], BOOTH["z2"], BOOTH["y0"]
     H = BOOTH_H
-    box(w, X1b, Y0, Zb1, X2b, Y0 + H + 2, Zb2, "gray_concrete")           # shell
-    carve(w, X1b + 1, Y0 + 1, Zb1, X2b - 1, Y0 + H + 1, Zb2 - 1)
-    for x in range(X1b + 1, X2b):                                         # the window, one pane
+    top = Y0 + H + 3
+    box(w, X1b, Y0, Zb1, X2b, top, Zb2, "gray_concrete")                    # shell
+    carve(w, X1b + 1, Y0 + 1, Zb1 + 1, X2b - 1, top - 1, Zb2 - 1)
+    box(w, X1b + 1, Y0 + 1, Zb1 + 1, X2b - 1, top - 1, Zb1 + 1, "white_concrete")      # pale walls inside
+    box(w, X1b + 1, Y0 + 1, Zb1 + 1, X1b + 1, top - 1, Zb2 - 1, "white_concrete")
+    box(w, X2b - 1, Y0 + 1, Zb1 + 1, X2b - 1, top - 1, Zb2 - 1, "white_concrete")
+    box(w, X1b + 1, top - 1, Zb1 + 1, X2b - 1, top - 1, Zb2 - 1, "white_concrete")
+    box(w, X1b + 2, Y0 + 1, Zb1 + 2, X2b - 2, top - 2, Zb2 - 1, AIR)
+    box(w, X1b + 2, Y0, Zb1 + 1, X2b - 2, Y0, Zb2 - 3, "gray_concrete")
+    # the window: glazed wings, open middle; the floor is glass along the front so that his feet show from below
+    for x in range(X1b + 1, X2b):
         for y in range(Y0 + 1, Y0 + H + 1):
-            w.set(x, y, Zb2, "glass")
-        for z in range(Zb2 - 5, Zb2 + 1):                                 # glass floor along the front
+            w.set(x, y, Zb2, AIR if BOOTH_OPEN[0] <= x <= BOOTH_OPEN[1] else "glass_pane")
+        for z in range(Zb2 - 3, Zb2 + 1):
             w.set(x, Y0, z, "glass")
-    for x in (X1b + 3, X2b - 3):                                          # mullions, kept clear of the standing place
-        box(w, x, Y0 + 1, Zb2, x, Y0 + H, Zb2, BLACK)
-        box(w, x, Y0, Zb2 - 5, x, Y0, Zb2, BLACK)
     for x in range(X1b, X2b + 1):
-        w.set(x, Y0 + H + 2, Zb2, hazard(x, 0))
-    for x in list(range(X1b, X1b + 2)) + list(range(X2b - 1, X2b + 1)):   # the corners of the front frame
-        w.set(x, Y0, Zb2, hazard(x, 0))
-    # interior: pale back wall behind the commander so that he shows as a figure, consoles along it, a chair to one side
-    box(w, X1b + 1, Y0 + 1, Zb1, X2b - 1, Y0 + H, Zb1, "light_gray_concrete")
-    for x in range(X1b + 3, X2b - 2, 8):
-        box(w, x, Y0 + 1, Zb1 + 2, x + 5, Y0 + 2, Zb1 + 3, BLACK)
-        box(w, x, Y0 + 3, Zb1 + 2, x + 5, Y0 + 3, Zb1 + 2, "cyan_concrete")
-    box(w, X2b - 5, Y0 + 1, 37, X2b - 3, Y0 + 1, 38, "gray_concrete")  # command chair, off to one side of the standing place
-    box(w, X2b - 5, Y0 + 2, 38, X2b - 3, Y0 + 3, 38, BLACK)
-    for x in range(X1b + 3, X2b - 2, 4):
-        box(w, x, Y0 + 4, Zb1, x + 2, Y0 + 5, Zb1, "cyan_concrete")
-    # lamps inside (dead until the story lights the booth): a ceiling grid and a row along the top of the window
-    for x in range(X1b + 3, X2b - 2, 4):
-        for z in (27, 33, 39, Zb2 - 1):
-            w.set(x, Y0 + H + 1, z, LAMP_OFF)
-            CAGE_LIGHTS.append((x, Y0 + H + 1, z, LAMP_ON))
-            BOOTH_LIGHTS.append((x, Y0 + H + 1, z, LAMP_ON))
-    # three hidden light blocks in the air in front of and beside the standing place, so that he is plainly lit
-    for (x, y, z) in ((int(BOOTH_STAND[0]), Y0 + 4, Zb2 - 3), (int(BOOTH_STAND[0]) - 4, Y0 + 4, Zb2 - 3), (int(BOOTH_STAND[0]) + 4, Y0 + 4, Zb2 - 3)):
-        CAGE_LIGHTS.append((x, y, z, bs("light", level=14)))
-        BOOTH_LIGHTS.append((x, y, z, bs("light", level=14)))
-    # supports: diagonal braces from the front corners back to the wall, and brackets under the back
-    for x in (X1b, X2b):
-        for k in range(0, 14):
-            w.set(x, Y0 - 1 - k, Zb2 - 1 - k, "gray_concrete")
-            w.set(x, Y0 - 1 - k, Zb2 - 2 - k, "gray_concrete")
+        w.set(x, top, Zb2, hazard(x, 0))
+    for y in range(Y0, top + 1):                                              # corner posts, hazard banded
+        for (x, z) in ((X1b, Zb2), (X2b, Zb2)):
+            w.set(x, y, z, hazard(y, 0) if y % 6 < 3 else "gray_concrete")
+    # back wall: a field of lamps (dead until the story lights the booth), white frame lines between
+    for x in range(X1b + 3, X2b - 2):
+        for y in range(Y0 + 3, Y0 + H + 1):
+            if (x - (X1b + 3)) % 4 != 3 and (y - (Y0 + 3)) % 3 != 2:
+                lamp(w, x, y, Zb1 + 1, group=BOOTH_LIGHTS)
+    for x in range(X1b + 2, X2b - 1, 2):                                     # a row of lamps along the window's top edge: outlines it when lit
+        lamp(w, x, top - 1, Zb2, group=BOOTH_LIGHTS)
+    # ceiling lamps
+    for x in range(X1b + 4, X2b - 3, 3):
+        for z in (Zb1 + 3, Zb1 + 6):
+            lamp(w, x, top - 2, z, group=BOOTH_LIGHTS)
+    # hidden light blocks: in front of and above the standing place, so he is lit from the front and from above
+    sx, sz = int(BOOTH_STAND[0]), int(BOOTH_STAND[1])
+    for (x, y, z, lvl) in ((sx - 3, Y0 + 7, sz - 1, 14), (sx + 3, Y0 + 7, sz - 1, 14), (sx, Y0 + 8, sz - 2, 14),
+                           (sx - 2, Y0 + 3, sz, 14), (sx + 2, Y0 + 3, sz, 14), (sx - 3, Y0 + 5, sz - 4, 13), (sx + 4, Y0 + 5, sz - 4, 13),
+                           (sx, Y0 + 3, sz + 1, 15), (sx, Y0 + 6, sz + 1, 15), (sx - 2, Y0 + 4, sz - 3, 13), (sx + 2, Y0 + 4, sz - 3, 13)):
+        CAGE_LIGHTS.append((x, y, z, bs("light", level=lvl)))
+        BOOTH_LIGHTS.append((x, y, z, bs("light", level=lvl)))
+    # side consoles, kept to the walls
+    for x in (X1b + 2, X2b - 2):
+        box(w, x, Y0 + 1, Zb1 + 4, x, Y0 + 2, Zb2 - 4, BLACK)
+        box(w, x, Y0 + 3, Zb1 + 5, x, Y0 + 3, Zb2 - 5, "cyan_concrete")
+    # door in the east wall onto a short gangway to the catwalk at x 126..128 (its rail has a gap there)
+    carve(w, X2b - 1, Y0 + 1, 51, X2b, Y0 + 3, 53)
+    for x in range(X2b + 1, 126):
+        for z in (51, 52, 53):
+            w.set(x, Y0, z, "gray_concrete" if z == 52 else hazard(x, 0))
+        for z in (50, 54):
+            w.set(x, Y0, z, "iron_block")
+            w.set(x, Y0 + 1, z, "iron_bars")
+            w.set(x, Y0 + 2, z, "iron_bars")
+    for z in (51, 52, 53):
+        for y in (Y0 + 1, Y0 + 2):
+            w.set(126, y, z, AIR)
+    # hangers: chains to the roof truss at the four corners, and a braced underside
+    for (x, z) in ((X1b, Zb1), (X2b, Zb1), (X1b, Zb2), (X2b, Zb2)):
+        for y in range(top + 1, 109):
+            w.set(x, y, z, bs("iron_chain", axis="y"))
     for x in range(X1b, X2b + 1, 4):
-        box(w, x, Y0 - 3, Zb1, x, Y0 - 1, Zb1 + 1, "gray_concrete")
-    # booth door in the north wall: a corridor behind it
-    hollow(w, 111, Y0 + 1, 17, 119, Y0 + 4, 23, "polished_blackstone")
-    carve(w, 111, Y0 + 1, 23, 119, Y0 + 4, 24)
-    w.anchor("booth", BOOTH_STAND[0], Y0 + 1, BOOTH_STAND[1], yaw=YAW["south"], pitch=25.0)
+        box(w, x, Y0 - 1, Zb1, x, Y0 - 1, Zb1 + 3, "gray_concrete")
+    for k in range(0, 8):                                                       # diagonal knee braces from the east wall
+        for z in (Zb2 - 1, Zb2):
+            w.set(X2b + 1 + k, Y0 - 1 - k // 2, z, "gray_concrete")
+    ddx, ddz = BOOTH_STAND[0] - 96.5, FACE_Z - BOOTH_STAND[1]                     # he faces the stop on the bridge and looks down at it
+    yaw = math.degrees(math.atan2(ddx, ddz))
+    pitch = math.degrees(math.atan2(Y0 + 1 + 1.62 - (BRIDGE_Y + 1 + 1.62), math.hypot(ddx, ddz)))
+    w.anchor("booth", BOOTH_STAND[0], Y0 + 1, BOOTH_STAND[1], yaw=round(yaw, 1), pitch=round(pitch, 1))
+
 
 def build_gurney_door(w):
     X1 = CAGE["x1"]
@@ -1348,6 +1396,8 @@ def build_gurney_door(w):
     box(w, X1 - 12, BRIDGE_Y + 2, gz + 1, X1 - 12, BRIDGE_Y + 4, gz + 1, WHITE)
     w.set(X1 - 8, BRIDGE_Y + 4, gz + 1, LAMP_OFF)
     CAGE_LIGHTS.append((X1 - 8, BRIDGE_Y + 4, gz + 1, LAMP_ON))
+    for (x, z) in ((X1 - 10, gz - 3), (X1 - 10, gz + 5), (X1 - 7, gz + 1)):       # the vestibule is never dark
+        hlight(w, x, BRIDGE_Y + 3, z, 12)
 
 
 def cage_anchors(w):
@@ -1402,7 +1452,7 @@ def build_flood(w):
     for x in range(X1, 23):
         for z in range(154, 167):
             edge = x == 22 or z in (154, 166)
-            w.set(x, BRIDGE_Y, z, hazard(x + z, 0) if edge else "gray_concrete")
+            w.set(x, BRIDGE_Y, z, hazard(x + z, 0) if edge else "light_gray_concrete")
     for z in range(154, 167):
         for y in (BRIDGE_Y + 1, BRIDGE_Y + 2):
             pass
@@ -1419,14 +1469,14 @@ def build_flood(w):
         w.set(x, BRIDGE_Y, z, "gray_concrete")
     for x in range(23, 98):
         for z in (159, 160, 161):
-            w.set(x, BRIDGE_Y, z, hazard(x, 0) if z != 160 else ("gray_concrete" if x % 4 > 1 else YELLOW))
+            w.set(x, BRIDGE_Y, z, hazard(x, 0) if z != 160 else ("light_gray_concrete" if x % 4 > 1 else YELLOW))
         for z in (158, 162):
             w.set(x, BRIDGE_Y, z, "iron_block")
             w.set(x, BRIDGE_Y + 1, z, "iron_bars")
             w.set(x, BRIDGE_Y + 2, z, "iron_bars")
     for z in range(143, 159):
         for x in (95, 96, 97):
-            w.set(x, BRIDGE_Y, z, hazard(z, 0) if x != 96 else ("gray_concrete" if z % 4 > 1 else YELLOW))
+            w.set(x, BRIDGE_Y, z, hazard(z, 0) if x != 96 else ("light_gray_concrete" if z % 4 > 1 else YELLOW))
         for x in (94, 98):
             w.set(x, BRIDGE_Y, z, "iron_block")
             w.set(x, BRIDGE_Y + 1, z, "iron_bars")
@@ -1443,7 +1493,7 @@ def build_flood(w):
         pass
     # fix the corner: the north arm leaves the east-west catwalk at x 95..97, z 158 -> clear those rail cells
     for x in (95, 96, 97):
-        w.set(x, BRIDGE_Y, 158, "gray_concrete")
+        w.set(x, BRIDGE_Y, 158, "light_gray_concrete")
         w.set(x, BRIDGE_Y + 1, 158, AIR)
         w.set(x, BRIDGE_Y + 2, 158, AIR)
     for x in (94, 98):
@@ -1495,6 +1545,7 @@ def build_flood(w):
     for x in (36, 62, 124, 138):
         for z in (150, 180):
             emergency_lamp(w, x + 1, 58, z - 1, (x + 1, 59, z - 1))
+    flood_lights(w)
     w.anchor("dock", 15.5, BRIDGE_Y + 1, 160.5, yaw=YAW["east"])
     w.anchor("crossing", 60.5, BRIDGE_Y + 1, 160.5, yaw=YAW["east"])
     w.anchor("cage_door", 96.5, BRIDGE_Y + 1, 145.0, yaw=YAW["north"])
@@ -1504,20 +1555,24 @@ def build_flood(w):
 UY = 130                 # upper level floor block row (feet 131)
 LY = 106                 # lower level floor block row (feet 107)
 ZA = 160                 # centre line of the route
-WALL_A = "light_gray_concrete"
-DADO_A = "gray_concrete"
-BAND_A = "white_concrete"
-FLOOR_A = "gray_concrete"
+WALL_A = "white_concrete"                # clean pale walls: at light level 12+ the game's block light is neutral white, so the cool
+DADO_A = "light_gray_concrete"           # comes from the blue band and the blue plates, not from the lighting
+BAND_A = "light_blue_concrete"
+RIB_A = "light_gray_concrete"
+FLOOR_A = "light_gray_concrete"
 CEIL_A = "white_concrete"
 STRIP_A = "sea_lantern"
 ROOMS_A = []             # (x1, y1, z1, x2, y2, z2)
+# "loop_door": 6.5 blocks from the orange door, in the east end of the ring's north leg, facing it (it was 1.5 blocks away: a flat
+# orange wall filled the view)
+LOOP_DOOR_AT = (109.5, 154.5, round(math.degrees(math.atan2(109.5 - 103.5, 157.0 - 154.5)), 1))
 
 
 def room(x1, y1, z1, x2, y2, z2):
     ROOMS_A.append((x1, y1, z1, x2, y2, z2))
 
 
-def plate(w, text, plane, u0, v0, axis, step, bg="blue_concrete", fg=WHITE, pad=1):
+def plate(w, text, plane, u0, v0, axis, step, bg="light_blue_concrete", fg=WHITE, pad=1):
     """A wall sign: a coloured plate with block letters, set flush in the wall plane."""
     wd = 4 * len(text) - 1
     for i in range(-pad, wd + pad):
@@ -1548,12 +1603,12 @@ def decorate_room(w, r):
             b = DADO_A
         elif dy == 2:
             b = IRON if u % 3 else DADO_A
-        elif dy == H - 1:
+        elif dy >= H - 2:
             b = BAND_A
         else:
             b = WALL_A
-        if u % 8 == 0:
-            b = BAND_A if dy > 1 else IRON
+        if u % 8 == 0 and dy < H - 2:
+            b = RIB_A if dy > 1 else IRON
         elif u % 8 == 1 and dy > 2 and dy < H - 1:
             b = WALL_A
         w.set(x, y, z, b)
@@ -1614,7 +1669,7 @@ def bulkhead_door(w, x, z, side, number, y0=131):
         w.set(x + dx, y0 + 3, pz, IRON if dx in (-1, 2) else "gray_concrete")
     # number plate beside the door
     pass
-    stencil(w, number[-2:], pz, x + (4 if side < 0 else -4), y0 + 1, "z", 1 if side < 0 else -1, 1, BLACK)
+    stencil(w, number[-2:], pz, x + (4 if side < 0 else -4), y0 + 1, "z", 1 if side < 0 else -1, 1, BLACK, solid_only=True)
 
 
 def build_corridors(w):
@@ -1659,18 +1714,22 @@ def build_corridors(w):
     pass
     pass
     # reception desk and benches
-    box(w, 175, 131, 154, 176, 132, 158, "gray_concrete")
-    box(w, 175, 133, 154, 176, 133, 158, BLACK)
-    box(w, 175, 131, 162, 176, 132, 166, "gray_concrete")
-    box(w, 175, 133, 162, 176, 133, 166, BLACK)
-    for z in (155, 157, 163, 165):
-        w.set(176, 134, z, "cyan_concrete")
+    for (za, zb) in ((154, 158), (162, 166)):                # two reception desks: white body, a lit blue front, quartz top
+        box(w, 175, 131, za, 176, 132, zb, "white_concrete")
+        box(w, 175, 131, za, 175, 131, zb, "light_gray_concrete")
+        for z in range(za, zb + 1):
+            w.set(175, 132, z, "sea_lantern" if z % 2 == 0 else "light_blue_concrete")
+        box(w, 175, 133, za, 176, 133, zb, "smooth_quartz")
+        box(w, 177, 131, za, 177, 131, zb, "light_gray_concrete")                    # kick step
+        for z in (za + 1, zb - 1):
+            w.set(176, 134, z, "gray_concrete")
+            w.set(176, 135, z, "cyan_concrete")
     for z in range(152, 169, 2):
-        w.set(171, 131, z, "gray_concrete") if z not in (158, 159, 160, 161, 162) else None
+        w.set(171, 131, z, "smooth_quartz") if z not in (158, 159, 160, 161, 162) else None
     # big wall sign and a map plate
     pass
     pass
-    plate(w, "A-12", 170 - 1, 163, 135, "x", -1, bg="blue_concrete", fg=WHITE)
+    plate(w, "A-12", 170 - 1, 163, 135, "x", -1, bg="light_blue_concrete", fg=WHITE)
     # floor guide stripes through the lobby and everywhere on the route
     for x in range(152, 183):
         w.set(x, UY, ZA - 1, YELLOW)
@@ -1683,11 +1742,11 @@ def build_corridors(w):
         if r[0] == 22 and r[1] == 100:
             continue
         if x2 - x1 >= z2 - z1 and (z2 - z1) < 8:
-            ceiling_strips(w, r, 4, "x", [(z1 + z2) // 2])
+            ceiling_strips(w, r, 3, "x", [(z1 + z2) // 2])
         elif r[0] in (170, 122):
-            ceiling_strips(w, r, 4, "x", [z1 + 3, (z1 + z2) // 2, z2 - 3])
+            ceiling_strips(w, r, 3, "x", [z1 + 3, (z1 + z2) // 2, z2 - 3])
         else:
-            ceiling_strips(w, r, 4, "x", [(z1 + z2) // 2])
+            ceiling_strips(w, r, 3, "x", [(z1 + z2) // 2])
     # ring: strips in each leg
     for x in range(96, 111, 4):
         for z in (154, 166):
@@ -1708,12 +1767,12 @@ def build_corridors(w):
     for x in range(122, 152):
         for z in range(157, 164):
             edge = z in (157, 163)
-            w.set(x, UY, z, YELLOW if edge else BLACK)
+            w.set(x, UY, z, YELLOW if edge else "gray_concrete")
         for z in (156, 164):
             w.set(x, UY, z, "iron_block")
             for k in (1,):
                 w.set(x, UY + k, z, "iron_bars")
-            w.set(x, UY + 2, z, BLACK)
+            w.set(x, UY + 2, z, "cyan_concrete")
     for x0 in range(124, 150, 6):             # chevrons pointing west
         for k in range(4):
             for z in (ZA - k, ZA + k):
@@ -1726,9 +1785,9 @@ def build_corridors(w):
         for z in (154, 166):
             box(w, x, 131, z, x + 1, 137, z, "white_concrete")
     pass
-    plate(w, "B-3", 153, 126, 134, "z", 1, bg="blue_concrete")
-    plate(w, "B-3", 167, 146, 134, "z", -1, bg="blue_concrete")
-    plate(w, "LIFT", 153, 140, 134, "z", 1, bg="blue_concrete")
+    plate(w, "B-3", 153, 126, 134, "z", 1, bg="light_blue_concrete")
+    plate(w, "B-3", 167, 146, 134, "z", -1, bg="light_blue_concrete")
+    plate(w, "LIFT", 153, 140, 134, "z", 1, bg="light_blue_concrete")
     # ------------- C2 ----------------------------------------------------------------------------
     bulkhead_door(w, 114, 157, -1, "201")
     bulkhead_door(w, 118, 163, 1, "202")
@@ -1750,7 +1809,7 @@ def build_corridors(w):
     for x in (101, 105):
         w.set(x, 136, 157, "red_concrete")
     # a blue cart and a stack of crates against the north wall, only on the north leg
-    box(w, 108, 131, 152, 109, 132, 152, "blue_concrete")
+    box(w, 108, 131, 152, 109, 132, 152, "light_blue_concrete")
     box(w, 97, 131, 152, 97, 133, 152, "brown_concrete")
     # distinctive scuff/paint: a big orange arrow stripe on the floor ahead of the door
     for x in range(98, 109):
@@ -1758,8 +1817,8 @@ def build_corridors(w):
     # ring doors and exits
     pass
     pass
-    plate(w, "A-12", 151, 96, 134, "z", 1, bg="blue_concrete")
-    plate(w, "A-12", 169, 110, 134, "z", -1, bg="blue_concrete")
+    plate(w, "A-12", 151, 96, 134, "z", 1, bg="light_blue_concrete")
+    plate(w, "A-12", 169, 110, 134, "z", -1, bg="light_blue_concrete")
     # dead end
     for y in range(131, 136):
         for x in range(101, 106):
@@ -1777,12 +1836,14 @@ def build_corridors(w):
     bulkhead_door(w, 17, 157, -1, "501", y0=107)
     bulkhead_door(w, 19, 163, 1, "502", y0=107)
     build_elevator_lobby(w)
+    corridor_lights(w)
+    hall_lights(w)
     # route anchors
     w.anchor("start", 180.5, UY + 1, ZA + 0.5, yaw=YAW["west"])
     w.anchor("corr_1", 160.5, UY + 1, ZA + 0.5, yaw=YAW["west"])
     w.anchor("corr_2", 136.5, UY + 1, ZA + 0.5, yaw=YAW["west"])
     w.anchor("corr_3", 116.5, UY + 1, ZA + 0.5, yaw=YAW["west"])
-    w.anchor("loop_door", 103.5, UY + 1, 155.5, yaw=YAW["south"])
+    w.anchor("loop_door", LOOP_DOOR_AT[0], UY + 1, LOOP_DOOR_AT[1], yaw=LOOP_DOOR_AT[2])
     w.anchor("corr_4", 97.5, UY + 1, 165.5, yaw=YAW["south"])
     w.anchor("corr_5", 85.5, UY + 1, ZA + 0.5, yaw=YAW["west"])
     w.anchor("corr_6", 26.5, LY + 1, ZA + 0.5, yaw=YAW["west"])
@@ -1825,7 +1886,7 @@ def build_escalator_hall(w):
             y = int(s) - 1
             top = y + 1
             for z in range(ZA - 2, ZA + 3):
-                w.set(x, y, z, "black_concrete" if z != ZA else "gray_concrete")
+                w.set(x, y, z, "gray_concrete" if z != ZA else "light_gray_concrete")
             body_top = y - 1
         for z in range(ZA - 2, ZA + 3):
             for yy in range(body_top, body_top - 3, -1):
@@ -1834,9 +1895,9 @@ def build_escalator_hall(w):
         for zz in (ZA - 3, ZA + 3):
             w.set(x, yc, zz, "iron_bars")
             w.set(x, yc + 1, zz, "iron_bars")
-            w.set(x, yc + 2, zz, BLACK)
-            w.set(x, yc - 1, zz, "gray_concrete")
-            w.set(x, yc - 2, zz, "gray_concrete")
+            w.set(x, yc + 2, zz, "cyan_concrete" if x % 4 < 2 else "light_gray_concrete")
+            w.set(x, yc - 1, zz, "light_gray_concrete")
+            w.set(x, yc - 2, zz, "light_gray_concrete")
     # truss under the run
     for x in range(34, 79, 8):
         s = 131 - 0.5 * (79 - x + 1)
@@ -1932,8 +1993,8 @@ def build_elevator_lobby(w):
     # lobby: seating, sign, floor stripes
     for z in (155, 165):
         box(w, 10, 107, z, 12, 107, z, "gray_concrete")
-    plate(w, "LIFT", 153, 9, 110, "z", 1, bg="blue_concrete")
-    plate(w, "LIFT", 167, 13, 110, "z", -1, bg="blue_concrete")
+    plate(w, "LIFT", 153, 9, 110, "z", 1, bg="light_blue_concrete")
+    plate(w, "LIFT", 167, 13, 110, "z", -1, bg="light_blue_concrete")
     for z in range(159, 162):
         w.set(8, LY, z, YELLOW)
     for x in range(8, 15):
@@ -2077,12 +2138,207 @@ def build_shaft(w):
     w.anchor("shaft_top_gantry", X1 + 1.5, 149.0, cxs, yaw=YAW["east"])
 
 
+# ================================================================================================ LIGHT
+# Everything below is permanent light (it is in the canvas from the start, unlike CAGE_LIGHTS): hidden light blocks, run-lights
+# and emergency lamps.  Minecraft block light falls 1 level per block; at the default gamma a surface needs about 7 to read
+# clearly and 3 to 5 to show as a silhouette, and dim block light is tinted orange (it is neutral only near 14-15).
+RUN_LIGHTS = []               # (x, y, z) amber run-lights in rail bases, deck lips and catwalk edges (always on)
+
+
+def hlight(w, x, y, z, level):
+    """A permanent hidden light block, only into open air.  True if placed."""
+    if w.get(x, y, z) == AIR:
+        w.set(x, y, z, bs("light", level=level))
+        return True
+    return False
+
+
+def runlight(w, x, y, z, glass="orange_stained_glass", level=12):
+    """A low amber lamp: stained glass set into a rail-base cell, with a hidden light block in the open air under it."""
+    if w.get(x, y - 1, z) != AIR:
+        return False
+    w.set(x, y, z, glass)
+    w.set(x, y - 1, z, bs("light", level=level))
+    RUN_LIGHTS.append((x, y, z))
+    return True
+
+
+def corridor_lights(w):
+    """Bright, even, clean light in every corridor and lobby.  Block light is only neutral white near level 14-15 (dim light is
+    tinted orange), so the surfaces people see have to be within a block or two of a source: hidden level-15 blocks on the floor
+    cells (every 3 along, every 2 across) light the floor and the lower walls, a second layer under the ceiling every 4 x 4 lights
+    the upper walls and the ceiling.  (Before: strips only, 6 on the lobby floor, and the night sky did the rest.)"""
+    n = 0
+    for (x1, y1, z1, x2, y2, z2) in ROOMS_A:
+        if x1 == 22 and y1 == 100:
+            continue
+        for x in range(x1, x2 + 1):
+            for z in range(z1, z2 + 1):
+                if x % 3 == 0 and z % 2 == 0:
+                    n += hlight(w, x, y1, z, 15)
+                if x % 4 == 2 and z % 4 == 2:
+                    n += hlight(w, x, y2 - 1, z, 15)
+                if (x in (x1, x2) or z in (z1, z2)) and (x + z) % 3 == 0:        # along the walls, at 1, 4, 7 above the floor
+                    for y in range(y1 + 1, y2, 3):
+                        n += hlight(w, x, y, z, 15)
+    return n
+
+
+def hall_lights(w):
+    """The escalator hall: a lattice of hidden lights through the long void, dense over both landings and the pit floor."""
+    n = 0
+    for y in (102, 108, 116, 124, 132, 138, 146):
+        for x in range(24, 89, 6):
+            for z in (152, 160, 168):
+                n += hlight(w, x, y, z, 15)
+    for x in range(81, 89, 4):                     # over the upper landing
+        for z in (153, 160, 167):
+            n += hlight(w, x, 135, z, 15)
+    for x in range(23, 31, 4):                     # over the lower landing
+        for z in (153, 160, 167):
+            n += hlight(w, x, 111, z, 15)
+    return n
+
+
+def flood_lights(w):
+    """The flooded chamber: dark but readable.  A line of amber run-lights along the catwalk and its north arm, lamp bollards on
+    the dock, a glow under the lake, more and stronger red emergency lamps on the walls and pillars."""
+    b = B
+    X1, X2, Z1, Z2, Y1 = b["x1"], b["x2"], b["z1"], b["z2"], b["y1"]
+    for x in range(24, 98, 4):                                      # east-west catwalk rails z 158 and 162
+        for z in (158, 162):
+            runlight(w, x, BRIDGE_Y, z)
+    for z in range(145, 158, 4):                                    # north arm rails x 94 and 98
+        for x in (94, 98):
+            runlight(w, x, BRIDGE_Y, z)
+    for z in range(155, 166, 5):                                    # the dock's hazard lip
+        runlight(w, 22, BRIDGE_Y, z)
+    for x in (12, 17, 21):                                          # dock bollards: iron post, amber lamp, hidden light over it
+        for z in (155, 165):
+            w.set(x, BRIDGE_Y + 1, z, IRON)
+            w.set(x, BRIDGE_Y + 2, z, IRON)
+            w.set(x, BRIDGE_Y + 3, z, "orange_stained_glass")
+            hlight(w, x, BRIDGE_Y + 4, z, 13)
+            RUN_LIGHTS.append((x, BRIDGE_Y + 3, z))
+    for x in (13, 18):                                              # over the middle of the dock
+        hlight(w, x, BRIDGE_Y + 4, 160, 13)
+    for x in range(14, 148, 10):                                    # the lake glows: hidden light under the glass top
+        for z in range(148, 186, 10):
+            if w.get(x, LAKE_Y - 1, z) == "minecraft:" + LIQUID:
+                w.set(x, LAKE_Y - 1, z, bs("light", level=9))
+    # emergency lamps: walls, both long walls and both ends, and three heights on every pillar
+    for x in range(16, 146, 12):
+        for y in (58, 66):
+            emergency_lamp(w, x, y, Z2 + 1, (x, y, Z2))
+            if not (88 <= x <= 104):
+                emergency_lamp(w, x, y, Z1 - 1, (x, y, Z1))
+    for z in range(150, 182, 12):
+        for y in (58, 66):
+            emergency_lamp(w, X1 - 1, y, z, (X1, y, z))
+            emergency_lamp(w, X2 + 1, y, z, (X2, y, z))
+    for x in (36, 62, 124, 138):
+        for z in (150, 180):
+            for y in (64, 70):
+                emergency_lamp(w, x + 1, y, z - 1, (x + 1, y + 1, z - 1))
+                emergency_lamp(w, x + 1, y, z + 3, (x + 1, y + 1, z + 3))
+            emergency_lamp(w, x + 1, 58, z + 3, (x + 1, 59, z + 3))
+
+
+def cage_lights_baseline(w):
+    """The cage with the lights off: dark but readable.  Amber run-lights along the bridge rails and all three wall catwalks, a glow
+    under the coolant that lights the walls and the giant's shoulders from below, and a faint red rim round the head from
+    emergency lamps on the pylon tops and hidden lights beside the cheeks.  Nothing hangs in front of the face."""
+    c = CAGE
+    X1, X2, Z1, Z2 = c["x1"], c["x2"], c["z1"], c["z2"]
+    for z in range(76, Z2 - 1, 4):                                   # bridge rails
+        for x in (93, 99):
+            runlight(w, x, BRIDGE_Y, z, level=12)
+    for x in range(66, 92, 4):                                       # the gurney spur
+        for z in (GURNEY_Z - 1, GURNEY_Z + 3):
+            runlight(w, x, BRIDGE_Y, z, level=12)
+    for z in (138, 139):                                             # the tunnel behind the south wall
+        hlight(w, CX, BRIDGE_Y + 4, z, 12)
+    for y in (62, 76, 90):                                           # wall catwalks: lamps in the hazard edge, light under
+        for edge in (X1 + 2, X2 - 2):
+            for z in range(Z1 + 9, Z2 - 4, 6):
+                runlight(w, edge, y, z, level=10)
+    for x in range(66, 127, 8):                                      # the coolant glows (hidden light 2 under the top)
+        for z in range(28, 135, 8):
+            if w.get(x, SURF - 1, z) == "minecraft:" + LIQUID:
+                w.set(x, SURF - 1, z, bs("light", level=10))
+    # giant's rim: emergency lamps on the tops of the tall pylons, hidden lights over them and beside the cheeks
+    for sgn in (-1, 1):
+        xi = CX + sgn * 13
+        for z in (40, 44, 48):
+            ytop = None
+            for y in range(90, 30, -1):
+                if w.get(xi, y, z) not in (None, AIR):
+                    ytop = y
+                    break
+            if ytop is not None:
+                emergency_lamp(w, xi, ytop + 1, z, (xi, ytop + 2, z))
+        for (dx, y, z, lvl) in ((10, 54, 60, 13), (10, 60, 60, 13), (10, 66, 60, 13), (5, 52, 63, 12), (3, 56, 63, 11),
+                                (4, 72, 57, 12), (8, 69, 56, 12), (2, 66, 60, 11)):
+            hlight(w, CX + sgn * dx, y, z, lvl)
+    # red emergency lamps along the north wall behind the giant: the head stands against a faintly lit wall and reads as a shape
+    for x in range(72, 121, 6):
+        for y in (50, 58, 66, 74):
+            emergency_lamp(w, x, y, Z1 - 1, (x, y, Z1))
+    # a shaded light over the stop and the deck lip so that the player's own feet and the edge read
+    for (x, y, z) in ((CX, BRIDGE_Y + 5, 73), (CX, BRIDGE_Y + 5, 77), (CX, BRIDGE_Y + 5, 89)):
+        hlight(w, x, y, z, 11)
+
+
+def wall_detail(w):
+    """Industrial depth on both side walls at the player's eye level near the bridge (y 40..61, z 28..134): three pipe runs with
+    collars, cable trays, control cabinets, warning plates and stencilled numbers, each with a red lamp beside it."""
+    c = CAGE
+    X1, X2, Z1, Z2 = c["x1"], c["x2"], c["z1"], c["z2"]
+    for sgn in (-1, 1):
+        xp = X1 + 1 if sgn < 0 else X2 - 1                       # pipes stand one block off the wall
+        xw = X1 - 1 if sgn < 0 else X2 + 1                       # the wall plane (plates are set flush in it)
+        step = -1 if sgn < 0 else 1
+        for z in range(Z1 + 3, Z2 - 3):
+            for (y, blk) in ((44, "weathered_copper"), (47, "gray_concrete"), (50, "copper_block")):
+                if w.get(xp, y, z) == AIR:
+                    w.set(xp, y, z, blk if z % 8 else IRON)        # an iron collar every 8
+            if z % 8 == 0:
+                for y in (45, 46, 48, 49):
+                    if w.get(xp, y, z) == AIR:
+                        w.set(xp, y, z, IRON)
+            if w.get(xp, 52, z) == AIR:                            # a cable tray with an orange stripe
+                w.set(xp, 52, z, "black_concrete" if z % 12 else ORANGE)
+        # warning plates and stencils, flush in the wall plane
+        for k, zc in enumerate((66, 96, 114, 132)):         # (clear of the gurney door at z 79..81)
+            u0 = zc + (3 if sgn < 0 else -3)
+            if k % 2 == 0:
+                plate(w, "HOT", xw, u0, 56, "x", step, bg=YELLOW, fg=BLACK)
+            else:
+                plate(w, "A-%02d" % (7 + k), xw, u0, 56, "x", step, bg="gray_concrete", fg=WHITE)
+            lx = xp
+            emergency_lamp(w, lx, 55, zc + 6 * (1 if sgn > 0 else -1), (lx + (1 if sgn < 0 else -1), 55, zc + 6 * (1 if sgn > 0 else -1)))
+        stencil(w, "L%d" % (3 if sgn < 0 else 4), xw, 57 if sgn < 0 else 42, 50, "x", step, 2, "white_concrete")
+        # control cabinets at the foot of the wall: a body against the wall, a face with a screen and two indicators
+        xb = X1 if sgn < 0 else X2
+        for zc in (84, 104, 124):
+            for dz in range(3):
+                for y in range(39, 43):
+                    if w.get(xb, y, zc + dz) in (AIR, "minecraft:gray_concrete"):
+                        w.set(xb, y, zc + dz, "gray_concrete")
+                    if w.get(xp, y, zc + dz) == AIR:
+                        w.set(xp, y, zc + dz, "light_gray_concrete" if y in (39, 42) else ("cyan_concrete" if y == 41 else "gray_concrete"))
+            if w.get(xp, 40, zc) == "minecraft:gray_concrete":
+                w.set(xp, 40, zc, "red_concrete")
+            if w.get(xp, 40, zc + 2) == "minecraft:gray_concrete":
+                w.set(xp, 40, zc + 2, "lime_concrete")
+
+
 # ================================================================================================ assembly
 def face_rigs(w):
     """Light for the face.  Nothing bright may hang in front of the eyes, so the face is keyed by hidden light blocks (in
     CAGE_LIGHTS like the lamps: air when the lights are off, a light block when they are on); two visible lamp rigs on chains
     flank the shoulders well outside the head's silhouette."""
-    for x in (79, 113):
+    for x in (79, 123):                        # (the east rig was at 113: it stood under the commander's window)
         for y in range(66, 108):
             w.set(x, y, 62, bs("iron_chain", axis="y"))
         for dx in (0, 1):
@@ -2091,9 +2347,21 @@ def face_rigs(w):
         box(w, x - 1, 64, 60, x + 2, 64, 64, BLACK)
     for (x, y, z) in ((CX, 60, 61), (CX - 6, 60, 61), (CX + 6, 60, 61), (CX, 67, 60), (CX, 54, 62), (CX - 7, 64, 62), (CX + 7, 64, 62)):
         CAGE_LIGHTS.append((x, y, z, bs("light", level=15)))
+    # lights for the bridge, over the rails' height (invisible, above the stop's head): the deck was 5 to 7 with the cage lit
+    for z in range(74, 136, 6):
+        CAGE_LIGHTS.append((CX, BRIDGE_Y + 5, z, bs("light", level=15)))
+    # under the raised hand (it is placed by the story over the shield column; its palm is at y 61, z 74..80)
+    for (x, y, z) in ((CX - 3, 60, 76), (CX + 3, 60, 76), (CX, 60, 79), (CX - 4, 60, 82), (CX + 4, 60, 82), (CX, 60, 85),
+                      (CX - 6, 60, 79), (CX + 6, 60, 79)):
+        CAGE_LIGHTS.append((x, y, z, bs("light", level=15)))
+    # the eyes' own glow, to be set with the eyes: on the brow and the bridge end
+    for (x, y, z, lvl) in ((CX - 4, 60, 60, 12), (CX + 4, 60, 60, 12), (CX, 57, 61, 12), (CX - 5, 56, 67, 11), (CX + 5, 56, 67, 11),
+                           (CX, 58, 68, 11), (CX - 9, 66, 60, 11), (CX + 9, 66, 60, 11)):
+        EYE_GLOW.append((x, y, z, bs("light", level=lvl)))
 
 def build(w):
     EYES_LEFT.clear(); EYES_RIGHT.clear(); CAGE_LIGHTS.clear(); BOOTH_LIGHTS.clear(); EMERGENCY.clear(); DOORS.clear()
+    EYE_GLOW.clear(); RUN_LIGHTS.clear()
     build_flood(w)
     build_cage(w)
     face_rigs(w)
@@ -2101,7 +2369,7 @@ def build(w):
     build_plug(w)
     build_shaft(w)
     cage_anchors(w)
-    w.anchor("loop_door", 103.5, UY + 1, 155.5, yaw=YAW["south"])
+    w.anchor("loop_door", LOOP_DOOR_AT[0], UY + 1, LOOP_DOOR_AT[1], yaw=LOOP_DOOR_AT[2])
     seal_skylight(w)
     HAND["lowered"] = hand_bbox(False)
     HAND["raised"] = hand_bbox(True)
@@ -2249,6 +2517,35 @@ def skylight_check(w):
     return int(flood.sum()), int(col.sum()), [tuple(int(v) for v in p) for p in np.argwhere(both)[:10]]
 
 
+def light_report(w, tab, out=print):
+    """Block light (0..15) in the feet cell of every walkable cell of each stretch of the route: minimum, 5th percentile, median;
+    lights as built (everything the story has not switched on is off) and with every cage light on."""
+    A = lambda n: _local(w, n)
+    door = [DOORS["cage_door"]["box"]]
+    seen, _ = walk_bfs(w, A("start"), tab=tab)
+    seen2, _ = walk_bfs(w, A("dock"), clear_boxes=door, tab=tab)
+    w_on = lights_on(w)
+    Ls = {"off": light_map(w, tab), "on": light_map(w_on, tables(w_on))}
+    stretches = [
+        ("corridors + lobby (y 131)", [c for c in seen if c[1] == 131]),
+        ("escalator + lower corridor", [c for c in seen if c[1] < 131]),
+        ("dock", [c for c in seen2 if c[0] <= 22 and c[1] == 54 and c[2] > 150]),
+        ("catwalk (east-west)", [c for c in seen2 if 23 <= c[0] <= 93 and c[1] == 54 and c[2] > 150]),
+        ("catwalk north arm", [c for c in seen2 if 94 <= c[0] <= 98 and c[1] == 54 and 143 <= c[2] <= 157]),
+        ("bridge z 72..137", [c for c in seen2 if 93 <= c[0] <= 99 and c[1] == 54 and 72 <= c[2] <= 137]),
+        ("gurney spur", [c for c in seen2 if c[0] < 93 and c[1] == 54 and 78 <= c[2] <= 82]),
+    ]
+    rep = {}
+    for nm, cells in stretches:
+        for mode, L in Ls.items():
+            v = np.array([L[c] for c in cells]) if cells else np.array([0])
+            rep["%s/%s" % (nm, mode)] = (int(v.min()), float(np.percentile(v, 5)), float(np.median(v)))
+        a, b = rep["%s/off" % nm], rep["%s/on" % nm]
+        out("  light %-28s n=%4d  as built: min %2d p5 %4.1f median %4.1f   cage lights on: min %2d p5 %4.1f median %4.1f" % (
+            nm, len(cells), a[0], a[1], a[2], b[0], b[1], b[2]))
+    return rep
+
+
 def seal_skylight(w):
     """Back every drawn see-through cell (doors, emergency-lamp glass, bars ...) that touches untouched space with one dark opaque
     block, so the open sky of the void world cannot shine in through it."""
@@ -2302,6 +2599,10 @@ def verify(w, out=print):
         cur = w.get(x, y, z)
         if cur not in ("minecraft:" + LAMP_OFF.replace("minecraft:", ""), AIR, None):
             bad_l.append(((x, y, z), cur))
+    hand_all = set(hand_cells(True, (CX, BRIDGE_Y, SHIELD_Z))) | set(hand_cells(False, (CX, BRIDGE_Y, SHIELD_Z)))
+    in_hand = [(x, y, z) for (x, y, z, b) in CAGE_LIGHTS + EYE_GLOW if (x, y, z) in hand_all]
+    if in_hand:
+        bad_l += [(c, "inside a hand version") for c in in_hand]
     res["light_cells_clean"] = not bad_l
     out("light positions all dead lamps or open air: %s%s" % (not bad_l, "" if not bad_l else "  " + str(bad_l[:6])))
     # ---- the head: dimensions, where it stands, what the stop sees of it
@@ -2344,6 +2645,16 @@ def verify(w, out=print):
                 parts.append("%s->%s blocked by %s at %s" % (nm, lab, w.get(*blk) if blk else None, blk))
     out("commander in line of sight (feet, chest, head) from face / captain_mark / scientist_mark / shield: %s%s" % (
         all(res["booth"].values()), "" if all(res["booth"].values()) else "  " + "; ".join(parts)))
+    # the booth's place in the view from the stop: distance, elevation, bearing from straight ahead (north)
+    hd = (bx_, by_ + 1.8, bz_)
+    dx_, dy_, dz_ = hd[0] - eye[0], hd[1] - eye[1], eye[2] - hd[2]
+    res["booth_dist"] = math.sqrt(dx_ * dx_ + dy_ * dy_ + dz_ * dz_)
+    res["booth_elev"] = math.degrees(math.atan2(dy_, math.hypot(dx_, dz_)))
+    res["booth_bearing"] = math.degrees(math.atan2(dx_, dz_))
+    out("commander from the stop: %.1f blocks line of sight, %.1f deg above the horizontal, %.1f deg to the right of straight ahead "
+        "(want 18..28 blocks, <= 35 deg)" % (res["booth_dist"], res["booth_elev"], res["booth_bearing"]))
+    res["booth_dist_ok"] = 18.0 <= res["booth_dist"] <= 28.0 and res["booth_elev"] <= 35.0
+    out("booth distance/elevation within the brief: %s" % res["booth_dist_ok"])
     w_r = hand_swapped(w, True)
     ok_r = all(sees(w_r.a, tab, (A(n)[0], A(n)[1] + 1.62, A(n)[2]), (bx_, by_ + dy, bz_), masks=pm)[0]
                for n in ("face", "captain_mark", "shield") for dy in (0.1, 1.2, 1.8))
@@ -2356,6 +2667,30 @@ def verify(w, out=print):
             bxs.append(ok)
     res["booth_window_visible"] = (sum(bxs), len(bxs))
     out("booth window cells visible from the stop's eye: %d of %d" % res["booth_window_visible"])
+    # ---- nothing may stand across the face from the stop: every sample on the face (chin to brow, 12 wide) must be in clear view,
+    # or hidden only by the head's own relief (nose ridge, chin prow, brow overhang)
+    fv, other = [], []
+    for x in np.arange(HEAD_X0 + 4.5, HEAD_X0 + 16.6, 1.0):
+        for y in np.arange(HEAD_Y0 + 0.5, HEAD_Y0 + 21.0, 1.5):
+            ok, blk = sees(w.a, tab, eye, (x, y, FACE_PLANE_Z - 0.3), masks=pm)
+            fv.append(ok)
+            if not ok and not (HEAD_X0 <= blk[0] <= HEAD_X0 + 20 and HEAD_Y0 <= blk[1] <= HEAD_Y0 + 40 and HEAD_ZF - 27 <= blk[2] <= HEAD_ZF):
+                other.append((round(float(x), 1), round(float(y), 1), blk, w.get(*blk)))
+    res["face_clear"] = (sum(fv), len(fv))
+    res["face_blocked_by_other"] = len(other)
+    out("face samples in clear view from the stop: %d of %d; blocked by anything other than the head's own relief: %d%s" % (
+        sum(fv), len(fv), len(other), "" if not other else "  e.g. %s" % other[:4]))
+    # ---- skylight: nothing under the open sky of the void world may light the inside
+    nf, nc, smp = skylight_check(w)
+    res["skylight_flood"], res["skylight_column"] = nf, nc
+    out("skylight cap: %d interior cells would receive sky light in a full flood; %d interior cells lie above the first opaque cube "
+        "of their (x, z) column (both must be 0)%s" % (nf, nc, "" if not (nf or nc) else "  e.g. %s" % smp))
+    sh = SHAFT
+    lid = [w.get(x, sh["top"] + 1, z) for x in range(sh["x1"], sh["x2"] + 1) for z in range(sh["z1"], sh["z2"] + 1)]
+    res["shaft_lid_opaque"] = all(b not in (None, AIR) for b in lid)
+    out("launch shaft lid (y %d) fully filled with solid blocks: %s" % (sh["top"] + 1, res["shaft_lid_opaque"]))
+    # ---- block light on the walked route, lights off (as built) and cage lights on
+    res["light"] = light_report(w, tab, out)
     return res
 
 # ================================================================================================ previews
@@ -2384,6 +2719,17 @@ def lights_on(w, eyes=True):
     if eyes:
         for (x, y, z) in EYES_LEFT + EYES_RIGHT:
             w2.set(x, y, z, EYE_ON)
+    return w2
+
+
+def with_standin(w):
+    """A copy with a dark stand-in for the commander (1 x 2 blocks, much fatter than the real man) at the booth anchor, for the previews."""
+    w2 = World("s", w.origin, w.size)
+    w2.a = w.a.copy()
+    w2.palette = list(w.palette)
+    w2._ix = dict(w._ix)
+    for dy in (0, 1):
+        w2.set(int(BOOTH_STAND[0]), BOOTH["y0"] + 1 + dy, int(BOOTH_STAND[1]), "black_concrete")
     return w2
 
 
@@ -2445,6 +2791,26 @@ def render_all(w, outdir, quick=False):
     shot("cage_face_lights_off", w, tab, L_off, eye, ahead, fov=100)
     shot("cage_face_lights_on", w_on, tab_on, L_on, eye, ahead, fov=100)
     shot("cage_face_lookup_booth_on", w_on, tab_on, L_on, eye, (BOOTH_STAND[0], A("booth")[1] + 1.0, BOOTH_STAND[1]), fov=100)
+    wf_ = with_standin(w_on)
+    shot("cage_booth_standin_wide_on", wf_, tab_on, L_on, eye, (BOOTH_STAND[0], A("booth")[1] + 1.0, BOOTH_STAND[1]), fov=100)
+    shot("cage_booth_standin_zoom_on", wf_, tab_on, L_on, eye, (BOOTH_STAND[0], A("booth")[1] + 1.2, BOOTH_STAND[1]), fov=40)
+    shot("cage_face_eyes_close_on", w_on, tab_on, L_on, eye, (96.5, 62, 57), fov=45)
+    shot("cage_face_lookup_booth_off", w, tab, L_off, eye, (BOOTH_STAND[0], A("booth")[1] + 1.0, BOOTH_STAND[1]), fov=100)
+    w_eyes_off = lights_on(w, eyes=False)
+    shot("cage_face_lights_on_eyes_dark", w_eyes_off, tables(w_eyes_off), light_map(w_eyes_off, tables(w_eyes_off)), eye, ahead, fov=100)
+    w_eg = World("eg", w.origin, w.size)                      # only the eyes (and their optional glow) lit, cage lights off
+    w_eg.a = w.a.copy()
+    w_eg.palette = list(w.palette)
+    w_eg._ix = dict(w._ix)
+    for (x, y, z) in EYES_LEFT + EYES_RIGHT:
+        w_eg.set(x, y, z, EYE_ON)
+    for (x, y, z, b) in EYE_GLOW:
+        w_eg.set(x, y, z, b)
+    tab_eg = tables(w_eg)
+    shot("cage_face_eyes_only_glow", w_eg, tab_eg, light_map(w_eg, tab_eg), eye, ahead, fov=100)
+    shot("cage_lake_lights_off", w, tab, L_off, (96.5, 55.62, 80), (96.5, 36, 62), fov=100)
+    shot("cage_wall_west_lights_off", w, tab, L_off, (96.5, 55.62, 90), (64, 52, 80), fov=100)
+    shot("cage_wall_east_lights_on", w_on, tab_on, L_on, (96.5, 55.62, 90), (128, 52, 80), fov=100)
     e2, _ = gaze(w, "shield")
     shot("cage_shield_view_on", w_on, tab_on, L_on, e2, (BOOTH_STAND[0], A("booth")[1] + 1.0, BOOTH_STAND[1]), fov=100)
     e3, a3 = gaze(w, "captain_mark")
@@ -2461,6 +2827,7 @@ def render_all(w, outdir, quick=False):
         th_ = tables(wh_)
         Lh = light_map(wh_, th_)
         shot(nm + "_from_bridge", wh_, th_, Lh, (96.5, 55.62, SHIELD_Z + 17), (91, 56, SHIELD_Z - 3), fov=85)
+        shot(nm + "_from_shield_up", wh_, th_, Lh, (96.5, 55.62, SHIELD_Z + 0.5), (96.5, 63, SHIELD_Z + 1.5), fov=100)
         shot(nm + "_side", wh_, th_, Lh, (124, 60, SHIELD_Z + 25), (92, 52, SHIELD_Z - 3), fov=80)
         shot(nm + "_under", wh_, th_, Lh, (96.5, 55.62, SHIELD_Z + 0.5), (96.5, 64, SHIELD_Z + 0.5), fov=100)
     # ----- B
@@ -2469,7 +2836,7 @@ def render_all(w, outdir, quick=False):
     shot("flood_door_view", w, tab, L_off, (96.5, 55.6, 156.0), (96.5, 56, 140), fov=100, fine=False)
     # ----- A
     for nm, eyes_, tgt, fv in (("corr_start", A("start"), (150, 133, 160.5), 95), ("corr_c1", A("corr_1"), (130, 133, 160.5), 95),
-                               ("corr_walkway", A("corr_2"), (100, 133, 160.5), 95), ("corr_loop_door", (103.5, 132.6, 152.5), (103.5, 133, 157), 95),
+                               ("corr_walkway", A("corr_2"), (100, 133, 160.5), 95), ("corr_loop_door", gaze(w, "loop_door")[0], gaze(w, "loop_door")[1], 100),
                                ("corr_escalator_top", (86, 133, 160.5), (50, 120, 160.5), 100), ("corr_escalator_bottom", (28, 109, 160.5), (60, 125, 160.5), 100),
                                ("corr_elevator", (22, 109, 160.5), (6, 108, 160.5), 100)):
         shot(nm, w, tab, L_off, (eyes_[0], eyes_[1] + (1.62 if nm.startswith("corr_") and len(eyes_) == 3 and eyes_[1] in (131, 107) else 0), eyes_[2]), tgt, fov=fv, fine=False)
@@ -2512,7 +2879,8 @@ def main():
     print("hand boxes (local x1,y1,z1,x2,y2,z2): lowered %s raised %s" % (HAND["lowered"], HAND["raised"]))
     print("eyes left %s" % EYES_LEFT)
     print("eyes right %s" % EYES_RIGHT)
-    print("cage lights: %d blocks, booth lights %d, emergency %d" % (len(CAGE_LIGHTS), len(BOOTH_LIGHTS), len(EMERGENCY)))
+    print("cage lights: %d blocks, booth lights %d, emergency lamps %d (level %d), run-lights %d, eye glow %d; eye cells %d + %d" % (
+        len(CAGE_LIGHTS), len(BOOTH_LIGHTS), len(EMERGENCY), EMERGENCY_LEVEL, len(RUN_LIGHTS), len(EYE_GLOW), len(EYES_LEFT), len(EYES_RIGHT)))
     tab = tables(w)
     w_on = lights_on(w)
     L_off = light_map(w, tab)
@@ -2527,7 +2895,7 @@ def main():
         ok_c = all(sees(w.a, tab, eye, (bst[0], bst[1] + dy, bst[2]))[0] for dy in (0.1, 1.2, 1.8))
         print("  commander (feet, chest, head) clear from the bridge at z=%d: %s" % (zz, ok_c))
     for nm, pt in (("front of head", (96, 60, 61)), ("chin", (96, 54, 61)), ("bridge_start", (96, 54, 134)), ("bridge_mid", (96, 54, 100)),
-                   ("face stop", (96, 54, 72)), ("booth floor", (114, 95, 30)), ("commander", (115, 96, 42)), ("shield", (96, 54, 78)), ("dock", (15, 54, 160)),
+                   ("face stop", (96, 54, 72)), ("booth floor", (111, 63, 55)), ("commander", (111, 64, 55)), ("chin front", (96, 50, 62)), ("shield", (96, 54, 78)), ("dock", (15, 54, 160)),
                    ("crossing", (60, 54, 160)), ("corridor", (160, 131, 160)), ("escalator mid", (55, 120, 160)), ("plug seat", (30, 12, 11)),
                    ("shaft pad", (9, 5, 9)), ("shaft mid", (9, 80, 9))):
         print("  light %-18s off %2d  on %2d" % (nm, L_off[pt], L_on[pt]))

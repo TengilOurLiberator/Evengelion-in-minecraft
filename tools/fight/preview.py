@@ -1,4 +1,4 @@
-"""A small software renderer for the Angel's boxes (z-buffer, flat shading, outlines), used to look at the model.
+﻿"""A small software renderer for the Angel's boxes (z-buffer, flat shading, outlines), used to look at the model.
 
     python preview.py [pose ...]     writes preview\\<pose>_{front,side,q3}.png and preview\\sheet_<pose>.png
 """
@@ -38,7 +38,7 @@ def _hash(a, b, seed):
 
 
 def render(boxes, yaw=0.0, pitch=8.0, size=(520, 760), dist=210.0, target=(0, 50, 0), fov=34.0, extra=None,
-           unit=0.3, reflines=True):
+           unit=0.3, reflines=True, night=True):
     """yaw: camera azimuth in degrees, 0 = looking at the monster's front (camera on +z looking toward -z)."""
     W, H = size
     yaw_r, pit_r = math.radians(yaw), math.radians(pitch)
@@ -93,8 +93,8 @@ def render(boxes, yaw=0.0, pitch=8.0, size=(520, 760), dist=210.0, target=(0, 50
         if tex is not None:
             u = (l0 * attrs[0][0] / p0[2] + l1 * attrs[1][0] / p1[2] + l2 * attrs[2][0] / p2[2]) * z
             v = (l0 * attrs[0][1] / p0[2] + l1 * attrs[1][1] / p1[2] + l2 * attrs[2][1] / p2[2]) * z
-            ui = np.floor(np.nan_to_num(u) * tex[0]).astype(int)
-            vi = np.floor(np.nan_to_num(v) * tex[0]).astype(int)
+            ui = np.floor(np.nan_to_num(u, nan=0.0, posinf=0.0, neginf=0.0) * tex[0]).astype(int)
+            vi = np.floor(np.nan_to_num(v, nan=0.0, posinf=0.0, neginf=0.0) * tex[0]).astype(int)
             h = _hash(ui, vi, tex[1]) / 255.0
             k = (0.86 + 0.28 * h)[..., None]
             c = col[None, None, :] * k
@@ -116,12 +116,17 @@ def render(boxes, yaw=0.0, pitch=8.0, size=(520, 760), dist=210.0, target=(0, 50
         glow = (e.get("light") or 0) >= 15
         for (n, quad) in FACES:
             nw = e["R"] @ n
-            if nw @ (eye - e["centre"]) <= 0 and e["block"] != "minecraft:red_stained_glass":
+            if nw @ (eye - e["centre"]) <= 0:
                 continue
             lam = max(0.0, float(nw @ LIGHT))
             shade = 0.50 + 0.50 * lam
             if e["block"] in (model.DARK,):
                 shade = 0.55 + 0.9 * lam
+            if night:
+                # the in-game display brightness of the part (block light level), roughly as the lightmap shows it at night
+                lv = e.get("light") or model.BRIGHT.get(e["block"], (15, 15))
+                lv = max(lv) if isinstance(lv, tuple) else lv
+                shade *= 0.12 + 0.88 * (lv / 15.0) ** 1.6
             pts = [e["centre"] + e["R"] @ (q * h) for q in quad]
             pp = [proj(p) for p in pts]
             if any(q[2] < 1 for q in pp):
@@ -131,7 +136,7 @@ def render(boxes, yaw=0.0, pitch=8.0, size=(520, 760), dist=210.0, target=(0, 50
             emi = 0.0
             if glow:
                 shade, emi = 1.0, 0.0
-            if e["block"] == "minecraft:red_stained_glass":
+            if "stained_glass" in e["block"] or e["block"] == "minecraft:air":
                 continue
             tri(pp[0], pp[1], pp[2], col, ident, [uv[0], uv[1], uv[2]], shade, emi, tex)
             tri(pp[0], pp[2], pp[3], col, ident, [uv[0], uv[2], uv[3]], shade, emi, tex)
@@ -203,3 +208,4 @@ if __name__ == "__main__":
     for n in names:
         sheet(n, model.poses()[n])
         print("wrote", n)
+

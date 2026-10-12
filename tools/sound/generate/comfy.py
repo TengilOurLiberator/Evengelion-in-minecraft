@@ -77,7 +77,8 @@ def start():
     """start ComfyUI unless one already answers; returns True if we started it"""
     check()
     if up():
-        print("ComfyUI already running (not ours: left alone)")
+        ours = os.path.exists(PIDFILE)
+        print("ComfyUI already running (" + ("started earlier by comfy.py: `comfy.py stop` stops it" if ours else "not ours: left alone") + ")")
         return False
     os.makedirs(CAND, exist_ok=True)
     log = open(os.path.join(CAND, "comfy.log"), "w")

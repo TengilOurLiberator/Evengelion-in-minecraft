@@ -1,4 +1,4 @@
-"""Generates the monster's functions (namespace angel, folder angel/).
+﻿"""Generates the monster's functions (namespace angel, folder angel/).
 
 Design in short:
   * every part of the monster is a block_display standing at ONE point (the foot position of the monster); the part's
@@ -23,11 +23,12 @@ for a, b in zip(HEIGHTS, HEIGHTS[1:]):
     SNAP.append((int(math.floor(math.sqrt(a * b))), a))
 SNAP.append((10 ** 6, HEIGHTS[-1]))
 
-POSE_FILES = ["idle_a", "idle_b", "regen_a", "regen_b", "charge", "windup", "thrust", "stagger", "wrap_open",
+POSE_FILES = ["idle_a", "idle_b"] + [f"regen_{i}" for i in range(8)] + ["charge", "charge_2", "charge_3", "windup", "thrust", "stagger", "wrap_open",
               "wrap_close", "die_1", "die_2", "die_3", "walk_l", "walk_r"]
 
-BRIGHT = {model.SKIN: (6, 8), model.DARK: (4, 6), model.BONE: (12, 12)}
-BLOCK_TAGS = {"eye": "angel.eye", "core": "angel.corebody", "halo": "angel.corebody", "jaw": "angel.jaw"}
+BRIGHT = model.BRIGHT
+BLOCK_TAGS = {"eye": "angel.eye", "core": "angel.corebody", "halo": "angel.corebody", "jaw": "angel.jaw",
+              "coreglow": "angel.coreglow", "veil": "angel.veil", "eyeglow": "angel.eyeglow", "gather": "angel.gather"}
 
 CORE_BOX = 0.15          # core hit box edge as a fraction of the height
 BODY_W, BODY_H = 0.24, 0.56
@@ -155,7 +156,7 @@ def gen(F, add_block_tag=None):
         for i, (p, e) in enumerate(zip(P, bs0)):
             bl, sk = BRIGHT.get(p["block"], (15, 15))
             if p["light"]:
-                bl, sk = p["light"], p["light"]
+                bl, sk = p["light"] if isinstance(p["light"], tuple) else (p["light"], p["light"])
             tags = part_tags(i, p) + ["angel.new"]
             lines.append(
                 f'summon minecraft:block_display ~ ~ ~ {{Tags:{snbt_list(tags)},block_state:"{p["block"]}",'
@@ -251,6 +252,7 @@ def gen(F, add_block_tag=None):
         put(f"pose_{name}", [
             f"# pose {name}: a slow loop of two key poses",
             "schedule clear angel:angel/anim_tick", "schedule clear angel:angel/die_2", "schedule clear angel:angel/die_3",
+            "schedule clear angel:angel/charge_2", "schedule clear angel:angel/charge_3",
             f"scoreboard players set #loop angel.mon {1 if name == 'idle' else 2}",
             f"scoreboard players set #lp angel.mon 0",
             f"scoreboard players set #dur angel.mon {dur_a}",
@@ -259,11 +261,12 @@ def gen(F, add_block_tag=None):
         ])
 
     loop_pose("idle", "idle_a", "idle_b", 30, 40)
-    loop_pose("regenerating", "regen_a", "regen_b", 14, 16)
+    loop_pose("regenerating", "regen_0", "regen_1", 14, 10)
     put("anim_tick", [
         "execute unless entity @e[type=minecraft:marker,tag=angel.root] run return 0",
         "execute if score #walking angel.mon matches 1 run return 0",
         "execute if score #loop angel.mon matches 0 run return 0",
+        "execute if score #loop angel.mon matches 2 run return run function angel:angel/anim_r",
         "execute if score #lp angel.mon matches 0 run return run function angel:angel/anim_b",
         "function angel:angel/anim_a",
     ])
@@ -272,26 +275,39 @@ def gen(F, add_block_tag=None):
         "execute if score #loop angel.mon matches 1 run scoreboard players set #dur angel.mon 40",
         "execute if score #loop angel.mon matches 1 run function angel:angel/pp/idle_b",
         "execute if score #loop angel.mon matches 1 run schedule function angel:angel/anim_tick 40t",
-        "execute if score #loop angel.mon matches 2 run scoreboard players set #dur angel.mon 16",
-        "execute if score #loop angel.mon matches 2 run function angel:angel/pp/regen_b",
-        "execute if score #loop angel.mon matches 2 run schedule function angel:angel/anim_tick 16t",
     ])
     put("anim_a", [
         "scoreboard players set #lp angel.mon 0",
         "execute if score #loop angel.mon matches 1 run scoreboard players set #dur angel.mon 40",
         "execute if score #loop angel.mon matches 1 run function angel:angel/pp/idle_a",
         "execute if score #loop angel.mon matches 1 run schedule function angel:angel/anim_tick 40t",
-        "execute if score #loop angel.mon matches 2 run scoreboard players set #dur angel.mon 16",
-        "execute if score #loop angel.mon matches 2 run function angel:angel/pp/regen_a",
-        "execute if score #loop angel.mon matches 2 run schedule function angel:angel/anim_tick 16t",
     ])
+    # regenerating: 8 key frames, one every 10 ticks (slow breathing, a flickering core, the plates shifting)
+    put("anim_r", ["scoreboard players add #lp angel.mon 1",
+                   "execute if score #lp angel.mon matches 8.. run scoreboard players set #lp angel.mon 0",
+                   "scoreboard players set #dur angel.mon 9"] +
+        [f"execute if score #lp angel.mon matches {i} run function angel:angel/pp/regen_{i}" for i in range(8)] +
+        ["schedule function angel:angel/anim_tick 10t"])
+
     def one_shot(name, pp, dur, extra=()):
-        clr = [] if name.startswith("dying") else ["schedule clear angel:angel/die_2", "schedule clear angel:angel/die_3"]
+        clr = ["schedule clear angel:angel/charge_2", "schedule clear angel:angel/charge_3"]
+        if not name.startswith("dying"):
+            clr += ["schedule clear angel:angel/die_2", "schedule clear angel:angel/die_3"]
         put(f"pose_{name}", [f"# pose {name} (held until the next pose)", "schedule clear angel:angel/anim_tick"] + clr + [
                              "scoreboard players set #loop angel.mon 0", f"scoreboard players set #dur angel.mon {dur}",
                              f"function angel:angel/pp/{pp}"] + list(extra))
 
-    one_shot("charging", "charge", 14)
+    # charging: three stages (the glow of the eyes grows, the body leans further, a glow gathers in front of the mask)
+    put("pose_charging", [
+        "# pose charging: stage 1 now, stage 2 after 10 ticks, stage 3 after 24 (the beam fires at 34 / 40)",
+        "schedule clear angel:angel/anim_tick", "schedule clear angel:angel/die_2", "schedule clear angel:angel/die_3",
+        "scoreboard players set #loop angel.mon 0", "scoreboard players set #dur angel.mon 10",
+        "function angel:angel/pp/charge",
+        "schedule function angel:angel/charge_2 10t", "schedule function angel:angel/charge_3 24t"])
+    put("charge_2", ["execute unless entity @e[type=minecraft:marker,tag=angel.root] run return 0",
+                     "scoreboard players set #dur angel.mon 14", "function angel:angel/pp/charge_2"])
+    put("charge_3", ["execute unless entity @e[type=minecraft:marker,tag=angel.root] run return 0",
+                     "scoreboard players set #dur angel.mon 10", "function angel:angel/pp/charge_3"])
     one_shot("windup", "windup", 14)
     one_shot("thrust", "thrust", 3)
     one_shot("stagger", "stagger", 6)
@@ -302,7 +318,7 @@ def gen(F, add_block_tag=None):
     one_shot("dying_3", "die_3", 30)
     put("pose_dying", [
         "# the death: knees buckle, it folds, falls back (about 4 seconds); the core goes dark",
-        "schedule clear angel:angel/anim_tick",
+        "schedule clear angel:angel/anim_tick", "schedule clear angel:angel/charge_2", "schedule clear angel:angel/charge_3",
         "scoreboard players set #walking angel.mon 0",
         "function angel:angel/pose_dying_1",
         "function angel:angel/core_stage {stage:2}",
@@ -321,7 +337,9 @@ def gen(F, add_block_tag=None):
     ])
     put("core_stage_0", [f'execute as @e[type=minecraft:block_display,tag=angel.corebody] unless entity @s[tag=angel.halo] run data merge entity @s {{block_state:"{model.CORE}"}}'])
     put("core_stage_1", [f'execute as @e[type=minecraft:block_display,tag=angel.corebody] unless entity @s[tag=angel.halo] run data merge entity @s {{block_state:"{model.CORE_CRACKED}"}}'])
-    put("core_stage_2", ['execute as @e[type=minecraft:block_display,tag=angel.corebody] unless entity @s[tag=angel.halo] run data merge entity @s {block_state:"minecraft:black_concrete"}',
+    put("core_stage_2", ['execute as @e[type=minecraft:block_display,tag=angel.coreglow] run data merge entity @s {block_state:"minecraft:black_concrete"}',
+                         'execute as @e[type=minecraft:block_display,tag=angel.veil] run data merge entity @s {block_state:"minecraft:air"}',
+                         'execute as @e[type=minecraft:block_display,tag=angel.corebody] unless entity @s[tag=angel.halo] run data merge entity @s {block_state:"minecraft:black_concrete"}',
                          'execute as @e[type=minecraft:block_display,tag=angel.halo] run data merge entity @s {block_state:"minecraft:gray_stained_glass"}'])
     # the halo carries both tags corebody + halo: mark it in the summon lines
     # (done below by a tag line in the summons)
@@ -425,3 +443,5 @@ def gen(F, add_block_tag=None):
         "scoreboard players set #walking angel.mon 0",
     ])
     return F
+
+

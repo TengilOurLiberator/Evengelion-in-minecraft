@@ -1,0 +1,1633 @@
+{
+ "written": "2026-10-12 02:19:24",
+ "note": "Events whose pack .ogg is a generated candidate (ACE-Step / Stable Audio Open via ComfyUI). make_sound.py rebuilds the procedural files in place and would overwrite these: afterwards run  python switch.py all generated.",
+ "events": {
+  "amb.cage": {
+   "candidate": 1,
+   "engine": "Stable Audio Open 1.0",
+   "seed": 63816,
+   "seeds": {
+    "main_k1_p0.flac": 63816,
+    "main_k1_p1.flac": 63853
+   },
+   "prompt": {
+    "main_k1_p0.flac": "dark empty industrial hangar room tone, very low soft rumble, distant water dripping with long echoes, faint metallic ticks, a far-off bubbling liquid, enormous reverberant space, quiet and ominous",
+    "main_k1_p1.flac": "dark empty industrial hangar room tone, very low soft rumble, distant water dripping with long echoes, faint metallic ticks, a far-off bubbling liquid, enormous reverberant space, quiet and ominous"
+   },
+   "negative_prompt": "music, melody, speech, voice, singing, humming, low quality, distortion",
+   "bpm": null,
+   "key": null,
+   "reason": "uniform low room tone with faint far events; cand2/3 change timbre abruptly in the second half",
+   "source_file": "work/sound_candidates/amb.cage/cand1.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/amb.cage/main_k1_p0.flac",
+    "work/sound_candidates/raw/amb.cage/main_k1_p1.flac"
+   ],
+   "processing": {
+    "recipe": "bed",
+    "pieces": 2,
+    "xf": 4.0,
+    "matched_pieces": true,
+    "level": {
+     "lufs": -33.53,
+     "tp": -17.75,
+     "makeup_db": 0.0
+    }
+   },
+   "contract": {
+    "channels": 2,
+    "samples": 2646000,
+    "lufs": -33.55,
+    "lufs_ref": -33.53,
+    "tp": -17.86,
+    "dc": 1e-05,
+    "clipped": 0,
+    "lead_silence_s": 0.0,
+    "tail_silence_s": 0.0,
+    "join_hf_ratio": 0.38,
+    "join_onset_db": -2.5,
+    "join_level_diff_db": 1.93
+   },
+   "sha256_generated": "c73c1db6edaf9f8e1c92d437e8dc831237896ed6e7877031d5b4e9a8351e170d",
+   "sha256_procedural": "837a5d29939a52daa9c196746c4675d55e6fd6e935e5d3816efc97405e99c211",
+   "bytes_generated": 702438,
+   "bytes_procedural": 812212
+  },
+  "amb.cicadas": {
+   "candidate": 2,
+   "engine": "Stable Audio Open 1.0",
+   "seed": 11231,
+   "seeds": {
+    "main_k2_p0.flac": 11231,
+    "main_k2_p1.flac": 11268
+   },
+   "prompt": {
+    "main_k2_p0.flac": "loud cicadas buzzing in the trees on a hot summer afternoon, dense continuous insect chorus swelling and fading in waves, outdoors, open air",
+    "main_k2_p1.flac": "loud cicadas buzzing in the trees on a hot summer afternoon, dense continuous insect chorus swelling and fading in waves, outdoors, open air"
+   },
+   "negative_prompt": "music, melody, speech, voice, singing, humming, low quality, distortion",
+   "bpm": null,
+   "key": null,
+   "reason": "energy concentrated 3.5-9 kHz like the procedural bed, least low-frequency contamination",
+   "source_file": "work/sound_candidates/amb.cicadas/cand2.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/amb.cicadas/main_k2_p0.flac",
+    "work/sound_candidates/raw/amb.cicadas/main_k2_p1.flac"
+   ],
+   "processing": {
+    "recipe": "bed",
+    "pieces": 2,
+    "xf": 4.0,
+    "matched_pieces": true,
+    "level": {
+     "lufs": -32.24,
+     "tp": -21.72,
+     "makeup_db": 0.0
+    }
+   },
+   "contract": {
+    "channels": 2,
+    "samples": 2116800,
+    "lufs": -32.42,
+    "lufs_ref": -32.24,
+    "tp": -22.15,
+    "dc": 0.0,
+    "clipped": 0,
+    "lead_silence_s": 0.0,
+    "tail_silence_s": 0.0,
+    "join_hf_ratio": 0.22,
+    "join_onset_db": 0.6,
+    "join_level_diff_db": -0.03
+   },
+   "sha256_generated": "0d493a80c70002f9a82ed22bed90c0c17b4e000be612c3cfb4d433daa4ebdd0a",
+   "sha256_procedural": "d22db67d61286c6e39b5b60f92f5abed7532dcf82f1cf790239ecee7042d3d97",
+   "bytes_generated": 718695,
+   "bytes_procedural": 653918
+  },
+  "amb.city_night": {
+   "candidate": 1,
+   "engine": "Stable Audio Open 1.0",
+   "seed": 67920,
+   "seeds": {
+    "main_k1_p0.flac": 67920,
+    "main_k1_p1.flac": 67957
+   },
+   "prompt": {
+    "main_k1_p0.flac": "night wind moving between tall empty buildings, soft whistling gusts, a distant car alarm, a far-off emergency siren warbling, eerie empty city at night, one dull far thud, no people",
+    "main_k1_p1.flac": "night wind moving between tall empty buildings, soft whistling gusts, a distant car alarm, a far-off emergency siren warbling, eerie empty city at night, one dull far thud, no people"
+   },
+   "negative_prompt": "music, melody, speech, voice, singing, humming, low quality, distortion",
+   "bpm": null,
+   "key": null,
+   "reason": "wind-dominated spectrum like the procedural bed, no tone lines",
+   "source_file": "work/sound_candidates/amb.city_night/cand1.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/amb.city_night/main_k1_p0.flac",
+    "work/sound_candidates/raw/amb.city_night/main_k1_p1.flac"
+   ],
+   "processing": {
+    "recipe": "bed",
+    "pieces": 2,
+    "xf": 4.0,
+    "matched_pieces": true,
+    "level": {
+     "lufs": -32.11,
+     "tp": -16.22,
+     "makeup_db": 0.0
+    }
+   },
+   "contract": {
+    "channels": 2,
+    "samples": 2469600,
+    "lufs": -32.23,
+    "lufs_ref": -32.11,
+    "tp": -16.09,
+    "dc": 1e-05,
+    "clipped": 0,
+    "lead_silence_s": 0.0,
+    "tail_silence_s": 0.0,
+    "join_hf_ratio": 0.7,
+    "join_onset_db": 0.1,
+    "join_level_diff_db": 1.02
+   },
+   "sha256_generated": "8ef3624cd33002bcd4ba255fec76425ccf0a27bbb4766232dc82dd77b35a3287",
+   "sha256_procedural": "98849a7589eb47adac83b1452e841cc00facf12b061d935c879bc8b7e1373d64",
+   "bytes_generated": 816214,
+   "bytes_procedural": 767720
+  },
+  "amb.geofront": {
+   "candidate": 2,
+   "engine": "Stable Audio Open 1.0",
+   "seed": 65695,
+   "seeds": {
+    "main_k2_p0.flac": 65695,
+    "main_k2_p1.flac": 65732
+   },
+   "prompt": {
+    "main_k2_p0.flac": "vast underground cavern, soft airy room tone, a distant waterfall, faint water drips echoing far away, a few faint bird calls echoing in a huge open space, hollow, wide, calm",
+    "main_k2_p1.flac": "vast underground cavern, soft airy room tone, a distant waterfall, faint water drips echoing far away, a few faint bird calls echoing in a huge open space, hollow, wide, calm"
+   },
+   "negative_prompt": "music, melody, speech, voice, singing, humming, low quality, distortion",
+   "bpm": null,
+   "key": null,
+   "reason": "broad airy/waterfall spectrum closest to the procedural cavern bed",
+   "source_file": "work/sound_candidates/amb.geofront/cand2.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/amb.geofront/main_k2_p0.flac",
+    "work/sound_candidates/raw/amb.geofront/main_k2_p1.flac"
+   ],
+   "processing": {
+    "recipe": "bed",
+    "pieces": 2,
+    "xf": 4.0,
+    "matched_pieces": true,
+    "level": {
+     "lufs": -33.7,
+     "tp": -8.67,
+     "makeup_db": 0.0
+    }
+   },
+   "contract": {
+    "channels": 2,
+    "samples": 2469600,
+    "lufs": -33.79,
+    "lufs_ref": -33.7,
+    "tp": -8.59,
+    "dc": 1e-05,
+    "clipped": 0,
+    "lead_silence_s": 0.0,
+    "tail_silence_s": 0.0,
+    "join_hf_ratio": 0.44,
+    "join_onset_db": 0.1,
+    "join_level_diff_db": 1.51
+   },
+   "sha256_generated": "c5027912cb2a774b60473cd32636ecd3686e2a928b7ebebcbf44ae34a4abb111",
+   "sha256_procedural": "0b2051743de786a17578216aaf567422c73741a72cf8aea791175799d9b98654",
+   "bytes_generated": 846234,
+   "bytes_procedural": 801137
+  },
+  "amb.town_empty": {
+   "candidate": 1,
+   "engine": "Stable Audio Open 1.0",
+   "seed": 74123,
+   "seeds": {
+    "main_k1_p0.flac": 74123,
+    "main_k1_p1.flac": 74160
+   },
+   "prompt": {
+    "main_k1_p0.flac": "empty seaside town at noon, soft gusting wind through wires and empty streets, a faint metallic creak, very distant sea, a far-off railway crossing bell ringing slowly and stopping, quiet, lonely, no people",
+    "main_k1_p1.flac": "empty seaside town at noon, soft gusting wind through wires and empty streets, a faint metallic creak, very distant sea, a far-off railway crossing bell ringing slowly and stopping, quiet, lonely, no people"
+   },
+   "negative_prompt": "music, melody, speech, voice, singing, humming, low quality, distortion",
+   "bpm": null,
+   "key": null,
+   "reason": "the only one with discrete bell-like strikes (the crossing bell of the cue) over wind",
+   "source_file": "work/sound_candidates/amb.town_empty/cand1.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/amb.town_empty/main_k1_p0.flac",
+    "work/sound_candidates/raw/amb.town_empty/main_k1_p1.flac"
+   ],
+   "processing": {
+    "recipe": "bed",
+    "pieces": 2,
+    "xf": 4.0,
+    "matched_pieces": true,
+    "level": {
+     "lufs": -33.13,
+     "tp": -14.96,
+     "makeup_db": 0.0
+    }
+   },
+   "contract": {
+    "channels": 2,
+    "samples": 2205000,
+    "lufs": -33.2,
+    "lufs_ref": -33.13,
+    "tp": -14.95,
+    "dc": 1e-05,
+    "clipped": 0,
+    "lead_silence_s": 0.0,
+    "tail_silence_s": 0.0,
+    "join_hf_ratio": 0.11,
+    "join_onset_db": 4.0,
+    "join_level_diff_db": -0.68
+   },
+   "sha256_generated": "9e7a2608ed1b5b3ac8e31a6636a8dd2f3c19fa0c5c602cd1cb8ce0c88e987cbb",
+   "sha256_procedural": "d7a51d9393c425c869fa669fc55e923d442665c3b2b3fa21a089754d0c191c50",
+   "bytes_generated": 748196,
+   "bytes_procedural": 659996
+  },
+  "music.decision": {
+   "candidate": 3,
+   "engine": "ACE-Step 1.5 turbo",
+   "seed": 90448,
+   "seeds": {
+    "main_k3_p0.flac": 90448
+   },
+   "prompt": {
+    "main_k3_p0.flac": "mounting suspense, a low heartbeat-like pulse that drives steadily on, strings creeping upward by half steps, a growing dissonant cluster and rising airy noise, pressure building from quiet to tense, anxious, relentless, no melody, instrumental, no vocals, no lyrics, no choir, no singing"
+   },
+   "negative_prompt": null,
+   "bpm": 104,
+   "key": "D minor",
+   "reason": "104 bpm pulse aligned so the last 24 beats are the loop cycle; long file builds from sparse hits to dense; cand1/2 failed the leading-silence contract",
+   "source_file": "work/sound_candidates/music.decision/cand3.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/music.decision/main_k3_p0.flac"
+   ],
+   "processing": {
+    "recipe": "music_long_loop",
+    "tempo_hint": 104,
+    "tempo_first_fit": {
+     "bpm": 206.0,
+     "strength": 0.669,
+     "octave": 2.0
+    },
+    "stretch_ratio": 1.0094,
+    "lag_ms": [
+     -1.3
+    ],
+    "aligned": true,
+    "trimmed_lead_s": 0.0,
+    "hand_off": "loop sample 0 is the continuation of the long file's last sample",
+    "shared_gain_db": -14.39,
+    "early_boost_db": 6.07,
+    "role": "long"
+   },
+   "contract": {
+    "channels": 2,
+    "samples": 4579785,
+    "lufs": -26.08,
+    "lufs_ref": -25.98,
+    "tp": -8.63,
+    "dc": 3e-05,
+    "clipped": 0,
+    "lead_silence_s": 0.006,
+    "tail_silence_s": 0.0
+   },
+   "sha256_generated": "43039491c42c738b4dca98e9e6124e1fcf37fb88a2b8abf79a365d5a96e3448f",
+   "sha256_procedural": "fdcb0626a2639c52811a733ecf86757590eb2ea599d4eacccb82bbd5b979d57d",
+   "bytes_generated": 1838468,
+   "bytes_procedural": 1068575
+  },
+  "music.decision_loop": {
+   "candidate": 3,
+   "engine": "ACE-Step 1.5 turbo",
+   "seed": 90448,
+   "seeds": {
+    "main_k3_p0.flac": 90448
+   },
+   "prompt": {
+    "main_k3_p0.flac": "mounting suspense, a low heartbeat-like pulse that drives steadily on, strings creeping upward by half steps, a growing dissonant cluster and rising airy noise, pressure building from quiet to tense, anxious, relentless, no melody, instrumental, no vocals, no lyrics, no choir, no singing"
+   },
+   "negative_prompt": null,
+   "bpm": 104,
+   "key": "D minor",
+   "reason": "same generation as music.decision cand3 (shared gain, hand-off continuous)",
+   "source_file": "work/sound_candidates/music.decision_loop/cand3.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/music.decision/main_k3_p0.flac"
+   ],
+   "processing": {
+    "recipe": "music_long_loop",
+    "tempo_hint": 104,
+    "tempo_first_fit": {
+     "bpm": 206.0,
+     "strength": 0.669,
+     "octave": 2.0
+    },
+    "stretch_ratio": 1.0094,
+    "lag_ms": [
+     -1.3
+    ],
+    "aligned": true,
+    "trimmed_lead_s": 0.0,
+    "hand_off": "loop sample 0 is the continuation of the long file's last sample",
+    "shared_gain_db": -14.39,
+    "early_boost_db": 6.07,
+    "role": "loop"
+   },
+   "contract": {
+    "channels": 2,
+    "samples": 610785,
+    "lufs": -25.98,
+    "lufs_ref": -25.97,
+    "tp": -13.5,
+    "dc": 0.0001,
+    "clipped": 0,
+    "lead_silence_s": 0.0,
+    "tail_silence_s": 0.0,
+    "join_hf_ratio": 0.14,
+    "join_onset_db": 2.8,
+    "join_level_diff_db": -2.88
+   },
+   "sha256_generated": "501d1b1f26fcd8869a32884c6f853153113246c4c1f9af2528c80ac154a69d6f",
+   "sha256_procedural": "a1a05fdc8e270b37710d58f2a5f75f00d8d28e9c0f033505ab59e79efe17b5fe",
+   "bytes_generated": 288738,
+   "bytes_procedural": 148115
+  },
+  "music.defeat": {
+   "candidate": 1,
+   "engine": "ACE-Step 1.5 turbo",
+   "seed": 42859,
+   "seeds": {
+    "main_k1_p0.flac": 42859
+   },
+   "prompt": {
+    "main_k1_p0.flac": "one huge heavy impact, then a dissonant cluster of low strings sliding downward and darkening into silence, ominous, collapse, no melody, instrumental, no vocals, no lyrics, no choir, no singing"
+   },
+   "negative_prompt": null,
+   "bpm": 60,
+   "key": "D minor",
+   "reason": "one decaying low cluster with no rhythm; cand2/3 are repeating chord hits",
+   "source_file": "work/sound_candidates/music.defeat/cand1.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/music.defeat/main_k1_p0.flac"
+   ],
+   "processing": {
+    "recipe": "music_oneshot",
+    "onset_s": 0.16,
+    "level": {
+     "lufs": -24.97,
+     "tp": -12.45,
+     "makeup_db": 0.0
+    }
+   },
+   "contract": {
+    "channels": 2,
+    "samples": 352800,
+    "lufs": -24.95,
+    "lufs_ref": -24.97,
+    "tp": -12.57,
+    "dc": 1e-05,
+    "clipped": 0,
+    "lead_silence_s": 0.001,
+    "tail_silence_s": 2.057
+   },
+   "sha256_generated": "ea3829e51c7cac3c3f72a8aa5d0da1bc49b6de7b426017513daa350637745c01",
+   "sha256_procedural": "ab27622fd174a27e313db31771cbf9f526aa8c01c6f7ef9aaca0893400d3302a",
+   "bytes_generated": 124339,
+   "bytes_procedural": 81392
+  },
+  "music.dread": {
+   "candidate": 6,
+   "engine": "ACE-Step 1.5 turbo",
+   "seed": 94551,
+   "seeds": {
+    "main_k6_p0.flac": 94551
+   },
+   "prompt": {
+    "main_k6_p0.flac": "dark ambient soundscape, deep sustained low drone, slowly evolving dissonant string pad, long reverb tails, cold and vast, motionless, quiet, atmospheric underscore, instrumental, no vocals, no lyrics, no choir, no singing"
+   },
+   "negative_prompt": null,
+   "bpm": 40,
+   "key": "D minor",
+   "reason": "only candidate that is a low, steady bed with slow regular throbs (like the brief's sub heartbeat); the others are dense ticking or sectioned",
+   "source_file": "work/sound_candidates/music.dread/cand6.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/music.dread/main_k6_p0.flac"
+   ],
+   "processing": {
+    "recipe": "music_loop",
+    "pulse": false,
+    "start_s": 8.25,
+    "join_cost": 0.24,
+    "level": {
+     "lufs": -25.99,
+     "tp": -10.69,
+     "makeup_db": 0.0
+    }
+   },
+   "contract": {
+    "channels": 2,
+    "samples": 3175200,
+    "lufs": -25.96,
+    "lufs_ref": -25.99,
+    "tp": -10.66,
+    "dc": 1e-05,
+    "clipped": 0,
+    "lead_silence_s": 0.0,
+    "tail_silence_s": 0.0,
+    "join_hf_ratio": 0.05,
+    "join_onset_db": 0.3,
+    "join_level_diff_db": 0.75
+   },
+   "sha256_generated": "bd63effa01815c6ba70b30c85c0d882ddeb01c4c96ad42b41ca8586962a26b17",
+   "sha256_procedural": "e2099f9b9c342013a8425795ab8ccb17fc47321829fb05d7e09072a2dbee7ac2",
+   "bytes_generated": 1136416,
+   "bytes_procedural": 1020352
+  },
+  "music.father": {
+   "candidate": 4,
+   "engine": "ACE-Step 1.5 turbo",
+   "seed": 31310,
+   "seeds": {
+    "main_k4_p0.flac": 31310
+   },
+   "prompt": {
+    "main_k4_p0.flac": "a single sustained very low drone note, soft slow swell and fade like breathing, a thin high pure overtone, hushed, motionless, minimal ambient soundscape, instrumental, no vocals, no lyrics, no choir, no singing"
+   },
+   "negative_prompt": null,
+   "bpm": 40,
+   "key": "D minor",
+   "reason": "continuous very low drone with a slow swell about every 20 s (breathing), no beat; others tick, drift or have sections",
+   "source_file": "work/sound_candidates/music.father/cand4.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/music.father/main_k4_p0.flac"
+   ],
+   "processing": {
+    "recipe": "music_loop",
+    "pulse": false,
+    "start_s": 2.0,
+    "join_cost": 7.02,
+    "level": {
+     "lufs": -27.98,
+     "tp": -7.21,
+     "makeup_db": 0.0
+    }
+   },
+   "contract": {
+    "channels": 2,
+    "samples": 2646000,
+    "lufs": -27.94,
+    "lufs_ref": -27.98,
+    "tp": -7.13,
+    "dc": 1e-05,
+    "clipped": 0,
+    "lead_silence_s": 0.0,
+    "tail_silence_s": 0.0,
+    "join_hf_ratio": 0.04,
+    "join_onset_db": 1.3,
+    "join_level_diff_db": 0.4
+   },
+   "sha256_generated": "2dc6e4212725a7c15ca586dd764f80f1f19334f4623c6690b492af0756ffdbb3",
+   "sha256_procedural": "dc7d1bdca95b9b46e9ef2011011dcb770b9fac47e0e2850e7627a9f19f5e568f",
+   "bytes_generated": 901146,
+   "bytes_procedural": 253004
+  },
+  "music.fight": {
+   "candidate": 2,
+   "engine": "ACE-Step 1.5 turbo",
+   "seed": 71642,
+   "seeds": {
+    "main_k2_p0.flac": 71642
+   },
+   "prompt": {
+    "main_k2_p0.flac": "ferocious fast battle music, heavy war drums and kick, hard cracking snare, a repeating chromatic low brass riff, dissonant string stabs, tremolo strings, relentless and dark, constant intensity, steady and unchanging, instrumental, no vocals, no lyrics, no choir, no singing"
+   },
+   "negative_prompt": null,
+   "bpm": 152,
+   "key": "D minor",
+   "reason": "152 bpm, kick and low hits, two breakdown sections like the brief; cand1 is a flat wall of hits",
+   "source_file": "work/sound_candidates/music.fight/cand2.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/music.fight/main_k2_p0.flac"
+   ],
+   "processing": {
+    "recipe": "music_loop",
+    "pulse": true,
+    "tempo_hint": 152,
+    "tempo_first_fit": {
+     "bpm": 308.02,
+     "strength": 0.749,
+     "octave": 2.0
+    },
+    "stretch_ratio": 0.9871,
+    "lag_ms": [
+     1.5
+    ],
+    "aligned": true,
+    "downbeat_beat_of_4": 2,
+    "bar_accent_distribution": [
+     0.17,
+     0.31,
+     0.34,
+     0.18
+    ],
+    "start_s": 9.948,
+    "join_cost": 1.11,
+    "level": {
+     "lufs": -24.51,
+     "tp": -9.93,
+     "makeup_db": 0.0
+    }
+   },
+   "contract": {
+    "channels": 2,
+    "samples": 2784915,
+    "lufs": -24.56,
+    "lufs_ref": -24.51,
+    "tp": -10.15,
+    "dc": 2e-05,
+    "clipped": 0,
+    "lead_silence_s": 0.0,
+    "tail_silence_s": 0.0,
+    "join_hf_ratio": 0.02,
+    "join_onset_db": -2.3,
+    "join_level_diff_db": 3.43
+   },
+   "sha256_generated": "6829e48f857943358fbaca104b6b685407d8ebec61a45a2f5fb902bc33c292a3",
+   "sha256_procedural": "bddb5a5c940b0b354b56c1a20c7abf6842b33d6b846c648fffd5a241ed0b2080",
+   "bytes_generated": 1355260,
+   "bytes_procedural": 1009442
+  },
+  "music.fight_final": {
+   "candidate": 1,
+   "engine": "ACE-Step 1.5 turbo",
+   "seed": 81759,
+   "seeds": {
+    "main_k1_p0.flac": 81759
+   },
+   "prompt": {
+    "main_k1_p0.flac": "desperate frantic final battle, very fast double-time bass pulse, heavy drums, a high mallet pattern in repeating sixteenth notes, harsh dissonant brass stabs, a rising siren-like synth tone, maximum intensity, steady and unchanging, instrumental, no vocals, no lyrics, no choir, no singing"
+   },
+   "negative_prompt": null,
+   "bpm": 172,
+   "key": "D minor",
+   "reason": "172 bpm, constant maximum intensity and brighter top end; cand2 has a 4 s near-silent hole, cand3 had words detected",
+   "source_file": "work/sound_candidates/music.fight_final/cand1.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/music.fight_final/main_k1_p0.flac"
+   ],
+   "processing": {
+    "recipe": "music_loop",
+    "pulse": true,
+    "tempo_hint": 172,
+    "tempo_first_fit": {
+     "bpm": 342.86,
+     "strength": 0.868,
+     "octave": 2.0
+    },
+    "stretch_ratio": 1.003,
+    "lag_ms": [
+     -0.1
+    ],
+    "aligned": true,
+    "downbeat_beat_of_4": 0,
+    "bar_accent_distribution": [
+     1.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "start_s": 9.957,
+    "join_cost": 4.66,
+    "level": {
+     "lufs": -24.2,
+     "tp": -10.3,
+     "makeup_db": 0.0
+    }
+   },
+   "contract": {
+    "channels": 2,
+    "samples": 2954700,
+    "lufs": -24.26,
+    "lufs_ref": -24.2,
+    "tp": -10.22,
+    "dc": 3e-05,
+    "clipped": 0,
+    "lead_silence_s": 0.0,
+    "tail_silence_s": 0.0,
+    "join_hf_ratio": 0.0,
+    "join_onset_db": 0.1,
+    "join_level_diff_db": 4.48
+   },
+   "sha256_generated": "ea4c14bac650d860295b3a546489bb50d6b85e0f48e414979d073820aa089933",
+   "sha256_procedural": "ec7dd08cac76c8fb109644d6316cd9434cb8972033deeca3ee09f9a7f79da0f6",
+   "bytes_generated": 1389935,
+   "bytes_procedural": 1206094
+  },
+  "music.launch": {
+   "candidate": 2,
+   "engine": "ACE-Step 1.5 turbo",
+   "seed": 40259,
+   "seeds": {
+    "build_k2_p0.flac": 40259,
+    "drive_k2_p0.flac": 40266
+   },
+   "prompt": {
+    "build_k2_p0.flac": "intense build-up, a low drone, drums entering and doubling in density, accelerating, a rising noise sweep, swelling low brass chords, rising tension, climbing to a huge climax and cutting off, no melody, instrumental, no vocals, no lyrics, no choir, no singing",
+    "drive_k2_p0.flac": "relentless heavy driving rhythm, pounding war drums and kick on every beat, a powerful repeating low brass ostinato, low strings pulsing in sixteenth notes, dark heroic momentum, steady and unchanging, no melody, instrumental, no vocals, no lyrics, no choir, no singing"
+   },
+   "negative_prompt": null,
+   "bpm": 144,
+   "key": "D minor",
+   "reason": "build with a rising line and a clear step into the drive, kick on the first sample after 20.000 s; cand1 was preferred on the build but its loop file had a word detected after the kick alignment (Bye.), so the whole pair moved to cand2",
+   "source_file": "work/sound_candidates/music.launch/cand2.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/music.launch/build_k2_p0.flac",
+    "work/sound_candidates/raw/music.launch/drive_k2_p0.flac"
+   ],
+   "processing": {
+    "recipe": "music_launch",
+    "tempo_hint": 144,
+    "tempo_first_fit": {
+     "bpm": 140.0,
+     "strength": 0.672,
+     "octave": 1.0
+    },
+    "stretch_ratio": 1.0292,
+    "lag_ms": [
+     -2.7
+    ],
+    "aligned": true,
+    "downbeat_beat_of_4": 0,
+    "bar_accent_distribution": [
+     0.32,
+     0.19,
+     0.31,
+     0.18
+    ],
+    "start_s": 33.519,
+    "join_cost": 2.52,
+    "kick_roll_ms": 271.4,
+    "build": {
+     "climax_s": 25.82,
+     "bpm": 140.0,
+     "strength": 0.429,
+     "snapped_to_beat": true
+    },
+    "shared_gain_db": -12.18,
+    "early_boost_db": 0.0,
+    "role": "long"
+   },
+   "contract": {
+    "channels": 2,
+    "samples": 3232530,
+    "lufs": -24.43,
+    "lufs_ref": -24.51,
+    "tp": -10.51,
+    "dc": 7e-05,
+    "clipped": 0,
+    "lead_silence_s": 0.001,
+    "tail_silence_s": 0.0
+   },
+   "sha256_generated": "0a3c86cf47b61e68be26d4c7ba6460687b4af5b1a299614c1a76450f77b911d6",
+   "sha256_procedural": "32a27552330c103ab58bda5d2ed6ba4a7c213abb4ec19e548a7f42ea2cb2b470",
+   "bytes_generated": 1474601,
+   "bytes_procedural": 1135910
+  },
+  "music.launch_loop": {
+   "candidate": 2,
+   "engine": "ACE-Step 1.5 turbo",
+   "seed": 40259,
+   "seeds": {
+    "build_k2_p0.flac": 40259,
+    "drive_k2_p0.flac": 40266
+   },
+   "prompt": {
+    "build_k2_p0.flac": "intense build-up, a low drone, drums entering and doubling in density, accelerating, a rising noise sweep, swelling low brass chords, rising tension, climbing to a huge climax and cutting off, no melody, instrumental, no vocals, no lyrics, no choir, no singing",
+    "drive_k2_p0.flac": "relentless heavy driving rhythm, pounding war drums and kick on every beat, a powerful repeating low brass ostinato, low strings pulsing in sixteenth notes, dark heroic momentum, steady and unchanging, no melody, instrumental, no vocals, no lyrics, no choir, no singing"
+   },
+   "negative_prompt": null,
+   "bpm": 144,
+   "key": "D minor",
+   "reason": "drive cycle of the same generation, 16 bars at 144 bpm, kick on sample 0, steady (4 dB swing)",
+   "source_file": "work/sound_candidates/music.launch_loop/cand2.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/music.launch/build_k2_p0.flac",
+    "work/sound_candidates/raw/music.launch/drive_k2_p0.flac"
+   ],
+   "processing": {
+    "recipe": "music_launch",
+    "tempo_hint": 144,
+    "tempo_first_fit": {
+     "bpm": 140.0,
+     "strength": 0.672,
+     "octave": 1.0
+    },
+    "stretch_ratio": 1.0292,
+    "lag_ms": [
+     -2.7
+    ],
+    "aligned": true,
+    "downbeat_beat_of_4": 0,
+    "bar_accent_distribution": [
+     0.32,
+     0.19,
+     0.31,
+     0.18
+    ],
+    "start_s": 33.519,
+    "join_cost": 2.52,
+    "kick_roll_ms": 271.4,
+    "build": {
+     "climax_s": 25.82,
+     "bpm": 140.0,
+     "strength": 0.429,
+     "snapped_to_beat": true
+    },
+    "shared_gain_db": -12.18,
+    "early_boost_db": 0.0,
+    "role": "loop"
+   },
+   "contract": {
+    "channels": 2,
+    "samples": 1175265,
+    "lufs": -24.53,
+    "lufs_ref": -24.51,
+    "tp": -10.56,
+    "dc": 8e-05,
+    "clipped": 0,
+    "lead_silence_s": 0.0,
+    "tail_silence_s": 0.0,
+    "join_hf_ratio": 0.04,
+    "join_onset_db": -1.2,
+    "join_level_diff_db": 5.36
+   },
+   "sha256_generated": "38e00346a68701da4b0e34928c66d11253785316aa73a87d90e27866760925b7",
+   "sha256_procedural": "612a3b940cbf397643ff40823f2e44eba43dd1446a55146641d702a23dcb0513",
+   "bytes_generated": 539150,
+   "bytes_procedural": 420834
+  },
+  "music.resolve": {
+   "candidate": 3,
+   "engine": "ACE-Step 1.5 turbo",
+   "seed": 68497,
+   "seeds": {
+    "main_k3_p0.flac": 68497
+   },
+   "prompt": {
+    "main_k3_p0.flac": "a tense dissonant cluster of strings slowly settling by half steps into a warm open D major chord with a bright added ninth, relief, soft and hushed, gentle shimmer, sustained, no drums, no percussion, instrumental, no vocals, no lyrics, no choir, no singing"
+   },
+   "negative_prompt": null,
+   "bpm": 60,
+   "key": "D major",
+   "reason": "smooth sustained pad that steps from one chord to another and fades; the others are chord stabs or end in silence",
+   "source_file": "work/sound_candidates/music.resolve/cand3.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/music.resolve/main_k3_p0.flac"
+   ],
+   "processing": {
+    "recipe": "music_oneshot",
+    "onset_s": 2.518,
+    "level": {
+     "lufs": -25.97,
+     "tp": -15.97,
+     "makeup_db": 0.2
+    }
+   },
+   "contract": {
+    "channels": 2,
+    "samples": 529200,
+    "lufs": -25.93,
+    "lufs_ref": -25.97,
+    "tp": -15.89,
+    "dc": 0.0,
+    "clipped": 0,
+    "lead_silence_s": 0.003,
+    "tail_silence_s": 0.945
+   },
+   "sha256_generated": "d9f84e5a0c2062ec0fa7ef821b4af4113332949a19dae15f6c4c301a65e65657",
+   "sha256_procedural": "a54d509e6a109ad28f5105c5ecbc6abe29e914614e384f7fedb325c4d2b441ad",
+   "bytes_generated": 200927,
+   "bytes_procedural": 180788
+  },
+  "music.road": {
+   "candidate": 2,
+   "engine": "ACE-Step 1.5 turbo",
+   "seed": 81381,
+   "seeds": {
+    "main_k2_p0.flac": 81381
+   },
+   "prompt": {
+    "main_k2_p0.flac": "tense restrained driving groove, steady medium tempo, plucked low bass ostinato, muted marimba and mallet pattern in an uneven three-three-two rhythm, soft kick drum and ticking hi-hat, sustained low strings underneath, cold minor harmony, nervous forward momentum, sparse, steady and unchanging, instrumental, no vocals, no lyrics, no choir, no singing"
+   },
+   "negative_prompt": null,
+   "bpm": 112,
+   "key": "D minor",
+   "reason": "steady 112 bpm pulse locked to 32 bars, level swing 3.4 dB, no gaps; cand1 has 7 s of silence, cand3 had words detected",
+   "source_file": "work/sound_candidates/music.road/cand2.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/music.road/main_k2_p0.flac"
+   ],
+   "processing": {
+    "recipe": "music_loop",
+    "pulse": true,
+    "tempo_hint": 112,
+    "tempo_first_fit": {
+     "bpm": 224.0,
+     "strength": 0.668,
+     "octave": 2.0
+    },
+    "stretch_ratio": 1.0003,
+    "lag_ms": [
+     -0.7
+    ],
+    "aligned": true,
+    "downbeat_beat_of_4": 3,
+    "bar_accent_distribution": [
+     0.32,
+     0.0,
+     0.29,
+     0.38
+    ],
+    "start_s": 12.867,
+    "join_cost": 3.39,
+    "level": {
+     "lufs": -24.98,
+     "tp": -9.8,
+     "makeup_db": 0.0
+    }
+   },
+   "contract": {
+    "channels": 2,
+    "samples": 3023055,
+    "lufs": -24.96,
+    "lufs_ref": -24.98,
+    "tp": -9.84,
+    "dc": 1e-05,
+    "clipped": 0,
+    "lead_silence_s": 0.0,
+    "tail_silence_s": 0.0,
+    "join_hf_ratio": 0.02,
+    "join_onset_db": 1.6,
+    "join_level_diff_db": -9.7
+   },
+   "sha256_generated": "1acfb211d0e1aa44fb371b78ab93d6a14972ddfe06485db89c7e152a2ac6e9ff",
+   "sha256_procedural": "5ceef76df752db55a40380a06e35faa82581644c5344ac93d1ba2aedc7e2595c",
+   "bytes_generated": 1187081,
+   "bytes_procedural": 952959
+  },
+  "sfx.birds_up": {
+   "candidate": 1,
+   "engine": "Stable Audio Open 1.0",
+   "seed": 71986,
+   "seeds": {
+    "main_k1_p0.flac": 71986
+   },
+   "prompt": {
+    "main_k1_p0.flac": "a flock of birds suddenly startled and taking flight from trees, loud wing flapping and sharp alarm calls, panicked, outdoors"
+   },
+   "negative_prompt": "music, melody, speech, voice, singing, humming, low quality, distortion",
+   "bpm": null,
+   "key": null,
+   "reason": "broadband flock with wing-flap transients",
+   "source_file": "work/sound_candidates/sfx.birds_up/cand1.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/sfx.birds_up/main_k1_p0.flac"
+   ],
+   "processing": {
+    "recipe": "oneshot",
+    "onset_s": 0.0,
+    "level": {
+     "lufs": -31.33,
+     "tp": -14.06,
+     "makeup_db": 0.0
+    }
+   },
+   "contract": {
+    "channels": 1,
+    "samples": 198450,
+    "lufs": -31.36,
+    "lufs_ref": -31.33,
+    "tp": -14.36,
+    "dc": 0.0,
+    "clipped": 0,
+    "lead_silence_s": 0.001,
+    "tail_silence_s": 0.16
+   },
+   "sha256_generated": "eb779c9d6a8c88c2f6aff45e682911c5911cc6f62581678d096178a856d055bf",
+   "sha256_procedural": "40016bf2ec8a4ce47e1cfc25107dd4638dd534a05caaef80f660c2c389a8a839",
+   "bytes_generated": 57000,
+   "bytes_procedural": 39340
+  },
+  "sfx.car_roll": {
+   "candidate": 5,
+   "engine": "Stable Audio Open 1.0",
+   "seed": 43086,
+   "seeds": {
+    "main_k5_p0.flac": 43086
+   },
+   "prompt": {
+    "main_k5_p0.flac": "a car crash rollover: several heavy metal crunches and bangs one after another, glass shattering, parts scraping and bouncing, then silence with a last creak"
+   },
+   "negative_prompt": "music, melody, speech, voice, low quality, hiss, noise, distortion",
+   "bpm": null,
+   "key": null,
+   "reason": "series of crunching impacts diminishing from the first sample (variant prompt); round 1 gave an engine-like drone",
+   "source_file": "work/sound_candidates/sfx.car_roll/cand5.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/sfx.car_roll/main_k5_p0.flac"
+   ],
+   "processing": {
+    "recipe": "oneshot",
+    "onset_s": 0.115,
+    "level": {
+     "lufs": -25.91,
+     "tp": -1.94,
+     "makeup_db": 0.0
+    }
+   },
+   "contract": {
+    "channels": 1,
+    "samples": 220500,
+    "lufs": -26.01,
+    "lufs_ref": -25.91,
+    "tp": -1.86,
+    "dc": 0.0,
+    "clipped": 0,
+    "lead_silence_s": 0.004,
+    "tail_silence_s": 0.256
+   },
+   "sha256_generated": "65996308d321b4ee99e250b8102d7340410f3a4ef41010346f0d85931f3c819c",
+   "sha256_procedural": "97ac864e4dfc9287d289cc189e2d97fb519fbb4ed9ff277cb43040c36edcbf86",
+   "bytes_generated": 69517,
+   "bytes_procedural": 73135
+  },
+  "sfx.crash": {
+   "candidate": 2,
+   "engine": "Stable Audio Open 1.0",
+   "seed": 47194,
+   "seeds": {
+    "main_k2_p0.flac": 47194
+   },
+   "prompt": {
+    "main_k2_p0.flac": "a large aircraft crashing into a city street, massive impact, metal tearing and scraping, glass shattering, rubble collapsing, then a fire whoosh and crackle"
+   },
+   "negative_prompt": "music, melody, speech, voice, low quality, hiss, noise, distortion",
+   "bpm": null,
+   "key": null,
+   "reason": "loud impact decaying over the full length; cand1 is a flat wall of noise that stops abruptly",
+   "source_file": "work/sound_candidates/sfx.crash/cand2.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/sfx.crash/main_k2_p0.flac"
+   ],
+   "processing": {
+    "recipe": "oneshot",
+    "onset_s": 3.244,
+    "level": {
+     "lufs": -22.29,
+     "tp": -12.1,
+     "makeup_db": 0.0
+    }
+   },
+   "contract": {
+    "channels": 1,
+    "samples": 352800,
+    "lufs": -22.42,
+    "lufs_ref": -22.29,
+    "tp": -11.43,
+    "dc": 1e-05,
+    "clipped": 0,
+    "lead_silence_s": 0.003,
+    "tail_silence_s": 0.21
+   },
+   "sha256_generated": "1135f8345894955e45afc78acb724ca8ffe0e5a58d621a80a41dc63a23620395",
+   "sha256_procedural": "4e1929e9b250c377d3a9c21d5393e1033190967dbb72f7a978a40f7f4624f2a7",
+   "bytes_generated": 83571,
+   "bytes_procedural": 96148
+  },
+  "sfx.cross": {
+   "candidate": 4,
+   "engine": "Stable Audio Open 1.0",
+   "seed": 22396,
+   "seeds": {
+    "main_k4_p0.flac": 22396
+   },
+   "prompt": {
+    "main_k4_p0.flac": "a very bright pure tone climbing steadily upward in pitch, then opening into a huge radiant sustained chord of glassy bowed tones with shimmering overtones, enormous reverberant hall, awe"
+   },
+   "negative_prompt": "music, melody, speech, voice, low quality, hiss, noise, distortion",
+   "bpm": null,
+   "key": null,
+   "reason": "variant prompt: only candidate with a slowly rising line and a swell late in the sound; no voices",
+   "source_file": "work/sound_candidates/sfx.cross/cand4.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/sfx.cross/main_k4_p0.flac"
+   ],
+   "processing": {
+    "recipe": "oneshot",
+    "onset_s": 2.04,
+    "level": {
+     "lufs": -25.97,
+     "tp": -14.81,
+     "makeup_db": 0.0
+    }
+   },
+   "contract": {
+    "channels": 2,
+    "samples": 573300,
+    "lufs": -25.91,
+    "lufs_ref": -25.97,
+    "tp": -14.73,
+    "dc": 0.0,
+    "clipped": 0,
+    "lead_silence_s": 0.004,
+    "tail_silence_s": 0.735
+   },
+   "sha256_generated": "692baaa3e5b1f492cdfc51833b659299a4b8a91e708de5c5e74d76c53ca67465",
+   "sha256_procedural": "a188b92e2cc634df641f7bf363b0a7bf5cd06efb282365e705b523a74ba7542f",
+   "bytes_generated": 161028,
+   "bytes_procedural": 214188
+  },
+  "sfx.door_boom": {
+   "candidate": 2,
+   "engine": "Stable Audio Open 1.0",
+   "seed": 31214,
+   "seeds": {
+    "main_k2_p0.flac": 31214
+   },
+   "prompt": {
+    "main_k2_p0.flac": "a huge steel door slamming shut in a vast dark hangar, a deafening metallic boom, ringing metal decay, bolts clunking, a very long echo"
+   },
+   "negative_prompt": "music, melody, speech, voice, low quality, hiss, noise, distortion",
+   "bpm": null,
+   "key": null,
+   "reason": "metallic boom with ringing decay; cand1 had words detected",
+   "source_file": "work/sound_candidates/sfx.door_boom/cand2.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/sfx.door_boom/main_k2_p0.flac"
+   ],
+   "processing": {
+    "recipe": "oneshot",
+    "onset_s": 0.02,
+    "level": {
+     "lufs": -20.54,
+     "tp": -9.84,
+     "makeup_db": 0.0
+    }
+   },
+   "contract": {
+    "channels": 2,
+    "samples": 352800,
+    "lufs": -20.74,
+    "lufs_ref": -20.54,
+    "tp": -8.6,
+    "dc": 0.0,
+    "clipped": 0,
+    "lead_silence_s": 0.002,
+    "tail_silence_s": 0.975
+   },
+   "sha256_generated": "da52169b5467c4ac34d4a2d02ff5845611195b54a267877b0067883f5fb76279",
+   "sha256_procedural": "738df36bbbcc4a11d5e8a03135d4cf5e36b544fb85fed4e2f945ef3129fa5bd3",
+   "bytes_generated": 156575,
+   "bytes_procedural": 108054
+  },
+  "sfx.explosion_far": {
+   "candidate": 3,
+   "engine": "Stable Audio Open 1.0",
+   "seed": 87995,
+   "seeds": {
+    "main_k3_p0.flac": 87995
+   },
+   "prompt": {
+    "main_k3_p0.flac": "a large explosion far away, a delayed deep boom rolling across hills, long low rumbling echoes dying away"
+   },
+   "negative_prompt": "music, melody, speech, voice, low quality, hiss, noise, distortion",
+   "bpm": null,
+   "key": null,
+   "reason": "boom with long decaying rumble, no tone line",
+   "source_file": "work/sound_candidates/sfx.explosion_far/cand3.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/sfx.explosion_far/main_k3_p0.flac"
+   ],
+   "processing": {
+    "recipe": "oneshot",
+    "onset_s": 0.563,
+    "level": {
+     "lufs": -25.12,
+     "tp": -4.04,
+     "makeup_db": 0.0
+    }
+   },
+   "contract": {
+    "channels": 1,
+    "samples": 396900,
+    "lufs": -25.11,
+    "lufs_ref": -25.12,
+    "tp": -4.15,
+    "dc": 1e-05,
+    "clipped": 0,
+    "lead_silence_s": 0.002,
+    "tail_silence_s": 1.04
+   },
+   "sha256_generated": "f1700585619dd5113a9cc8e23770c05656f0f92480c9b30c405713235aac81f9",
+   "sha256_procedural": "b9b5efec77f8122cf3188a175aa9e5c4a5e93517c9a7e05528757097eb9da557",
+   "bytes_generated": 78396,
+   "bytes_procedural": 51423
+  },
+  "sfx.explosion_near": {
+   "candidate": 3,
+   "engine": "Stable Audio Open 1.0",
+   "seed": 25870,
+   "seeds": {
+    "main_k3_p0.flac": 25870
+   },
+   "prompt": {
+    "main_k3_p0.flac": "a huge close explosion, sharp crack followed by an enormous boom, fireball roar, debris raining down, ringing rumbling tail"
+   },
+   "negative_prompt": "music, melody, speech, voice, low quality, hiss, noise, distortion",
+   "bpm": null,
+   "key": null,
+   "reason": "crack, boom and a debris tail",
+   "source_file": "work/sound_candidates/sfx.explosion_near/cand3.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/sfx.explosion_near/main_k3_p0.flac"
+   ],
+   "processing": {
+    "recipe": "oneshot",
+    "onset_s": 1.064,
+    "level": {
+     "lufs": -20.45,
+     "tp": -9.64,
+     "makeup_db": 0.0
+    }
+   },
+   "contract": {
+    "channels": 1,
+    "samples": 441000,
+    "lufs": -20.47,
+    "lufs_ref": -20.6,
+    "tp": -9.65,
+    "dc": 2e-05,
+    "clipped": 0,
+    "lead_silence_s": 0.002,
+    "tail_silence_s": 0.708
+   },
+   "sha256_generated": "5f95f1f6a30de13821e7688c287ea9921a07d00b7396fd4c776e0a9276c7dd62",
+   "sha256_procedural": "acef68724fdd7eddce8dacd4b399cad0b6c0e97683156013cd28d41195f04724",
+   "bytes_generated": 104611,
+   "bytes_procedural": 131535
+  },
+  "sfx.gate_close": {
+   "candidate": 5,
+   "engine": "Stable Audio Open 1.0",
+   "seed": 37780,
+   "seeds": {
+    "main_k5_p0.flac": 37780
+   },
+   "prompt": {
+    "main_k5_p0.flac": "an enormous steel blast door slowly sliding shut with a long low grinding motor sound and creaking rails, then at the very end one massive thud and bolts locking, in a tunnel"
+   },
+   "negative_prompt": "music, melody, speech, voice, low quality, hiss, noise, distortion",
+   "bpm": null,
+   "key": null,
+   "reason": "variant prompt: grinding slide for about 4 s, then the massive thud and decay (round 1 candidates all put the thud first)",
+   "source_file": "work/sound_candidates/sfx.gate_close/cand5.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/sfx.gate_close/main_k5_p0.flac"
+   ],
+   "processing": {
+    "recipe": "oneshot",
+    "onset_s": 0.391,
+    "level": {
+     "lufs": -22.4,
+     "tp": -5.61,
+     "makeup_db": 0.0
+    }
+   },
+   "contract": {
+    "channels": 1,
+    "samples": 396900,
+    "lufs": -22.46,
+    "lufs_ref": -22.4,
+    "tp": -5.9,
+    "dc": 0.0,
+    "clipped": 0,
+    "lead_silence_s": 0.003,
+    "tail_silence_s": 0.211
+   },
+   "sha256_generated": "0065b6c38b00c981867dd5c73f7052116b8be456698e48219055cd490f1efc98",
+   "sha256_procedural": "cf2b237e022c65695a0af01d241250b43e9815bcae421ba2f243f6fded7f9512",
+   "bytes_generated": 92329,
+   "bytes_procedural": 88796
+  },
+  "sfx.giant_hit": {
+   "candidate": 2,
+   "engine": "Stable Audio Open 1.0",
+   "seed": 15563,
+   "seeds": {
+    "main_k2_p0.flac": 15563
+   },
+   "prompt": {
+    "main_k2_p0.flac": "a very heavy blow landing on a colossal armoured body, deep thud, wet slap, armour plate cracking, falling debris"
+   },
+   "negative_prompt": "music, melody, speech, voice, low quality, hiss, noise, distortion",
+   "bpm": null,
+   "key": null,
+   "reason": "thud with sustained low body",
+   "source_file": "work/sound_candidates/sfx.giant_hit/cand2.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/sfx.giant_hit/main_k2_p0.flac"
+   ],
+   "processing": {
+    "recipe": "oneshot",
+    "onset_s": 0.0,
+    "level": {
+     "lufs": -22.02,
+     "tp": -1.3,
+     "makeup_db": 2.4
+    }
+   },
+   "contract": {
+    "channels": 1,
+    "samples": 132300,
+    "lufs": -22.03,
+    "lufs_ref": -22.0,
+    "tp": -1.22,
+    "dc": 0.00017,
+    "clipped": 0,
+    "lead_silence_s": 0.0,
+    "tail_silence_s": 0.146
+   },
+   "sha256_generated": "a8d32e8d0fe05913550036be4b1586ff5d6c2273d9ed97b1de0e7d9917df87de",
+   "sha256_procedural": "641a18c4e3a7ef38b02228a8d9bffabdce615c10662cee26ce467b9379073b31",
+   "bytes_generated": 34886,
+   "bytes_procedural": 32633
+  },
+  "sfx.giant_punch": {
+   "candidate": 2,
+   "engine": "Stable Audio Open 1.0",
+   "seed": 73090,
+   "seeds": {
+    "main_k2_p0.flac": 73090
+   },
+   "prompt": {
+    "main_k2_p0.flac": "a colossal punch landing, an enormous impact with a shockwave, armour cracking, deep boom, stone and metal debris"
+   },
+   "negative_prompt": "music, melody, speech, voice, low quality, hiss, noise, distortion",
+   "bpm": null,
+   "key": null,
+   "reason": "wide, thick impact",
+   "source_file": "work/sound_candidates/sfx.giant_punch/cand2.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/sfx.giant_punch/main_k2_p0.flac"
+   ],
+   "processing": {
+    "recipe": "oneshot",
+    "onset_s": 0.0,
+    "level": {
+     "lufs": -19.53,
+     "tp": -3.17,
+     "makeup_db": 0.0
+    }
+   },
+   "contract": {
+    "channels": 1,
+    "samples": 132300,
+    "lufs": -19.57,
+    "lufs_ref": -19.53,
+    "tp": -3.2,
+    "dc": 2e-05,
+    "clipped": 0,
+    "lead_silence_s": 0.0,
+    "tail_silence_s": 0.11
+   },
+   "sha256_generated": "a3e6a29d54c3d6c0d82d1bcb150b2088b6c0028321dd2b3ea715f1b0faa8fdfa",
+   "sha256_procedural": "2ec5da7223882360655fc8dd331f296ee0739dad239e88c9e36c3cdaaf959fb7",
+   "bytes_generated": 36832,
+   "bytes_procedural": 42128
+  },
+  "sfx.gunfire_far": {
+   "candidate": 1,
+   "engine": "Stable Audio Open 1.0",
+   "seed": 84406,
+   "seeds": {
+    "main_k1_p0.flac": 84406
+   },
+   "prompt": {
+    "main_k1_p0.flac": "distant gunfire across a valley, scattered rifle shots and short rapid bursts, heavy echo off hills, muffled by distance, far away"
+   },
+   "negative_prompt": "music, melody, speech, voice, low quality, hiss, noise, distortion",
+   "bpm": null,
+   "key": null,
+   "reason": "separate shots and short bursts with decaying echoes",
+   "source_file": "work/sound_candidates/sfx.gunfire_far/cand1.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/sfx.gunfire_far/main_k1_p0.flac"
+   ],
+   "processing": {
+    "recipe": "oneshot",
+    "onset_s": 0.163,
+    "level": {
+     "lufs": -25.8,
+     "tp": -1.3,
+     "makeup_db": 4.7
+    }
+   },
+   "contract": {
+    "channels": 1,
+    "samples": 264600,
+    "lufs": -25.79,
+    "lufs_ref": -25.65,
+    "tp": -1.56,
+    "dc": 3e-05,
+    "clipped": 0,
+    "lead_silence_s": 0.002,
+    "tail_silence_s": 0.196
+   },
+   "sha256_generated": "946d52c0bd09dceec6e6d1e5a51366991bb5f3b3fca9502ed132389a64fa7d71",
+   "sha256_procedural": "b910591f73f7b2ec46b004e26d197d818b0d82cbb87cfbe76e8d049167369df7",
+   "bytes_generated": 71503,
+   "bytes_procedural": 46124
+  },
+  "sfx.hand_rise": {
+   "candidate": 1,
+   "engine": "Stable Audio Open 1.0",
+   "seed": 71392,
+   "seeds": {
+    "main_k1_p0.flac": 71392
+   },
+   "prompt": {
+    "main_k1_p0.flac": "something enormous slowly rising out of thick liquid, a huge cascade of water pouring off it, deep creaking and straining, low rumbling, in a vast cavernous hall"
+   },
+   "negative_prompt": "music, melody, speech, voice, low quality, hiss, noise, distortion",
+   "bpm": null,
+   "key": null,
+   "reason": "low water/creak rumble, no speech detected",
+   "source_file": "work/sound_candidates/sfx.hand_rise/cand1.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/sfx.hand_rise/main_k1_p0.flac"
+   ],
+   "processing": {
+    "recipe": "oneshot",
+    "onset_s": 0.038,
+    "level": {
+     "lufs": -24.18,
+     "tp": -9.54,
+     "makeup_db": 0.0
+    },
+    "slid_for_lead_s": 0.035
+   },
+   "contract": {
+    "channels": 2,
+    "samples": 396900,
+    "lufs": -24.18,
+    "lufs_ref": -24.18,
+    "tp": -9.62,
+    "dc": 5e-05,
+    "clipped": 0,
+    "lead_silence_s": 0.006,
+    "tail_silence_s": 0.16
+   },
+   "sha256_generated": "b655566cfa2b82de86591d8fb311de48fc8841f59a4f32fc439920ed60bbfc2d",
+   "sha256_procedural": "100aaedfcd5796ff6076b4baaad585e3ce860883f1ae109016a20b9aa1f2bb67",
+   "bytes_generated": 212208,
+   "bytes_procedural": 192500
+  },
+  "sfx.impact_above": {
+   "candidate": 2,
+   "engine": "Stable Audio Open 1.0",
+   "seed": 14653,
+   "seeds": {
+    "main_k2_p0.flac": 14653
+   },
+   "prompt": {
+    "main_k2_p0.flac": "a deep heavy blow from above shaking a huge underground chamber, a deep boom, dust and small debris falling, metal creaking, long low reverberant rumble"
+   },
+   "negative_prompt": "music, melody, speech, voice, low quality, hiss, noise, distortion",
+   "bpm": null,
+   "key": null,
+   "reason": "clean deep boom decaying through a long rumble",
+   "source_file": "work/sound_candidates/sfx.impact_above/cand2.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/sfx.impact_above/main_k2_p0.flac"
+   ],
+   "processing": {
+    "recipe": "oneshot",
+    "onset_s": 0.144,
+    "level": {
+     "lufs": -21.88,
+     "tp": -4.22,
+     "makeup_db": 0.0
+    }
+   },
+   "contract": {
+    "channels": 2,
+    "samples": 308700,
+    "lufs": -21.94,
+    "lufs_ref": -21.88,
+    "tp": -4.21,
+    "dc": 3e-05,
+    "clipped": 0,
+    "lead_silence_s": 0.003,
+    "tail_silence_s": 0.371
+   },
+   "sha256_generated": "aee0552716d779dff1f50461d66a38df1ae2abaa564bb1016179221d15e27340",
+   "sha256_procedural": "b3d824ca097c931f42f6ba63c5c02243cc91effaf05ef614307d8121e57c84b2",
+   "bytes_generated": 133760,
+   "bytes_procedural": 149114
+  },
+  "sfx.impact_above_hard": {
+   "candidate": 3,
+   "engine": "Stable Audio Open 1.0",
+   "seed": 36103,
+   "seeds": {
+    "main_k3_p0.flac": 36103
+   },
+   "prompt": {
+    "main_k3_p0.flac": "a much harder, closer blow from above slamming a huge underground chamber, an enormous deep boom, structure groaning, heavy debris crashing down, long low reverberant rumble"
+   },
+   "negative_prompt": "music, melody, speech, voice, low quality, hiss, noise, distortion",
+   "bpm": null,
+   "key": null,
+   "reason": "clean heavy boom; cand2 had speech-like detection",
+   "source_file": "work/sound_candidates/sfx.impact_above_hard/cand3.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/sfx.impact_above_hard/main_k3_p0.flac"
+   ],
+   "processing": {
+    "recipe": "oneshot",
+    "onset_s": 0.0,
+    "level": {
+     "lufs": -19.66,
+     "tp": -1.3,
+     "makeup_db": 0.4
+    }
+   },
+   "contract": {
+    "channels": 2,
+    "samples": 396900,
+    "lufs": -19.97,
+    "lufs_ref": -19.59,
+    "tp": -1.21,
+    "dc": 7e-05,
+    "clipped": 0,
+    "lead_silence_s": 0.0,
+    "tail_silence_s": 0.49
+   },
+   "sha256_generated": "5ed1ecf18dd44a4e9be91ff8f956880915c69364c020cb15c9dc1de56c4465e7",
+   "sha256_procedural": "513f2538f9a625ce4d5a04379003e2638515d876bdbf15e359c224247a9718db",
+   "bytes_generated": 164253,
+   "bytes_procedural": 180384
+  },
+  "sfx.jet_pass": {
+   "candidate": 3,
+   "engine": "Stable Audio Open 1.0",
+   "seed": 20897,
+   "seeds": {
+    "main_k3_p0.flac": 20897
+   },
+   "prompt": {
+    "main_k3_p0.flac": "a military jet fighter flying low overhead, loud roaring doppler fly-past from one side to the other, whine and rumble, fading into the distance"
+   },
+   "negative_prompt": "music, melody, speech, voice, low quality, hiss, noise, distortion",
+   "bpm": null,
+   "key": null,
+   "reason": "smooth bell-shaped Doppler-like swell with no thump at the start",
+   "source_file": "work/sound_candidates/sfx.jet_pass/cand3.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/sfx.jet_pass/main_k3_p0.flac"
+   ],
+   "processing": {
+    "recipe": "oneshot",
+    "onset_s": 1.109,
+    "level": {
+     "lufs": -22.19,
+     "tp": -13.53,
+     "makeup_db": 0.0
+    }
+   },
+   "contract": {
+    "channels": 1,
+    "samples": 308700,
+    "lufs": -22.27,
+    "lufs_ref": -22.19,
+    "tp": -13.59,
+    "dc": 1e-05,
+    "clipped": 0,
+    "lead_silence_s": 0.004,
+    "tail_silence_s": 0.51
+   },
+   "sha256_generated": "210a67dc78698fa1f49800467c7053e442f3f5ddea2fe39812d614e98ee744f2",
+   "sha256_procedural": "a191ed6b41cd05a71b7054349162e1bbaf8bc1cd1874474a5e94c07cdc71ab36",
+   "bytes_generated": 67376,
+   "bytes_procedural": 71504
+  },
+  "sfx.rig_crash": {
+   "candidate": 1,
+   "engine": "Stable Audio Open 1.0",
+   "seed": 68469,
+   "seeds": {
+    "main_k1_p0.flac": 68469
+   },
+   "prompt": {
+    "main_k1_p0.flac": "a heavy steel lighting truss crashing down onto a metal floor, huge clanging impact, bolts and debris scattering, glass breaking, ringing metal decay, in a large hangar"
+   },
+   "negative_prompt": "music, melody, speech, voice, low quality, hiss, noise, distortion",
+   "bpm": null,
+   "key": null,
+   "reason": "series of metal clanks like a truss bouncing, plus one last bump",
+   "source_file": "work/sound_candidates/sfx.rig_crash/cand1.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/sfx.rig_crash/main_k1_p0.flac"
+   ],
+   "processing": {
+    "recipe": "oneshot",
+    "onset_s": 0.193,
+    "level": {
+     "lufs": -22.33,
+     "tp": -1.49,
+     "makeup_db": 5.6
+    }
+   },
+   "contract": {
+    "channels": 1,
+    "samples": 220500,
+    "lufs": -22.45,
+    "lufs_ref": -22.31,
+    "tp": -1.53,
+    "dc": 1e-05,
+    "clipped": 0,
+    "lead_silence_s": 0.0,
+    "tail_silence_s": 0.084
+   },
+   "sha256_generated": "9d895f08ce6d0576d87fbcb14182bf9101959d4ffd16ae69159282c91a101d73",
+   "sha256_procedural": "327345c7b69efde68fbdd0c5b31abd9ed418465c04d4a15988561122ea9a7e7d",
+   "bytes_generated": 61779,
+   "bytes_procedural": 64181
+  },
+  "sfx.rig_tear": {
+   "candidate": 3,
+   "engine": "Stable Audio Open 1.0",
+   "seed": 89328,
+   "seeds": {
+    "main_k3_p0.flac": 89328
+   },
+   "prompt": {
+    "main_k3_p0.flac": "a heavy steel lighting rig tearing loose from a ceiling, screeching bending metal, bolts snapping, cables whipping and snapping, creaking"
+   },
+   "negative_prompt": "music, melody, speech, voice, low quality, hiss, noise, distortion",
+   "bpm": null,
+   "key": null,
+   "reason": "metallic burst and decay; cand2 is a metronomic tick artefact",
+   "source_file": "work/sound_candidates/sfx.rig_tear/cand3.ogg",
+   "raw_files": [
+    "work/sound_candidates/raw/sfx.rig_tear/main_k3_p0.flac"
+   ],
+   "processing": {
+    "recipe": "oneshot",
+    "onset_s": 0.909,
+    "level": {
+     "lufs": -28.56,
+     "tp": -4.79,
+     "makeup_db": -0.6
+    },
+    "slid_for_lead_s": 0.137
+   },
+   "contract": {
+    "channels": 1,
+    "samples": 185220,
+    "lufs": -28.81,
+    "lufs_ref": -28.56,
+    "tp": -5.8,
+    "dc": 0.0,
+    "clipped": 0,
+    "lead_silence_s": 0.004,
+    "tail_silence_s": 1.716
+   },
+   "sha256_generated": "14d0c7d18c20bbab2e25473735299181ae21d91c9f7d42976c96fa1d8d38db35",
+   "sha256_procedural": "c6ad9d01f1fc5316d8b6940bd962a765df206fdf223196f9ccdeda6459b56abd",
+   "bytes_generated": 49366,
+   "bytes_procedural": 51948
+  }
+ },
+ "kept_procedural": {
+  "music.cage": "every candidate is gated or ticking, with abrupt cut-offs between chord blocks; the procedural continuous pad matches the brief better",
+  "music.victory": "no candidate is a chord blooming from nothing: noise only, or chord stabs with long holes",
+  "sfx.siren": "generated sirens fade in and out within the 20 s and are noisy; the procedural two-cycle tone loop is cleaner and the datapack loops it",
+  "sfx.klaxon": "no candidate has three clean pulses in 4 s (the datapack repeats it every 11 s relying on that); the one with two pulses had words detected",
+  "music.descent": "not regenerated: its bloom must land at exactly 8.00 s"
+ }
+}

@@ -29,7 +29,7 @@ Public functions (all at the executor's position/rotation where position matters
 | `function angel:angel/pose {pose:"idle"}` | `idle` (breathing loop), `regenerating` (hunched, pulsing loop), `charging` (eyes glow, chest out, jaw open), `dying` (about 4 s: knees buckle, folds back, core goes dark). Also: `windup`, `thrust`, `stagger`, `wrap_open`, `wrapping` |
 | `function angel:angel/core_stage {stage:0}` | core look: 0 whole, 1 cracked (magma texture), 2 dead |
 
-Entities: 107 `block_display` parts (tag `angel.part`, `angel.p<N>`; plus `angel.eye`, `angel.corebody`, `angel.jaw`), a `marker`
+Entities: 133 `block_display` parts (tag `angel.part`, `angel.p<N>`; plus `angel.eye`, `angel.corebody`, `angel.jaw`), a `marker`
 `angel.root` (position + yaw of the whole monster), markers `angel.aim`, `angel.target`, `angel.aimpt`, and two `interaction`
 hit boxes (`angel.core`, `angel.body`).  Everything has the tag `angel.mon`.  Scoreboards: `angel.mon` (internal), `angel.walk`
 (`#arrived`).  Storage `angel:mon`.
@@ -41,6 +41,15 @@ from `#dur angel.mon`, so the client animates between two key poses.  Walking al
 leg / trailing leg with bent knee) and sets the step time to stride / speed, so the planted foot stays put.
 The 26.3 detail that bites: `block_state` is a plain string (`"minecraft:red_concrete"`); `{Name:..}` and
 `minecraft:x[prop=..]` decode to air.  A summon's `transformation` needs all four keys; a `data merge` may give fewer.
+
+Night look (changed after the first in-game screenshots): `warped_planks` skin (a dark teal, a bit lighter and more saturated than dark_prismarine)
+at display brightness 8/10, bone-white parts at 15, thin pale `white_concrete` rim strips on the upper edges (chest, hump, hips, outer edge of arms
+and thighs), emissive red strips around the core socket and a soft red `red_stained_glass` veil over the chest and the inner side of
+the upper arms (they go dark / vanish when the core dies). Torso pose angles: **negative = leaning forward** (positive leans back).
+`charging` is three stages (0, 10, 24 ticks in): the eye holes blaze (extra glowstone boxes + orange glass that grow with the key `eyeg`, tags
+`angel.eyeglow`), the body leans forward, the arms are drawn back and out and a glow gathers in front of the mask (key `gather`, tag
+`angel.gather`, on the hips frame). `regenerating` is an 8-frame loop of 10 ticks (slow breathing, flickering core, plates askew:
+`regen_0..7`). `dying` kneels, then slumps forward over its knees with the arms trailing on the ground.
 
 Look (previews in `preview\`, `sheet_<pose>.png` = front, side, three-quarter, close-up of the chest; `sheet_poses.png` = six
 poses): dark_prismarine skin shown dim so it reads dark green-black, black_concrete joints/hands/feet, bone_block plates, ribs,

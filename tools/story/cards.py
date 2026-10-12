@@ -2,6 +2,7 @@
 
     s.card("EVANGELION  UNIT 01")                              # the card, held 3.5 s in silence after its hit
     s.card("TO BE CONTINUED", small="an unofficial fan work")  # with a small line under it
+    s.card("ANGEL ATTACK", hold=2.0, back=2, back_wait=0.2)    # two seconds, then a quick return to the same view
 
 Why not `title`: in Vivecraft the title is part of the HUD, which is drawn on a floating quad whose place and visibility depend on the
 player's own settings (locked to the hand or the head, occluded by closer objects, dimmed); with the world blacked out by blindness it can
@@ -16,22 +17,33 @@ be anywhere or nowhere.  So the card is built in the world instead, around the p
 The sequence: the world goes dark with blindness (instantly), the room is built in the dark, blindness is cleared (the viewer sees only
 black, the room hiding the world), the sound event angel:sfx.card plays and the text appears at the same instant, it is held in silence,
 then blindness is applied again, the room and the text are removed in the dark and the story goes on (the next scene fades in from black
-by itself).  There is no serif font in vanilla Minecraft; the text uses the default font, bold.  To get serif capitals add a font file to the
-resource pack (e.g. assets/angel/font/card.json with a ttf provider) and pass font="angel:card" (the text component's `font` field).
+by itself).  There is no serif font in vanilla Minecraft: the text uses the resource pack's font "angel:card" (cardfont.py builds it from an
+openly licensed Computer Modern: bold, condensed, widely spaced capitals, and a lighter lower case for the small line), already bold, so
+the component says bold:false (the game's own bold would draw every glyph twice, offset).  The scale is computed from the font's real
+advances, so every card is about TARGET_WIDTH blocks wide whatever its length.
 """
 import json
 
+import cardfont
 from core import NS, P, PA, TAG, num, fnum
 
 ROOM = 2.6                         # half-size of the black room
 DIST = 2.2                         # distance of the text from the eyes
-WIDTH_PX = 6.4                     # estimated width of a bold capital in pixels (for the automatic scale)
-TARGET_WIDTH = 2.4                 # blocks the main line should span at that distance (about 58 degrees)
+WIDTH_PX = 6.4                     # estimated width of a vanilla bold capital in pixels (for text in another font)
+TARGET_WIDTH = 2.6                 # blocks the main line should span at that distance (about 62 degrees)
+SMALL_RATIO = 0.8                  # the small line spans this fraction of that
+CARD_FONT = cardfont.FONT_ID
 
 
-def _auto_scale(text, target=TARGET_WIDTH, lo=0.35, hi=1.7):
-    w = max(1, len(text)) * WIDTH_PX * 0.025
-    return max(lo, min(hi, target / w))
+def _units(text, font):
+    """Width of the text in font units: the real advances of the card font, or a vanilla-width estimate for anything else."""
+    if font == CARD_FONT and cardfont.covers(text):
+        return float(cardfont.advance_units(text))
+    return max(1, len(text)) * WIDTH_PX
+
+
+def _auto_scale(text, target=TARGET_WIDTH, lo=0.35, hi=1.7, font=CARD_FONT):
+    return max(lo, min(hi, target / (_units(text, font) * 0.025)))
 
 
 def _text_display(comp, scale, dy, rot_yaw):
@@ -63,21 +75,26 @@ def room_commands(radius=ROOM):
 
 
 def card_index(ctx, text, small, font, bold, color):
-    key = (text, small, font, bold, color)
+    font = font or CARD_FONT
+    if bold is None:
+        bold = font != CARD_FONT                    # the card font is bold already
+    key = (text, small, font, bool(bold), color)
     if key not in ctx.cards:
         ctx.cards[key] = len(ctx.cards) + 1
         k = ctx.cards[key]
-        comp = {"text": text, "color": color, "bold": bool(bold)}
-        if font:
-            comp["font"] = font
+        if font == CARD_FONT:
+            for t in (text, small or ""):
+                if not cardfont.covers(t):
+                    raise ValueError(f"card text {t!r} has characters that the card font does not have")
+        comp = {"text": text, "color": color, "bold": bool(bold), "font": font}
+        sc_main = _auto_scale(text, font=font)
         lines = []
         for r in (0, 90, 180, 270):
-            lines.append(_text_display(comp, _auto_scale(text), 0.0, r))
+            lines.append(_text_display(comp, sc_main, 0.07 if small else 0.0, r))
             if small:
-                c2 = {"text": small, "color": "gray", "bold": False}
-                if font:
-                    c2["font"] = font
-                lines.append(_text_display(c2, _auto_scale(small, 1.3, 0.25, 0.7), -0.55 * _auto_scale(text) / 0.85, r))
+                c2 = {"text": small, "color": "gray", "bold": False, "font": font}
+                sc_small = _auto_scale(small, TARGET_WIDTH * SMALL_RATIO, 0.25, 0.9, font=font)
+                lines.append(_text_display(c2, sc_small, 0.07 - (0.125 * sc_main + 0.2), r))
         ctx.extra_functions[f"story/card/c{k}"] = lines
         ctx.extra_functions["story/card/bg"] = room_commands()
         ctx.extra_functions["story/card/off_text"] = ["kill @e[tag=angel.card_text]"]

@@ -21,8 +21,9 @@ def seat_world(pose, role="passenger"):
 def door_cmds(rig, pose, open_, ticks=10):
     deg = DOOR_OPEN_DEG if open_ else 0.0
     x, y, z = door_world(pose)
-    snd = "minecraft:block.iron_door.open" if open_ else "minecraft:block.iron_door.close"
-    return rig.pose_cmds({"door": door_motion(deg)}, ticks) + [play_at(snd, x, y + 1, z, 1.2, 1.3, 0.3)]
+    # sfx.car_door is a slam (1.2 s): the shut is the sound itself, the open the same sample softer and higher (a latch and a swing)
+    snd = play_at("angel:sfx.car_door", x, y + 1, z, 0.55, 1.25, 0.0) if open_ else play_at("angel:sfx.car_door", x, y + 1, z, 1.2, 1.0, 0.0)
+    return rig.pose_cmds({"door": door_motion(deg)}, ticks) + [snd]
 
 
 def roll_keyframes(rig, deg_from, deg_to, ticks, steps=8):

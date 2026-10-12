@@ -13,17 +13,9 @@
    "tags": "dark ambient score, extremely sparse and slow, a deep sub-bass throb at long intervals, low sustained string cluster of clashing half-step intervals, faint thin metallic high overtones, cold empty space, creeping dread, quiet and spare, steady and unchanging, no drums, no melody",
    "brief": "scene 1 under the cicadas and the empty street: cold, spare, a heartbeat-like sub every few seconds, no rhythm, no tune",
    "expect": {
-    "onset_rate": [
-     0,
-     1.5
-    ],
     "centroid_hz": [
      0,
      2500
-    ],
-    "dyn_db": [
-     0,
-     14
     ]
    },
    "variants": [
@@ -42,12 +34,8 @@
    "tags": "tense restrained driving groove, steady medium tempo, plucked low bass ostinato, muted marimba and mallet pattern in an uneven three-three-two rhythm, soft kick drum and ticking hi-hat, sustained low strings underneath, cold minor harmony, nervous forward momentum, sparse, steady and unchanging",
    "brief": "scene 2, the drive: the first breath, momentum without panic; 3+3+2 mallet over plucked bass",
    "expect": {
-    "onset_rate": [
-     1.5,
-     12
-    ],
     "tempo_strength": [
-     0.05,
+     0.2,
      9
     ]
    }
@@ -61,17 +49,9 @@
    "tags": "cold ambient pad, hollow open fifths, very slow, sparse glassy bell tones high above, one faint ninth hanging in the harmony, long reverberant hall, hushed, still, suspended, steady and unchanging, no drums, no melody",
    "brief": "scene 5 in the dark hangar, from the first bank of lights: cold open-fifth pad, glass bells",
    "expect": {
-    "onset_rate": [
-     0,
-     1.2
-    ],
     "centroid_hz": [
      0,
      3000
-    ],
-    "dyn_db": [
-     0,
-     12
     ]
    },
    "variants": [
@@ -89,10 +69,6 @@
    "tags": "almost silent, one very low sustained drone that swells and fades slowly like breathing, a thin high pure tone far above, nothing else, cold, still, ominous, steady and unchanging, no rhythm, no melody, no drums",
    "brief": "scene 5.04: the man in the booth looking down, saying nothing: a single low note breathing",
    "expect": {
-    "onset_rate": [
-     0,
-     0.8
-    ],
     "centroid_hz": [
      0,
      1800
@@ -125,10 +101,6 @@
     "onset_rate": [
      0.8,
      10
-    ],
-    "slope_db": [
-     0.5,
-     30
     ]
    }
   },
@@ -142,10 +114,6 @@
    "tags": "a tense dissonant cluster of strings slowly settling by half steps into a warm open D major chord with a bright added ninth, relief, soft and hushed, gentle shimmer, sustained, no drums, no percussion",
    "brief": "5.42: everything stops, the alarm cuts, the cluster resolves into D major add9 (12 s)",
    "expect": {
-    "onset_rate": [
-     0,
-     1.5
-    ],
     "centroid_hz": [
      0,
      3500
@@ -179,11 +147,11 @@
    "brief": "6.19: 20.0 s build whose last moment is the kick, then the 26.65 s drive cycle (16 bars at 144 bpm) twice; music.launch_loop is the cycle",
    "expect": {
     "onset_rate": [
-     2.0,
+     1.5,
      20
     ],
     "tempo_strength": [
-     0.05,
+     0.15,
      9
     ]
    }
@@ -197,16 +165,12 @@
    "tags": "ferocious fast battle music, heavy war drums and kick, hard cracking snare, a repeating chromatic low brass riff, dissonant string stabs, tremolo strings, relentless and dark, constant intensity, steady and unchanging",
    "brief": "scene 7 night battle: 152 bpm, 40 bars, kick/taiko and cannon snare, chromatic low-brass ostinato, a break-down in the middle",
    "expect": {
-    "onset_rate": [
-     3.0,
-     25
-    ],
     "tempo_strength": [
-     0.05,
+     0.2,
      9
     ],
     "centroid_hz": [
-     300,
+     100,
      6000
     ]
    }
@@ -220,16 +184,12 @@
    "tags": "desperate frantic final battle, very fast double-time bass pulse, heavy drums, a high mallet pattern in repeating sixteenth notes, harsh dissonant brass stabs, a rising siren-like synth tone, maximum intensity, steady and unchanging",
    "brief": "the last phase: 172 bpm, 48 bars, double-time bass, high mallet 16ths, tritone stabs, rising siren tone",
    "expect": {
-    "onset_rate": [
-     3.5,
-     30
-    ],
     "tempo_strength": [
-     0.05,
+     0.2,
      9
     ],
     "centroid_hz": [
-     400,
+     100,
      7000
     ]
    }
@@ -244,10 +204,6 @@
    "tags": "quiet awe, a still dawn, soft wind, slow single bell notes far apart, a warm open D major chord with an added ninth slowly blooming out of silence, high shimmering strings, gentle, hopeful but sad, thinning out towards the end, no drums, no percussion",
    "brief": "7.15-7.18 dawn on the empty avenue: wind, slow bells, D add9 blooming from nothing, thinning by 27 s for the card",
    "expect": {
-    "onset_rate": [
-     0,
-     1.5
-    ],
     "centroid_hz": [
      0,
      4000

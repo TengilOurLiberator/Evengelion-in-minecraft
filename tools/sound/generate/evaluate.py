@@ -88,6 +88,18 @@ def judge(event, rec, e, asr_res):
             miss = (lo - v) / span if v < lo else (v - hi) / span
             score -= 1.0 + min(2.0, miss)
             notes.append(f"{feat}={v} outside [{lo},{hi}]")
+    loop = bool(rec["contract"].get("join_hf_ratio") is not None)
+    if is_music and loop:
+        # a loop should be steady: no big swings in level, no drift from the start to the end of the cycle
+        if p["dyn_db"] > 12:
+            score -= min(3.0, (p["dyn_db"] - 12) / 6.0)
+            notes.append(f"dynamics {p['dyn_db']} dB over the cycle")
+        if abs(p["slope_db"]) > 6:
+            score -= min(3.0, (abs(p["slope_db"]) - 6) / 6.0)
+            notes.append(f"level drifts {p['slope_db']} dB from start to end")
+    if is_music and e.get("pulse") is False and p.get("pulse_strength", 0) > 0.40:
+        score -= 1.5                                    # the brief is a drone with no beat; the beat tracker finds one
+        notes.append(f"a beat is audible (pulse strength {p['pulse_strength']} at {p.get('pulse_bpm')} bpm) in a cue meant to have none")
     if p["longest_silence_s"] > (0.3 if event.startswith("amb.") else 1.5) and not (event.startswith("sfx.") and p["longest_silence_s"] < 2.0):
         score -= 1.5
         notes.append(f"silence {p['longest_silence_s']} s")

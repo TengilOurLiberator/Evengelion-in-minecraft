@@ -259,27 +259,49 @@ class Scene:
         return self
 
     # ----------------------------------------------------------------------------------- sound and cards
-    def bed(self, key, note=""):
-        """Start the ambience bed angel:amb.<key> (the bed in play stops first); None stops the bed."""
-        cmds = self.ctx.audio.start("bed", key) if key else self.ctx.audio.stop("bed")
-        return self.do(*cmds, note=note or (f"bed {key}" if key else "bed off"))
+    def quiet(self, start, end, note=""):
+        """Declare that NOTHING may sound between `start` and `end` seconds after this point (the mine's two seconds of silence).  It does
+        nothing in the game; the checker (sim.check_quiet) follows every command and scheduled function that can run in that window and
+        fails the build if one of them plays a sound."""
+        st = Step("do", cmds=[f"# quiet window {start:g}..{end:g} s"], note=note or f"QUIET {start:g}..{end:g} s: no sound may start")
+        st.quiet = (float(start), float(end))
+        return self._add(st)
+
+    def bed(self, key, note="", fade=0.0, out=None, out_fade=1.0):
+        """Start the ambience bed angel:amb.<key> (the bed in play stops first); None stops the bed.  "a+b" layers two beds.
+        fade: seconds the bed takes to come in; out: the key of the bed in play, ramped down over out_fade s instead of cut (audio.py)."""
+        cmds = self.ctx.audio.start("bed", key, fade=fade, out=out, out_fade=out_fade) if key else self.ctx.audio.stop("bed")
+        return self.do(*cmds, note=note or (f"bed {key}" + (f" (in over {fade:g} s)" if fade else "") if key else "bed off"))
+
+    def bed_out(self, key, seconds=1.5, note=""):
+        """Ramp the bed in play (`key`) down to nothing over `seconds` instead of cutting it."""
+        return self.do(*self.ctx.audio.fade_out(key, seconds), note=note or f"bed {key} out over {seconds:g} s")
 
     def music(self, key, note=""):
         """Start the music cue angel:music.<key> (the cue in play stops first); None stops the music."""
         cmds = self.ctx.audio.start("music", key) if key else self.ctx.audio.stop("music")
         return self.do(*cmds, note=note or (f"music {key}" if key else "music off"))
 
-    def loop(self, key, note=""):
-        """Start the repeating effect layer angel:sfx.<key> (an alarm); None stops it."""
-        cmds = self.ctx.audio.start("loop", key) if key else self.ctx.audio.stop("loop")
+    def loop(self, key, note="", at=None, vol=None, name=None):
+        """Start the repeating effect layer angel:sfx.<key> (an alarm, the siren); None stops it.  at=(x, y, z): from a place in the world."""
+        cmds = self.ctx.audio.start("loop", key, at=at, vol=vol, name=name) if key else self.ctx.audio.stop("loop")
         return self.do(*cmds, note=note or (f"loop {key}" if key else "loop off"))
+
+    def silence(self, note=""):
+        """Every bed, cue and layer stopped, then every other sound that is still sounding (a line's tail, a long effect)."""
+        from audio import silence_cmds
+        return self.do(*silence_cmds(), note=note or "SILENCE: every sound stopped")
 
     def sfx(self, event, at=None, vol=1.0, pitch=1.0, minvol=0.0, note=""):
         from audio import sfx
         return self.do(sfx(event, at, vol, pitch, minvol), note=note or event)
 
-    def card(self, text, small=None, hold=3.5, sound="sfx.card", font=None, bold=True, color="white"):
-        """A title card, white capitals on black, readable in VR and on a flat screen (cards.py).  Takes about hold + 1.5 s."""
+    def card(self, text, small=None, hold=3.5, sound="sfx.card", font=None, bold=None, color="white", under=(), back=3, back_wait=0.6):
+        """A title card: white serif capitals (the resource pack's font angel:card, see cardfont.py) on black, readable in VR and on a flat
+        screen (cards.py).  Takes about hold + 1.5 s.
+        under:     [(seconds after the hit, [commands])]: things that start beside the card (a bed fading in, a monster stepping out);
+        back:      seconds of blindness that bring the world back after the card (3: a slow fade; 2 or 1: a quick return to the same view);
+        back_wait: how long the story waits (dark) before the next step."""
         from cards import card_index
         from audio import sfx as _sfx
         k = card_index(self.ctx, text, small, font, bold, color)
@@ -288,9 +310,11 @@ class Scene:
         self.do(fn("story/card/bg"), f"effect clear {PA()} minecraft:blindness", note="card: the black room, blindness off")
         self.sleep(0.35, note="card: black")
         self.do(_sfx(sound), fn(f"story/card/c{k}"), note=f"card: hit, then the text {text!r}")
+        for delay, cmds in under:
+            self.after(delay, *(cmds if isinstance(cmds, (list, tuple)) else [cmds]), note=f"card: beside the card, {delay:g} s after the hit")
         self.sleep(hold, note="card: held in silence")
-        self.do(fn("story/card/off_text"), blind(3), fn("story/card/off"), note="card: text away, dark, room away")
-        self.sleep(0.6, note="card: dark")
+        self.do(fn("story/card/off_text"), blind(back), fn("story/card/off"), note="card: text away, dark, room away")
+        self.sleep(back_wait, note="card: dark")
         return self
 
     def say_all(self, *lids):
