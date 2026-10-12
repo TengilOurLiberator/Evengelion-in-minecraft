@@ -1,5 +1,4 @@
 scoreboard players set #force angel.story 0
-function angel:cast/look {id:"misato",mode:"player"}
-scoreboard players set #f.lp_misato angel.story 0
-scoreboard players set #step angel.story 12
-function angel:story/s4/e12
+scoreboard players set #stept angel.story 0
+scoreboard players set #nagt angel.story 0
+scoreboard players set #hinted angel.story 0

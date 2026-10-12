@@ -70,12 +70,23 @@ class C:
 
 class Nudges:
     """Reminders run while a wait goes on (the player says nothing): `cmds[k]` is a list of commands, run in order; the first after `first`
-    seconds of waiting, then one every `repeat` seconds (never while a recorded line plays or the bridge is speaking: it tries again a
-    second later); after the last one the series goes on from index `loop_from` (default 1: 0, 1, 2, 1, 2, 1, 2 ...).
+    seconds of SILENCE, then one every `repeat` seconds of silence; after the last one the series goes on from index `loop_from` (default 1:
+    0, 1, 2, 1, 2, 1, 2 ...).  Silence means no recorded line playing and the bridge not speaking: the clock stands still while either
+    sounds, so the gap between the END of one nudge line and the START of the next is exactly `repeat` (engine.py, `compile`: the
+    counter `#nagt` only counts silent ticks; an earlier version restarted its clock when a line was queued and then clobbered it in
+    the same tick, which made the lines come one second after each other).
     `lines`: the recorded lines the first pass of the nudges says, for the offline checker."""
 
-    def __init__(self, first, repeat, cmds, loop_from=1, lines=()):
+    def __init__(self, first, repeat, cmds, loop_from=1, lines=(), gentle=False):
         self.first, self.repeat, self.cmds, self.loop_from, self.lines = first, repeat, [list(c) for c in cmds], loop_from, list(lines)
+        self.gentle = gentle                # the engine's default for a wait that has none of its own (no lines: a look and the prompt)
+
+    @staticmethod
+    def gentle_for(speaker, first=12.0, repeat=15.0):
+        """The default nudge of every wait: after `first` s of silence the asking character turns to look at the player (when she is
+        there in person) and the speak prompt pulses with its chime again; repeated every `repeat` s.  No spoken lines."""
+        look = f'execute if score #present_{speaker} {OBJ} matches 1 run function {NS}:cast/look {{id:"{speaker}",mode:"player"}}'
+        return Nudges(first, repeat, [[look, fn("story/prompt/pulse")]], loop_from=0, gentle=True)
 
     def nominal(self):
         """seconds until the player agrees after the first pass of the nudges (for the checker's estimate)"""
@@ -209,6 +220,8 @@ class Scene:
         variant = self.ctx.prompt_variant(prompt)
         if nudges is not None and est is None:
             est = nudges.nominal()
+        if nudges is None:
+            nudges = Nudges.gentle_for(spk)          # every wait reminds a silent player: a look and the prompt, no new lines
         return self._add(Step("wait", mode=mode, speaker=spk, prompt=prompt, variant=variant, timeout=timeout,
                               est=est if est is not None else CFG.answer_est, note=note or f"WAIT {mode} {spk}",
                               answer_ends=answer_ends, nudges=nudges))
@@ -239,6 +252,36 @@ class Scene:
         cmd = f"function {NS}:story/scene {{n:{n}}}" if jump else fn(f"story/s{n}/cont")
         return self._add(Step("handover", cmds=[cmd], to=n, jump=jump, note=f"-> scene {n} ({'rebuilt' if jump else 'continued'})"))
 
+    # ----------------------------------------------------------------------------------- moving the player
+    def move_player(self, x, y, z, yaw=None, pitch=None, r=4.0, settle=0.8, timeout=12.0, before=(), note=""):
+        """Put the player at (x, y, z) -- a place in ANOTHER SET (2000 blocks away, chunks not loaded) or anywhere the move must not fail --
+        and do not go on until he really is there.  Every scene-to-scene move uses this (`angel:story/...` hand-overs that jump, a scene
+        that begins somewhere else, the ending's return to the cage):
+
+          1. dismount (`ride dismount`, #ride 0: a rider cannot be teleported and the ride lock must not seat him again), forceload the
+             destination (3 x 3 chunks, removed again by halt), `before` commands;
+          2. wait `settle` s for the chunks;
+          3. dismount again and `tp` (with `yaw`/`pitch` when given: the head is only turned when asked);
+          4. WAIT (`until`) for the player to be within `r` blocks of the destination, re-issuing the dismount and the teleport every
+             second; after `timeout` s teleport once more and go on (nothing may soft-lock).
+
+        Costs about settle + 0.3 s when nothing goes wrong."""
+        x, y, z = float(x), float(y), float(z)
+        rot = f" {num(yaw, 2)} {num(pitch if pitch is not None else 0.0, 2)}" if yaw is not None else ""
+        dismount = [sset("#ride", 0), f"ride {P()} dismount"]
+        tp = dismount + [f"tp {P()} {num(x)} {num(y)} {num(z)}{rot}"]
+        self.do(*dismount, *self.ctx.preload(x, z), *before, note=(note or "move the player") + ": dismount, forceload the destination")
+        self.sleep(settle, note=(note or "move the player") + ": the chunks load")
+        self.do(*tp, sset("#mvok", 0), note=(note or "move the player") + f": teleport to ({x:.1f}, {y:.1f}, {z:.1f})")
+        self.steps[-1].guarded = True                    # (sim.check_relocations: a teleport that is followed by the wait)
+        # "there" means within r blocks for 8 ticks in a row (something that puts him back a moment after the teleport -- a seat, a lock -- must
+        # not pass for success)
+        near = C.near(x, y, z, r, est=0.3)
+        away = near.frags[0].replace(" if entity ", " unless entity ", 1)
+        return self.until(C.score("#mvok", "8..", est=0.6), timeout=timeout, nag=(1.0, 1.0, tp), on_timeout=tp, est=0.6,
+                          tick=[f"execute {near.text()} run {sadd('#mvok')}", f"execute {away} run {sset('#mvok', 0)}"],
+                          note=(note or "move the player") + ": wait until he is really there (re-teleport every second)")
+
     # ----------------------------------------------------------------------------------- convenience
     def fade(self, cmds=(), black=1.5, rest=0.0, note="fade"):
         """A short fade through darkness around `cmds`, which run once the picture is dark.
@@ -265,6 +308,18 @@ class Scene:
         fails the build if one of them plays a sound."""
         st = Step("do", cmds=[f"# quiet window {start:g}..{end:g} s"], note=note or f"QUIET {start:g}..{end:g} s: no sound may start")
         st.quiet = (float(start), float(end))
+        return self._add(st)
+
+    def hush(self, what=""):
+        """From here to `unhush()` NOTHING may start to sound but the recorded voices: no music, bed, alarm or effect (the character footsteps
+        of lead.py are muted by the score #hush).  `sim.check_hush` follows every step in the span and fails the build on a `playsound`."""
+        st = Step("do", cmds=[sset("#hush", 1)], note=f"HUSH begins: {what}")
+        st.hush = "begin"
+        return self._add(st)
+
+    def unhush(self):
+        st = Step("do", cmds=[sset("#hush", 0)], note="HUSH ends")
+        st.hush = "end"
         return self._add(st)
 
     def bed(self, key, note="", fade=0.0, out=None, out_fade=1.0):
@@ -390,22 +445,22 @@ class Compiler:
                 nud = getattr(st, "nudges", None)
                 if nud is not None:
                     enter += [sset("#nagt", 0), sset("#nagi", 0)]
-                    # the nudge series: gate (a line or the bridge is speaking: try again in a second), then the body of the current index
-                    out.function(f"{base}/n{i}", [
-                        f"execute {sc('#talking', '0')} unless {bsp} run function {NS}:{base}/nn{i}",
-                        f"execute {sc('#talking', '1')} run {sset('#nagt', T(nud.first) - 20)}",
-                        f"execute if {bsp} run {sset('#nagt', T(nud.first) - 20)}"])
+                    # The nudge clock `#nagt` counts SILENT ticks only (no recorded line playing, the bridge not speaking), so the gap between
+                    # the end of one nudge line and the start of the next is `repeat`.  When it reaches `first` the body runs: the nudge
+                    # commands of index #nagi, then #nagt is set back to first - repeat and the series moves on.  (The first version of this
+                    # compared the clock after the body had started a line and reset it to "try again in a second" every time: the nudges
+                    # then came one second after each other.)
+                    poll += [f"execute if score #step {OBJ} matches {i} {sc('#talking', '0')} unless {bsp} run {sadd('#nagt')}",
+                             f"execute if score #step {OBJ} matches {i} {sc('#nagt', str(T(nud.first)))} run function {NS}:{base}/nn{i}"]
                     body = [f"scoreboard players operation #nk {OBJ} = #nagi {OBJ}"]
                     for kk in range(len(nud.cmds)):
                         body.append(f"execute {sc('#nk', str(kk))} run {sset('#nagi', nud.next_index(kk))}")
+                    body.append(sset("#nagt", T(nud.first) - T(nud.repeat)))
                     for kk in range(len(nud.cmds)):
                         body.append(f"execute {sc('#nk', str(kk))} run function {NS}:{base}/nb{i}_{kk}")
-                    body.append(sset("#nagt", T(nud.first) - T(nud.repeat)))
                     out.function(f"{base}/nn{i}", body)
                     for kk, cmds_ in enumerate(nud.cmds):
                         out.function(f"{base}/nb{i}_{kk}", cmds_)
-                    poll += [sadd("#nagt"),
-                             f"execute if score #step {OBJ} matches {i} {sc('#nagt', str(T(nud.first)))} run function {NS}:{base}/n{i}"]
             elif k == "until":
                 enter += [sset("#stept", 0), sset("#nagt", 0), sset("#hinted", 0)]
                 poll = list(st.tick)
@@ -428,8 +483,9 @@ class Compiler:
                     first, repeat, cmds = st.nag
                     # the nag only speaks when no other line is playing; otherwise it tries again in a second
                     body = list(cmds)
-                    out.function(f"{base}/n{i}", [f"execute {sc('#talking', '0')} run function {NS}:{base}/nn{i}",
-                                                  f"execute {sc('#talking', '1')} run {sset('#nagt', T(first) - 20)}"])
+                    # (`return`: the retry line must not run after the body has itself started a line and set #talking)
+                    out.function(f"{base}/n{i}", [f"execute {sc('#talking', '1')} run return run {sset('#nagt', T(first) - 20)}",
+                                                  f"function {NS}:{base}/nn{i}"])
                     out.function(f"{base}/nn{i}", body + ([sset("#nagt", T(first) - T(repeat))] if repeat else [sset("#nagt", -999999)]))
                     poll.append(f"execute if score #step {OBJ} matches {i} {sc('#nagt', str(T(first)))} run function {NS}:{base}/n{i}")
                 exit_pre = list(st.on_done)
@@ -446,19 +502,21 @@ class Compiler:
         for name, lines in scene.extra_functions.items():
             out.function(f"story/s{n}/f_{name}", lines)
         # begin: a clean slate, then step 0.  `angel:story/scene {n:N}` calls this.
+        hooks = list(self.ctx.enter_hooks.get(n, []))                # commands the engine runs when scene n is entered, jump or hand-over
         out.function(f"story/s{n}/begin", [fn("story/halt"), sset("#scene", n), sset("#step", 0), sset("#running", 1),
                                            sset("#wait", 0), sset("#talking", 0), sset("#line_left", 0),
-                                           sset("#mv.on", 0), sset("#ride", 0),
+                                           sset("#mv.on", 0), sset("#ride", 0), *hooks,
                                            fn(f"story/s{n}/e0") if steps else "# (empty scene)"])
         # cont: the previous scene left the state standing; carry on after the setup steps
         k = getattr(scene, "setup_end", 0) or 0
         if k < len(steps):
-            out.function(f"story/s{n}/cont", [sset("#scene", n), sset("#running", 1), sset("#wait", 0), sset("#step", k), fn(f"story/s{n}/e{k}")])
+            out.function(f"story/s{n}/cont", [sset("#scene", n), sset("#running", 1), sset("#wait", 0), sset("#step", k), *hooks,
+                                              fn(f"story/s{n}/e{k}")])
         else:
             out.function(f"story/s{n}/cont", [sset("#scene", n), sset("#step", -1), "# (nothing after the setup)"])
 
 
 def _text(s, color="white"):
     import json
-    return json.dumps({"text": s, "color": color}, ensure_ascii=False)
+    return json.dumps({"text": s, "color": color}, ensure_ascii=True)
 

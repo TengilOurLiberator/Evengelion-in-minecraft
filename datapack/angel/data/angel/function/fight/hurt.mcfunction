@@ -4,8 +4,7 @@ execute if score #ginv angel.fight matches 1.. run return 0
 scoreboard players operation #gh angel.fight -= #dmg angel.fight
 scoreboard players set #ginv angel.fight 20
 scoreboard players set #gcalm angel.fight 0
-execute at @e[tag=angel.giant,limit=1] run playsound minecraft:entity.generic.explode hostile @a ~ ~ ~ 3 0.6
-execute at @e[tag=angel.giant,limit=1] run playsound minecraft:entity.iron_golem.damage hostile @a ~ ~ ~ 3 0.5
+execute at @e[tag=angel.giant,limit=1] run playsound angel:sfx.giant_hit hostile @a ~ ~ ~ 2 1
 execute as @e[tag=angel.giant,type=minecraft:player] run damage @s 1 minecraft:magic
 execute as @e[tag=angel.giant,type=minecraft:player] run effect give @s minecraft:instant_health 1 4 true
 function angel:fight/bark {id:"7_04"}

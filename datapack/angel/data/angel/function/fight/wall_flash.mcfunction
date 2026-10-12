@@ -1,19 +1,3 @@
-# the wall of light flashing where a hit was stopped: 8 bars + 2 translucent squares, facing the giant
-playsound minecraft:block.amethyst_block.resonate hostile @a ~ ~ ~ 4 0.7
-playsound minecraft:entity.evoker.cast_spell hostile @a ~ ~ ~ 3 1.6
-playsound minecraft:block.beacon.deactivate hostile @a ~ ~ ~ 3 1.8
-summon minecraft:block_display ~ ~ ~ {Tags:["angel.fight","angel.flash","angel.wnew"],block_state:"minecraft:orange_concrete",view_range:16f,interpolation_duration:0,brightness:{block:15,sky:15},transformation:{translation:[12.123f,-5.166f,-0.350f],left_rotation:[0f,0f,0.0000f,1.0000f],scale:[0.700f,10.332f,0.700f],right_rotation:[0f,0f,0f,1f]}}
-summon minecraft:block_display ~ ~ ~ {Tags:["angel.fight","angel.flash","angel.wnew"],block_state:"minecraft:orange_concrete",view_range:16f,interpolation_duration:0,brightness:{block:15,sky:15},transformation:{translation:[12.225f,4.919f,-0.350f],left_rotation:[0f,0f,0.3827f,0.9239f],scale:[0.700f,10.332f,0.700f],right_rotation:[0f,0f,0f,1f]}}
-summon minecraft:block_display ~ ~ ~ {Tags:["angel.fight","angel.flash","angel.wnew"],block_state:"minecraft:orange_concrete",view_range:16f,interpolation_duration:0,brightness:{block:15,sky:15},transformation:{translation:[5.166f,12.123f,-0.350f],left_rotation:[0f,0f,0.7071f,0.7071f],scale:[0.700f,10.332f,0.700f],right_rotation:[0f,0f,0f,1f]}}
-summon minecraft:block_display ~ ~ ~ {Tags:["angel.fight","angel.flash","angel.wnew"],block_state:"minecraft:orange_concrete",view_range:16f,interpolation_duration:0,brightness:{block:15,sky:15},transformation:{translation:[-4.919f,12.225f,-0.350f],left_rotation:[0f,0f,0.9239f,0.3827f],scale:[0.700f,10.332f,0.700f],right_rotation:[0f,0f,0f,1f]}}
-summon minecraft:block_display ~ ~ ~ {Tags:["angel.fight","angel.flash","angel.wnew"],block_state:"minecraft:orange_concrete",view_range:16f,interpolation_duration:0,brightness:{block:15,sky:15},transformation:{translation:[-12.123f,5.166f,-0.350f],left_rotation:[0f,0f,1.0000f,0.0000f],scale:[0.700f,10.332f,0.700f],right_rotation:[0f,0f,0f,1f]}}
-summon minecraft:block_display ~ ~ ~ {Tags:["angel.fight","angel.flash","angel.wnew"],block_state:"minecraft:orange_concrete",view_range:16f,interpolation_duration:0,brightness:{block:15,sky:15},transformation:{translation:[-12.225f,-4.919f,-0.350f],left_rotation:[0f,0f,0.9239f,-0.3827f],scale:[0.700f,10.332f,0.700f],right_rotation:[0f,0f,0f,1f]}}
-summon minecraft:block_display ~ ~ ~ {Tags:["angel.fight","angel.flash","angel.wnew"],block_state:"minecraft:orange_concrete",view_range:16f,interpolation_duration:0,brightness:{block:15,sky:15},transformation:{translation:[-5.166f,-12.123f,-0.350f],left_rotation:[0f,0f,0.7071f,-0.7071f],scale:[0.700f,10.332f,0.700f],right_rotation:[0f,0f,0f,1f]}}
-summon minecraft:block_display ~ ~ ~ {Tags:["angel.fight","angel.flash","angel.wnew"],block_state:"minecraft:orange_concrete",view_range:16f,interpolation_duration:0,brightness:{block:15,sky:15},transformation:{translation:[4.919f,-12.225f,-0.350f],left_rotation:[0f,0f,0.3827f,-0.9239f],scale:[0.700f,10.332f,0.700f],right_rotation:[0f,0f,0f,1f]}}
-summon minecraft:block_display ~ ~ ~ {Tags:["angel.fight","angel.flash","angel.wnew"],block_state:"minecraft:orange_stained_glass",view_range:16f,interpolation_duration:0,brightness:{block:15,sky:15},transformation:{translation:[-9.450f,-9.450f,-0.100f],left_rotation:[0f,0f,0.0000f,1.0000f],scale:[18.900f,18.900f,0.200f],right_rotation:[0f,0f,0f,1f]}}
-summon minecraft:block_display ~ ~ ~ {Tags:["angel.fight","angel.flash","angel.wnew"],block_state:"minecraft:orange_stained_glass",view_range:16f,interpolation_duration:0,brightness:{block:15,sky:15},transformation:{translation:[-0.000f,-13.364f,-0.100f],left_rotation:[0f,0f,0.3827f,0.9239f],scale:[18.900f,18.900f,0.200f],right_rotation:[0f,0f,0f,1f]}}
-execute as @e[type=minecraft:block_display,tag=angel.wnew] run rotate @s facing entity @e[tag=angel.giant,limit=1] eyes
-tag @e[tag=angel.wnew] remove angel.wnew
-particle minecraft:flash{color:[1.0,0.7,0.3,1.0]} ~ ~ ~ 0 0 0 0 1 force
-schedule function angel:fight/fx_fade 4t
-schedule function angel:fight/fx_clear 14t
+# a hit stopped by the barrier: the octagon of light and its tone
+playsound angel:sfx.barrier hostile @a ~ ~ ~ 3 1
+function angel:fight/wall_draw

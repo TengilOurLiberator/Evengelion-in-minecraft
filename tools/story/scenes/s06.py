@@ -26,8 +26,10 @@ TITLE = "The plug"
 
 # ---------------------------------------------------------------------------------------------------- numbers you may want to change
 FLUID_TICKS = 160            # the amber surface climbs from the floor to the ceiling in 8 s (sfx.fluid_fill is 8 s long)
-FLUID_BRIGHT = 12            # light level of the amber glass (0..15): it must glow, not look like mud
-FLUID_LAYERS = 2             # stained glass is only 46 % opaque: two layers of the fluid, three of the dark (about 16 % of the light left)
+FLUID_BRIGHT = 15            # light level of the amber glass (0..15): it must glow, not look like mud (it was 12 with two layers: brown)
+FLUID_LAYERS = 3             # stained glass is only 46 % opaque: three layers of the fluid give 84 % amber at full light, over the dark shell
+PAD_FACING = (0.0, -60.0)    # yaw, pitch the boy is turned to on arrival at the launch pad (during the black): up the shaft
+PARTICLE_EVERY = 3           # ticks between the sparks of light at the rising surface
 DARK_LAYERS = 3
 COCKPIT_BRIGHT = 13          # the amber glass round the head in the cockpit (one layer: the bridge must stay clear)
 FLUID_BLOCK = "orange_stained_glass"
@@ -64,19 +66,29 @@ def build(s, ctx):
     cx, cy, cz = (b["x0"] + b["x1"]) / 2.0, (b["y0"] + b["y1"]) / 2.0, (b["z0"] + b["z1"]) / 2.0
     dark = lambda block: sh.box_shell("angel.lshell", block, (cx, cy, cz), (1.48, 2.48, 4.48), bright=0, layers=DARK_LAYERS)
     fluid = sh.Fluid("angel.lfluid", FLUID_BLOCK, b["x0"] + 0.07, b["x1"] - 0.07, b["y0"] + 0.07, b["y1"] - 0.1,
-                     b["z0"] + 0.07, b["z1"] - 0.07, bright=FLUID_BRIGHT, layers=FLUID_LAYERS)
+                     b["z0"] + 0.07, b["z1"] - 0.07, bright=FLUID_BRIGHT, layers=FLUID_LAYERS, men_tag="angel.lmen")
     cockpit = lambda block: sh.box_shell("angel.lcock", block, geo.COCKPIT_EYE, (geo.COCKPIT_HALF,) * 3, bright=COCKPIT_BRIGHT)
     # the surface passes the eyes (feet + 1.62) at this fraction of the climb
     eyes_frac = (geo.PLUG_FEET_Y + 1.62 - (b["y0"] + 0.07)) / fluid.full_height
+    # sparks of light along the rising surface: one small function per step (each schedules the next, so the surface line reads as it climbs past the
+    # eyes); halt clears them
+    n_p = FLUID_TICKS // PARTICLE_EVERY
+    for k in range(n_p):
+        y = fluid.surface_y(min(1.0, k * PARTICLE_EVERY / float(FLUID_TICKS)))
+        lines = [f"particle minecraft:dust{{color:[1.0,0.82,0.35],scale:0.7}} {num(cx)} {num(y, 2)} {num(cz)} 1.3 0.03 3.8 0 5 force"]
+        if k + 1 < n_p:
+            lines.append(f"schedule function angel:story/launch/fp{k + 1} {PARTICLE_EVERY}t")
+        ctx.extra_functions[f"story/launch/fp{k}"] = lines
+        ctx.fx_scheduled.append(f"story/launch/fp{k}")
     ctx.extra_functions["story/launch/flash_up"] = sh.box_shell("angel.lflash", "white_concrete", None, SHAFT_FLASH, bright=15)
     ctx.extra_functions["story/launch/flash_down"] = sh.box_shell("angel.lflash", "white_concrete", None, CITY_FLASH, bright=15)
 
     # ================================================================ setup (a jump runs it; the hand-over from scene 5 is a jump)
     s.do(blind(4.5), note="fade out")
     s.sleep(0.4)
-    s.do(*ctx.preload(seat["x"], seat["z"]), *ctx.preload(pad["x"], pad["z"]), fn("cast/remove_all"), "function angel:cast/gurney_remove",
-         *audio.stop("bed"), note="preload the plug and the shaft; nobody is in the capsule")
-    s.sleep(0.9)
+    s.do(*ctx.preload(pad["x"], pad["z"]), fn("cast/remove_all"), "function angel:cast/gurney_remove", *audio.stop("bed"),
+         note="preload the shaft; nobody is in the capsule")
+    s.move_player(seat["x"], geo.PLUG_FEET_Y, seat["z"], settle=0.9, note="the player to the plug")
     s.do(*worldgen_sky.sky("hq"), *cg.sit_at(plug_feet), f"gamemode adventure {PA()}",
          sset("#present_misato", 0), sset("#present_ritsuko", 0), sset("#present_gendo", 0), sset("#present_rei", 0), sset("#beat", 54),
          note="the boy to the seat in the plug, in the dark; the capsule is white and lit (the lamps are part of the set)")
@@ -100,8 +112,9 @@ def build(s, ctx):
 
     # ================================================================ the fluid
     prep_at = 1.0
-    s.do(au.sfx("fluid_fill"), *fluid.spawn(), note="6.04: the amber fluid begins (sfx.fluid_fill, 8 s)")
-    s.after(0.3, *fluid.rise_to(fluid.full_height, FLUID_TICKS), note="the amber surface climbs, one smooth rise")
+    s.do(au.sfx("fluid_fill"), *fluid.spawn(), note="6.04: the amber fluid begins (sfx.fluid_fill, 8 s): amber glass, and the surface itself as a bright sheet and line")
+    s.after(0.3, *fluid.rise_to(fluid.full_height, FLUID_TICKS), fn("story/launch/fp0"),
+            note="the amber surface climbs, one smooth rise, with sparks of light along it")
     s.after(0.3 + eyes_frac * FLUID_TICKS / 20.0, *audio.start("bed", "plug_flooded"),
             note="the surface passes the eyes: the bed goes dull and close (amb.plug_flooded)")
     # the cage is made ready for the view from the giant's eyes while the boy is under the fluid
@@ -121,7 +134,7 @@ def build(s, ctx):
              (2.3, "white_stained_glass"), (2.5, FLUID_BLOCK), (2.7, "white_stained_glass"), (t - 0.15, "white_concrete")]
     for at, blk in flick:
         s.after(at, sh.set_block("angel.lfluid", blk), note=f"shimmer {blk}")
-    s.after(t, *cg.sit_at(geo.COCKPIT_FEET, turn_south=True), *cockpit("white_concrete"), sh.kill("angel.lfluid"),
+    s.after(t, *cg.sit_at(geo.COCKPIT_FEET, turn_south=True), *cockpit("white_concrete"), sh.kill("angel.lfluid"), sh.kill("angel.lmen"),
             note="MOVE to the cockpit in front of the giant's face, in the white (turned to face down the bridge if he looks away)")
     s.after(t + 0.15, sh.set_block("angel.lcock", "white_stained_glass"), note="the white thins")
     s.after(t + 0.40, sh.set_block("angel.lcock", FLUID_BLOCK), note="the amber tint stays")
@@ -143,10 +156,15 @@ def build(s, ctx):
     s.after(1.3, au.sfx("bridge_slide"), note="the bridge slides away (sound only; the deck itself is part of the set)")
     s.say("6.13")
     s.say("6.14")
-    s.fade([*cg.leave_seat(), sh.kill("angel.lcock"), fn("story/launch/eyes_off"), fn("cast/remove_all"), "function angel:cast/gurney_remove",
-            *cg.forceload_cage_off(), *audio.start("bed", "hq"), *au.sfx_stop("bolt_1", "bolt_2", "bolt_3", "bridge_slide", "contact", "sync_rise"),
-            tp_player(pad["x"], pad["y"], pad["z"]), f"execute as {P()} run function angel:fight/become_giant"],
-           black=1.8, note="through black to the launch pad: the boy is now the giant, free, no seat")
+    s.do(blind(3.0), note="through black to the launch pad")
+    s.sleep(0.4, note="dark")
+    s.do(*cg.leave_seat(), sh.kill("angel.lcock"), fn("story/launch/eyes_off"), fn("cast/remove_all"), "function angel:cast/gurney_remove",
+         *cg.forceload_cage_off(), *audio.start("bed", "hq"), *au.sfx_stop("bolt_1", "bolt_2", "bolt_3", "bridge_slide", "contact", "sync_rise"),
+         ctx.preload(pad["x"], pad["z"]), note="in the dark: off the seat, the cage let go")
+    # he arrives ALREADY LOOKING UP THE SHAFT (the teleport is through black: the only place to turn his head), and the move is guarded
+    s.move_player(pad["x"], pad["y"], pad["z"], yaw=PAD_FACING[0], pitch=PAD_FACING[1], settle=0.5, note="to the launch pad, facing up the shaft")
+    s.do(f"execute as {P()} run function angel:fight/become_giant", note="the boy is now the giant, free, no seat")
+    s.sleep(1.3, note="the black lifts")
     s.music("launch", note="music.launch: its 20 s build ends at the kick; the drive begins there")
     s.beat(61)
     s.say("6.15")
@@ -177,11 +195,16 @@ def build(s, ctx):
     s.sleep(0.2, note="white")
     # ---- the cut: to the city, standing on the lift platform, at giant scale, no upward motion (a teleport zeroes the velocity)
     face = " 180 0" if TURN_AT_ARRIVAL else ""
-    s.do(f"effect clear {ap} minecraft:levitation", f"tp {P()} {num(top['x'])} {num(top['y'])} {num(top['z'])}{face}",
+    tp_top = f"tp {P()} {num(top['x'])} {num(top['y'])} {num(top['z'])}{face}"
+    s.do(f"effect clear {ap} minecraft:levitation", tp_top,
          sh.kill("angel.lflash"), at_eyes + fn("story/launch/flash_down"),
          *audio.stop("music"), *au.sfx_stop("launch", "launch_roar", "launch_charge"),
          au.sfx("launch_arrive", 2.0), *worldgen_sky.sky("city"),
          note="THE CUT: white; to city.launch_top (giant, on the lift, facing the avenue); music and roar end, the lift locks")
+    s.steps[-1].guarded = True                       # (the checker: this teleport is followed by the wait below)
+    # the move is 2000 blocks (the chunks were forceloaded at the pad, long before): make sure he is there, re-teleporting every 0.4 s if not
+    s.until(C.near(top["x"], top["y"], top["z"], 8.0, est=0.1), timeout=4.0, nag=(0.4, 0.4, [tp_top]), on_timeout=[tp_top], est=0.1,
+            note="he is really on the lift (re-teleported every 0.4 s if not)")
     s.bed("city_night", note="night: the city bed")
     s.after(0.6, sh.set_block("angel.lflash", "white_stained_glass"), note="the white thins")
     s.after(1.2, sh.kill("angel.lflash"), note="night")

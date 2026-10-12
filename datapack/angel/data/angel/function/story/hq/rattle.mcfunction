@@ -1,8 +1,2 @@
-playsound minecraft:block.chain.hit master @a 3088.5 96.0 78.5 2.5 0.6 0.4
-playsound minecraft:block.iron_chain.hit master @a 3088.5 96.0 78.5 2.5 0.6 0.4
-playsound minecraft:block.chain.hit master @a 3104.5 96.0 90.5 2.5 0.6 0.4
-playsound minecraft:block.iron_chain.hit master @a 3104.5 96.0 90.5 2.5 0.6 0.4
-playsound minecraft:block.chain.hit master @a 3088.5 96.0 102.5 2.5 0.6 0.4
-playsound minecraft:block.iron_chain.hit master @a 3088.5 96.0 102.5 2.5 0.6 0.4
-playsound minecraft:block.chain.hit master @a 3104.5 96.0 114.5 2.5 0.6 0.4
-playsound minecraft:block.iron_chain.hit master @a 3104.5 96.0 114.5 2.5 0.6 0.4
+playsound angel:sfx.chains master @a 3088.5 96.0 90.5 2.6 0.9 0.5
+playsound angel:sfx.chains master @a 3104.5 96.0 102.5 2.0 0.8 0.4

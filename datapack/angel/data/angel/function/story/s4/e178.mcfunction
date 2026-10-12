@@ -1,2 +1,5 @@
 scoreboard players set #force angel.story 0
-function angel:story/s5/cont
+function angel:cast/look {id:"ritsuko",mode:"player"}
+scoreboard players set #f.lp_ritsuko angel.story 0
+scoreboard players set #step angel.story 179
+function angel:story/s4/e179

@@ -1,6 +1,5 @@
 scoreboard players set #force angel.story 0
-function angel:story/card/off_text
-effect give @a minecraft:blindness 3 0 true
-function angel:story/card/off
+execute at @a[limit=1] run playsound angel:sfx.card master @a ~ ~ ~ 1.0 1.0 1.0
+function angel:story/card/c1
 scoreboard players set #step angel.story 15
 function angel:story/s1/e15

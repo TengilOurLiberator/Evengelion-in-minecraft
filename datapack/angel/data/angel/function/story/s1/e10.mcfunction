@@ -1,2 +1,4 @@
 scoreboard players set #force angel.story 0
-scoreboard players set #sleep angel.story 7
+effect give @a minecraft:blindness 9 0 true
+scoreboard players set #step angel.story 11
+function angel:story/s1/e11

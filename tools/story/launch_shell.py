@@ -77,10 +77,15 @@ class Fluid:
     """Amber glass that fills a box from the floor up: four walls that grow and a lid that rises with them (the lid is seen from above
     while the level is below the eyes and from below once it has passed them).  Walls and lid are inset from the capsule's own walls."""
 
-    def __init__(self, tag, block, x0, x1, y0, y1, z0, z1, bright=None, layers=1, gap=0.05):
+    def __init__(self, tag, block, x0, x1, y0, y1, z0, z1, bright=None, layers=1, gap=0.05, men_tag=None, sheet_block="yellow_stained_glass",
+                 line_block="ochre_froglight"):
         self.tag, self.block, self.bright = tag, block, bright
         self.x0, self.x1, self.y0, self.y1, self.z0, self.z1 = x0, x1, y0, y1, z0, z1
         self.layers, self.gap = layers, gap
+        # the MENISCUS: the surface itself, made to read as it climbs past the eyes (stained glass only tints what is behind it, so the amber body
+        # of the fluid is dim in a dark room; the surface is therefore marked by its own glowing parts): a thin bright translucent sheet at the
+        # level and a bright opaque line round the walls at the level, all at light level 15 (tag `men_tag`, rising with the level)
+        self.men_tag, self.sheet_block, self.line_block = men_tag, sheet_block, line_block
 
     def _parts(self, h, k=0):
         """(tag suffix, x, y, z, sx, sy, sz, lift) for a column of height h, layer k (each layer `gap` further in)"""
@@ -94,15 +99,40 @@ class Fluid:
                 (f"s{k}", x0, self.y0, z1 - t, xl, h, t, 0.0),
                 (f"u{k}", x0, self.y0, z0, xl, t, zl, h - t)]
 
+    def _men_parts(self, h):
+        """(tag suffix, block, x, y, z, sx, sy, sz, lift) of the meniscus at level h: the sheet and the four wall lines, inside the fluid's own walls"""
+        i = 0.14                                      # in from the walls, clear of all the fluid's layers
+        t, lh = 0.04, 0.10                            # the sheet is 4 cm thick; the lines are 10 cm high and 6 cm deep
+        x0, x1, z0, z1 = self.x0 + i, self.x1 - i, self.z0 + i, self.z1 - i
+        xl, zl = x1 - x0, z1 - z0
+        return [("ms", self.sheet_block, x0, self.y0, z0, xl, t, zl, h - t),
+                ("mw", self.line_block, x0, self.y0, z0, 0.06, lh, zl, h - lh),
+                ("me", self.line_block, x1 - 0.06, self.y0, z0, 0.06, lh, zl, h - lh),
+                ("mn", self.line_block, x0, self.y0, z0, xl, lh, 0.06, h - lh),
+                ("mz", self.line_block, x0, self.y0, z1 - 0.06, xl, lh, 0.06, h - lh)]
+
     def spawn(self, h0=0.06):
-        return [slab([self.tag, f"{self.tag}_{suf}"], self.block, x, y, z, sx, sy, sz, self.bright, ty=lift)
+        cmds = [slab([self.tag, f"{self.tag}_{suf}"], self.block, x, y, z, sx, sy, sz, self.bright, ty=lift)
                 for k in range(self.layers) for suf, x, y, z, sx, sy, sz, lift in self._parts(h0, k)]
+        if self.men_tag:
+            cmds += [slab([self.men_tag, f"{self.men_tag}_{suf}"], blk, x, y, z, sx, sy, sz, 15, ty=lift)
+                     for suf, blk, x, y, z, sx, sy, sz, lift in self._men_parts(h0)]
+        return cmds
 
     def rise_to(self, h, ticks):
         """data merge commands that take the level to height h over `ticks` ticks (linear: one smooth rise)."""
-        return [f"execute as @e[tag={self.tag}_{suf},limit=1] run data merge entity @s {{start_interpolation:0,"
+        cmds = [f"execute as @e[tag={self.tag}_{suf},limit=1] run data merge entity @s {{start_interpolation:0,"
                 f"interpolation_duration:{int(ticks)},{_tf(sx, sy, sz, 0.0, lift, 0.0)}}}"
                 for k in range(self.layers) for suf, x, y, z, sx, sy, sz, lift in self._parts(h, k)]
+        if self.men_tag:
+            cmds += [f"execute as @e[tag={self.men_tag}_{suf},limit=1] run data merge entity @s {{start_interpolation:0,"
+                     f"interpolation_duration:{int(ticks)},{_tf(sx, sy, sz, 0.0, lift, 0.0)}}}"
+                     for suf, blk, x, y, z, sx, sy, sz, lift in self._men_parts(h)]
+        return cmds
+
+    def surface_y(self, frac):
+        """world y of the surface when the level has climbed `frac` (0..1) of the way (the fluid's own walls start at y0 and end at y1)"""
+        return self.y0 + 0.06 + (self.full_height - 0.06) * frac
 
     @property
     def full_height(self):

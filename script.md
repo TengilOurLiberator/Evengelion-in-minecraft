@@ -1,4 +1,4 @@
-# Angel Attack: the script
+﻿# Angel Attack: the script
 
 The first episode's story, told in new words. You are the boy, Shinji Ikari, fourteen, and you have no
 recorded lines: when someone speaks to you, you answer aloud in your own words.
@@ -18,9 +18,9 @@ How to read the page:
 - A spoken line is a name, a number, and the words. Read only the words.
 - *(Italics in brackets after a line)* say where the voice comes from or how it is said. Do not read them.
 - `> ` lines are what happens in the world.
-- **▶ WAIT** means the story stops until you, as the boy, say something. Whoever spoke last answers you
+- **â–¶ WAIT** means the story stops until you, as the boy, say something. Whoever spoke last answers you
   live, in character, and then the script goes on. The lines after a wait are written to follow any answer.
-- **▶ WAIT FOR YES** stops until you agree to pilot.
+- **â–¶ WAIT FOR YES** stops until you agree to pilot.
 
 When recording, read one character at a time, top to bottom, from the sheets in `recording/`. Leave two
 seconds of silence between lines. If you fluff a line, just say it again; the last take is the one kept.
@@ -63,7 +63,7 @@ seconds of silence between lines. If you fluff a line, just say it again; the la
 
 **MISATO** `2.02` Are you hurt? Anything bleeding that I ought to know about?
 
-**▶ WAIT**
+**â–¶ WAIT**
 
 **MISATO** `2.03` Good. That thing behind us, we call an Angel. Don't ask me who chose the name.
 
@@ -79,9 +79,9 @@ seconds of silence between lines. If you fluff a line, just say it again; the la
 
 **MISATO** `2.07` Still with me? Say something.
 
-**▶ WAIT**
+**â–¶ WAIT**
 
-**MISATO** `2.08` Me too. Mouthful of sand, that's all. Come on. Back against the roof, and push when I say.
+**MISATO** `2.08` Me too. Mouthful of sand, that's all. Come on. Push when I say.
 
 **MISATO** `2.09` One. Two. Three!
 
@@ -111,7 +111,7 @@ seconds of silence between lines. If you fluff a line, just say it again; the la
 
 **MISATO** `3.02` Did your father send you a pass? A card, with your face on it?
 
-**▶ WAIT**
+**â–¶ WAIT**
 
 **MISATO** `3.03` Keep hold of it. And this is yours. Read it on the way down; there's a test.
 
@@ -121,11 +121,11 @@ seconds of silence between lines. If you fluff a line, just say it again; the la
 
 **MISATO** `3.05` Do you know what he does here?
 
-**▶ WAIT**
+**â–¶ WAIT**
 
 **MISATO** `3.06` Mm. He isn't an easy man to know. I gather the two of you aren't close.
 
-**▶ WAIT**
+**â–¶ WAIT**
 
 **MISATO** `3.07` Then we have that in common. I couldn't stand mine either.
 
@@ -149,7 +149,7 @@ seconds of silence between lines. If you fluff a line, just say it again; the la
 
 **MISATO** `4.03` We've been past that door already, haven't we.
 
-**▶ WAIT**
+**â–¶ WAIT**
 
 **MISATO** `4.04` Well. That's what the system is for. If you can't find a thing, make it come and find you.
 
@@ -167,7 +167,7 @@ seconds of silence between lines. If you fluff a line, just say it again; the la
 
 **RITSUKO** `4.10` Ritsuko Akagi. I run the Evangelion project. I'm glad you came, Shinji.
 
-**▶ WAIT**
+**â–¶ WAIT**
 
 **MISATO** `4.11` Don't take it to heart. He comes by the cold shoulder honestly; you've met his father.
 
@@ -198,13 +198,13 @@ seconds of silence between lines. If you fluff a line, just say it again; the la
 
 **RITSUKO** `5.03` Evangelion. This is the first of the true series, Unit Zero-One. It was built here, in secret, and it is the last card we hold.
 
-**▶ WAIT**
+**â–¶ WAIT**
 
 **GENDO** `5.04` Shinji. *(from the booth, high above)*
 
 **GENDO** `5.05` Three years. You came when you were sent for. Good. *(from above)*
 
-**▶ WAIT**
+**â–¶ WAIT**
 
 **GENDO** `5.06` Prepare to launch. *(from above)*
 
@@ -220,7 +220,7 @@ seconds of silence between lines. If you fluff a line, just say it again; the la
 
 **RITSUKO** `5.12` Shinji Ikari. You will be the one inside it.
 
-**▶ WAIT**
+**â–¶ WAIT**
 
 **MISATO** `5.13` It took Rei seven months just to link with hers. He stepped off a train this morning!
 
@@ -236,7 +236,7 @@ seconds of silence between lines. If you fluff a line, just say it again; the la
 
 **GENDO** `5.19` No one else alive can do this. Get in. *(from above)*
 
-**▶ WAIT**
+**â–¶ WAIT**
 
 **GENDO** `5.20` Then choose quickly. Sit in it, or go back where you came from. Standing there you are only in the way. *(from above)*
 
@@ -250,7 +250,7 @@ seconds of silence between lines. If you fluff a line, just say it again; the la
 
 **MISATO** `5.24` What did you come all this way for? Look at him. Look at it. Then decide, but decide facing them.
 
-**▶ WAIT** *(If you agree here, the story goes straight to 5.42.)*
+**â–¶ WAIT** *(If you agree here, the story goes straight to 5.42.)*
 
 **GENDO** `5.25` Medical. Wake Rei. *(from above, into a handset)*
 
@@ -289,7 +289,7 @@ seconds of silence between lines. If you fluff a line, just say it again; the la
 
 **REI** `5.38` It's what I'm for.
 
-**▶ WAIT FOR YES**
+**â–¶ WAIT FOR YES**
 
 > While you say nothing, these come, some seconds apart:
 

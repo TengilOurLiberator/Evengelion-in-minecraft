@@ -1,42 +1,107 @@
-setblock 3065 43 41 minecraft:sea_lantern
-setblock 3127 43 41 minecraft:sea_lantern
+setblock 3064 40 50 minecraft:light[level=15]
+setblock 3128 40 83 minecraft:light[level=15]
+setblock 3064 40 91 minecraft:light[level=15]
+setblock 3128 41 75 minecraft:light[level=15]
+setblock 3064 41 82 minecraft:light[level=15]
+setblock 3128 42 66 minecraft:light[level=15]
 setblock 3065 43 56 minecraft:sea_lantern
 setblock 3127 43 56 minecraft:sea_lantern
+setblock 3127 43 57 minecraft:light[level=15]
+setblock 3128 43 98 minecraft:light[level=15]
+setblock 3128 44 47 minecraft:light[level=15]
+setblock 3066 44 55 minecraft:light[level=15]
+setblock 3128 44 89 minecraft:light[level=15]
+setblock 3064 44 97 minecraft:light[level=15]
+setblock 3065 45 46 minecraft:light[level=15]
+setblock 3064 45 87 minecraft:light[level=15]
+setblock 3128 48 53 minecraft:light[level=15]
+setblock 3128 48 94 minecraft:light[level=15]
+setblock 3128 49 44 minecraft:light[level=15]
+setblock 3064 49 51 minecraft:light[level=15]
+setblock 3128 49 85 minecraft:light[level=15]
+setblock 3064 49 91 minecraft:light[level=15]
+setblock 3128 52 58 minecraft:light[level=15]
+setblock 3128 52 99 minecraft:light[level=15]
+setblock 3128 53 50 minecraft:light[level=15]
+setblock 3064 53 56 minecraft:light[level=15]
+setblock 3128 53 90 minecraft:light[level=15]
+setblock 3064 53 97 minecraft:light[level=15]
+setblock 3064 54 47 minecraft:light[level=15]
+setblock 3064 54 88 minecraft:light[level=15]
+setblock 3096 55 109 minecraft:light[level=15]
+setblock 3096 55 113 minecraft:light[level=15]
+setblock 3128 57 54 minecraft:light[level=15]
+setblock 3128 57 95 minecraft:light[level=15]
 setblock 3093 57 109 minecraft:sea_lantern
 setblock 3099 57 109 minecraft:sea_lantern
-setblock 3093 57 116 minecraft:sea_lantern
-setblock 3099 57 116 minecraft:sea_lantern
-setblock 3096 58 110 minecraft:light[level=15]
-setblock 3096 58 116 minecraft:light[level=15]
+setblock 3128 58 45 minecraft:light[level=15]
+setblock 3064 58 52 minecraft:light[level=15]
+setblock 3128 58 86 minecraft:light[level=15]
+setblock 3064 58 94 minecraft:light[level=15]
+setblock 3128 61 59 minecraft:light[level=15]
+setblock 3128 61 100 minecraft:light[level=15]
+setblock 3064 63 47 minecraft:light[level=15]
+setblock 3128 63 50 minecraft:light[level=15]
+setblock 3064 63 57 minecraft:light[level=15]
+setblock 3064 63 89 minecraft:light[level=15]
+setblock 3128 63 91 minecraft:light[level=15]
+setblock 3064 63 98 minecraft:light[level=15]
 setblock 3066 65 44 minecraft:sea_lantern
 setblock 3126 65 44 minecraft:sea_lantern
 setblock 3066 65 56 minecraft:sea_lantern
 setblock 3126 65 56 minecraft:sea_lantern
 setblock 3066 65 92 minecraft:sea_lantern
 setblock 3126 65 92 minecraft:sea_lantern
-setblock 3066 65 104 minecraft:sea_lantern
-setblock 3126 65 104 minecraft:sea_lantern
+setblock 3128 66 55 minecraft:light[level=15]
+setblock 3064 66 62 minecraft:light[level=15]
+setblock 3127 66 96 minecraft:light[level=15]
+setblock 3128 67 46 minecraft:light[level=15]
+setblock 3064 67 53 minecraft:light[level=15]
+setblock 3128 67 87 minecraft:light[level=15]
+setblock 3064 67 94 minecraft:light[level=15]
+setblock 3128 68 78 minecraft:light[level=15]
+setblock 3064 68 85 minecraft:light[level=15]
+setblock 3128 69 69 minecraft:light[level=15]
+setblock 3064 69 76 minecraft:light[level=15]
+setblock 3128 70 60 minecraft:light[level=15]
+setblock 3064 70 67 minecraft:light[level=15]
+setblock 3128 71 51 minecraft:light[level=15]
+setblock 3064 71 58 minecraft:light[level=15]
+setblock 3128 71 91 minecraft:light[level=15]
+setblock 3064 72 50 minecraft:light[level=15]
+setblock 3128 72 83 minecraft:light[level=15]
+setblock 3064 72 90 minecraft:light[level=15]
+setblock 3128 73 74 minecraft:light[level=15]
+setblock 3064 73 81 minecraft:light[level=15]
+fill 3082 74 39 3083 74 39 minecraft:light[level=15]
+setblock 3128 74 65 minecraft:light[level=15]
+setblock 3064 74 72 minecraft:light[level=15]
 fill 3082 75 40 3083 75 40 minecraft:sea_lantern
 fill 3103 75 40 3104 75 40 minecraft:sea_lantern
 fill 3082 75 41 3083 75 41 minecraft:sea_lantern
 fill 3103 75 41 3104 75 41 minecraft:sea_lantern
-setblock 3066 79 44 minecraft:sea_lantern
-setblock 3126 79 44 minecraft:sea_lantern
+setblock 3128 75 56 minecraft:light[level=15]
+setblock 3064 75 63 minecraft:light[level=15]
+setblock 3064 77 54 minecraft:light[level=15]
+setblock 3128 77 79 minecraft:light[level=15]
+setblock 3064 77 86 minecraft:light[level=15]
+setblock 3128 77 88 minecraft:light[level=15]
+setblock 3128 78 69 minecraft:light[level=15]
+setblock 3064 78 77 minecraft:light[level=15]
 setblock 3066 79 56 minecraft:sea_lantern
 setblock 3126 79 56 minecraft:sea_lantern
+setblock 3128 79 61 minecraft:light[level=15]
+setblock 3064 79 68 minecraft:light[level=15]
 setblock 3066 79 68 minecraft:sea_lantern
 setblock 3126 79 68 minecraft:sea_lantern
 setblock 3066 79 80 minecraft:sea_lantern
 setblock 3126 79 80 minecraft:sea_lantern
-setblock 3066 79 92 minecraft:sea_lantern
-setblock 3126 79 92 minecraft:sea_lantern
-setblock 3087 85 85 minecraft:sea_lantern
+setblock 3064 80 59 minecraft:light[level=15]
+setblock 3128 81 84 minecraft:light[level=15]
+setblock 3128 82 75 minecraft:light[level=15]
+setblock 3128 83 66 minecraft:light[level=15]
+setblock 3064 83 73 minecraft:light[level=15]
 fill 3087 85 96 3088 85 96 minecraft:sea_lantern
 fill 3104 85 96 3105 85 96 minecraft:sea_lantern
 fill 3087 85 97 3088 85 97 minecraft:sea_lantern
 fill 3104 85 97 3105 85 97 minecraft:sea_lantern
-fill 3087 85 108 3088 85 108 minecraft:sea_lantern
-fill 3104 85 108 3105 85 108 minecraft:sea_lantern
-fill 3087 85 109 3088 85 109 minecraft:sea_lantern
-fill 3104 85 109 3105 85 109 minecraft:sea_lantern
-setblock 3126 93 68 minecraft:sea_lantern

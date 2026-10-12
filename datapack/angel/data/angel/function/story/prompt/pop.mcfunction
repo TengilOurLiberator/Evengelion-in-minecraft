@@ -1,1 +1,2 @@
-data merge entity @e[tag=angel.prompt,limit=1] {start_interpolation:0,interpolation_duration:8,transformation:{translation:[0f,0f,0f],left_rotation:[0f,0f,0f,1f],scale:[0.32f,0.32f,0.32f],right_rotation:[0f,0f,0f,1f]}}
+data merge entity @e[tag=angel.prompt_main,limit=1] {start_interpolation:0,interpolation_duration:8,transformation:{translation:[0f,0f,0f],left_rotation:[0f,0f,0f,1f],scale:[0.62f,0.62f,0.62f],right_rotation:[0f,0f,0f,1f]}}
+data merge entity @e[tag=angel.prompt_sub,limit=1] {start_interpolation:0,interpolation_duration:8,transformation:{translation:[0f,-0.21f,0f],left_rotation:[0f,0f,0f,1f],scale:[0.4f,0.4f,0.4f],right_rotation:[0f,0f,0f,1f]}}

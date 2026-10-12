@@ -13,6 +13,7 @@ its route.  It checks that:
     jerk, turn rates).
 """
 import math
+import os
 import re
 import sys
 
@@ -319,6 +320,26 @@ def check_sounds(out, report):
                     vanilla.setdefault(m.group(1).replace("minecraft:", ""), set()).add(where)
     if vanilla:
         report.note("vanilla stand-in sounds still played (event: where): " + "; ".join(f"{e}: {', '.join(sorted(w))}" for e, w in sorted(vanilla.items())))
+        # each of them must exist in the game's own sounds.json (the client logs "Unable to play unknown soundEvent" and plays nothing otherwise:
+        # that is how `block.iron_chain.hit` was found missing in 26.3); read from the installed client's asset index
+        try:
+            mc = os.path.join(os.environ["APPDATA"], ".minecraft")
+            idx_dir = os.path.join(mc, "assets", "indexes")
+            known = None
+            for name in sorted(os.listdir(idx_dir)):
+                idx = json.load(open(os.path.join(idx_dir, name), encoding="utf-8"))["objects"]
+                if "minecraft/sounds.json" in idx:
+                    hh = idx["minecraft/sounds.json"]["hash"]
+                    known = set(json.load(open(os.path.join(mc, "assets", "objects", hh[:2], hh), encoding="utf-8")))
+            if known is None:
+                raise OSError("no asset index with minecraft/sounds.json")
+            gone = sorted(e for e in vanilla if e not in known)
+            for e in gone:
+                report.error(f"vanilla sound event minecraft:{e} ({', '.join(sorted(vanilla[e]))}) does not exist in this game version")
+            report.note(f"vanilla sounds: all {len(vanilla)} stand-in events exist in the installed game's sounds.json" if not gone else
+                        f"vanilla sounds: {len(gone)} of {len(vanilla)} do not exist")
+        except (OSError, KeyError, ValueError) as e:
+            report.note(f"vanilla sound ids not verified (no installed client asset index: {e})")
     return used
 
 
@@ -436,12 +457,305 @@ def check_cards(ctx, out, report):
 
 
 def waits_without_nudge(ctx, report):
-    rows = []
+    rows, gentle = [], []
     for scene in ctx.scenes:
         for st in scene.steps:
-            if st.kind == "wait" and not getattr(st, "nudges", None):
+            if st.kind != "wait":
+                continue
+            nud = getattr(st, "nudges", None)
+            if not nud:
                 rows.append(f"{scene.n}:{st.index}")
-    report.note("waits with no nudge (only the speak prompt and angel:story/skip): " + (", ".join(rows) if rows else "none"))
+            elif nud.gentle:
+                gentle.append(f"{scene.n}:{st.index}")
+    report.note("waits with no nudge at all (only the speak prompt and angel:story/skip): " + (", ".join(rows) if rows else "none"))
+    for r in rows:
+        report.error(f"wait {r} has no nudge (the engine gives every wait a gentle default)")
+    report.note(f"waits with the engine's gentle default nudge (a look at the player and the prompt pulsing with its chime after 12 s of silence, "
+                f"then every 15 s): {', '.join(gentle) if gentle else 'none'}")
+
+
+# --------------------------------------------------------------------------------------------------- a tiny interpreter for the engine's own functions
+class McSim:
+    """Runs the generated functions' scoreboard logic (set/add/remove/operation, `execute if|unless score ... matches`, `function`, `return`)
+    so that a test can drive the compiled nudge code tick by tick.  Everything else (sounds, entities, selectors) is ignored; an `execute` with a
+    condition it does not know does not run its command.  `calls` records every function that ran: [(tick, path)]."""
+    def __init__(self, out):
+        self.files = {k[len("data/angel/function/"):-len(".mcfunction")]: v.splitlines() for k, v in out.files.items()
+                      if k.startswith("data/angel/function/") and k.endswith(".mcfunction")}
+        self.score = {}
+        self.tick = 0
+        self.calls = []
+
+    def get(self, name):
+        return self.score.get(name, 0)
+
+    @staticmethod
+    def _in(rng, v):
+        if ".." in rng:
+            lo, hi = rng.split("..")
+            return (lo == "" or v >= int(lo)) and (hi == "" or v <= int(hi))
+        return v == int(rng)
+
+    def run_function(self, path, depth=0):
+        self.calls.append((self.tick, path))
+        if depth > 12 or path not in self.files:
+            return 0
+        for line in self.files[path]:
+            r = self.run(line, depth)
+            if r is not None and r[0] == "return":
+                return r[1]
+        return 0
+
+    def run(self, line, depth=0):
+        line = line.strip()
+        if not line or line.startswith("#"):
+            return None
+        toks = line.split()
+        if toks[0] == "execute":
+            i = 1
+            while i < len(toks):
+                w = toks[i]
+                if w in ("if", "unless") and i + 4 < len(toks) + 1 and toks[i + 1] == "score" and toks[i + 4] == "matches":
+                    ok = self._in(toks[i + 5], self.get(toks[i + 2]))
+                    if (w == "if") != ok:
+                        return None
+                    i += 6
+                elif w == "run":
+                    return self.run(" ".join(toks[i + 1:]), depth)
+                else:
+                    return None                      # a selector, a position, a data test ...: not simulated
+            return None
+        if toks[0] == "return":
+            if len(toks) > 1 and toks[1] == "run":
+                self.run(" ".join(toks[2:]), depth)
+            return ("return", 0)
+        if toks[0] == "function":
+            self.run_function(toks[1].split(":", 1)[1], depth + 1)
+            return None
+        if toks[0] == "scoreboard" and toks[1] == "players":
+            op = toks[2]
+            if op == "set":
+                self.score[toks[3]] = int(toks[5])
+            elif op == "add":
+                self.score[toks[3]] = self.get(toks[3]) + int(toks[5])
+            elif op == "remove":
+                self.score[toks[3]] = self.get(toks[3]) - int(toks[5])
+            elif op == "operation":
+                a, o, b = toks[3], toks[5], toks[6]
+                if o == "=":
+                    self.score[a] = self.get(b)
+        return None
+
+
+def check_nudge_cadence(ctx, out, report, minutes=3.0):
+    """Drive every compiled nudge series (waits with their own nudges, and the engine's gentle default) through three minutes of SILENCE, tick by
+    tick, on the generated functions themselves, and assert the cadence: the first nudge after `first` s, and every later one `repeat` s after
+    the END of the previous one's line (for a nudge with no line, after its start).  A recorded line is simulated for its real duration."""
+    from engine import Nudges
+    lines_ticks = {l.key: l.ticks for l in ctx.lines.values()}
+    n_checked, bad = 0, 0
+    for scene in ctx.scenes:
+        for st in scene.steps:
+            nud = getattr(st, "nudges", None)
+            if st.kind != "wait" or nud is None:
+                continue
+            i, base = st.index, f"story/s{scene.n}/"
+            m = McSim(out)
+            m.score.update({"#step": i, "#wait": st.mode, "#talking": 0, "#line_left": 0, "#bridge_speaking": 0, "#wt": -1, "#force": 0,
+                            "#timeout_s": 0, "#nagt": 0, "#nagi": 0})
+            starts, ends = [], []                               # nudge starts (ticks); ticks at which the line a nudge started ended
+            prev_talking = 0
+            for tick in range(int(minutes * 60 * TPS)):
+                m.tick = tick
+                n0 = len(m.calls)
+                # t_line, as the engine ticks it
+                if m.get("#talking") == 1:
+                    m.score["#line_left"] = m.get("#line_left") - 1
+                    if m.get("#line_left") <= 0:
+                        m.score["#talking"] = 0
+                m.run_function(f"{base}p{i}")           # (the say functions it runs set #talking and #line_left themselves: McSim runs them too)
+                if any(path == f"{base}nn{i}" for _, path in m.calls[n0:]):
+                    starts.append(tick)
+                if prev_talking == 1 and m.get("#talking") == 0:
+                    ends.append(tick)
+                prev_talking = m.get("#talking")
+            n_checked += 1
+            first_t, rep_t = T(nud.first), T(nud.repeat)
+            problems = []
+            if not starts or abs(starts[0] - first_t) > 1:
+                problems.append(f"first nudge at tick {starts[0] if starts else None}, expected {first_t}")
+            # the gap from the end of the previous nudge (its line's end, else its start) to the next start
+            for k in range(1, len(starts)):
+                line_end = next((e for e in ends if starts[k - 1] <= e <= starts[k]), starts[k - 1])
+                gap = starts[k] - line_end
+                if abs(gap - rep_t) > 1:
+                    problems.append(f"nudge {k + 1} began {gap} ticks after the end of nudge {k} (expected {rep_t})")
+                    break
+            if nud.lines and len(starts) < 3:
+                problems.append(f"only {len(starts)} nudges in {minutes:g} minutes")
+            if problems:
+                bad += 1
+                report.error(f"nudges of scene {scene.n} step {i} ({st.note[:40]}): " + "; ".join(problems) + f"  (starts {starts[:8]})")
+    report.note(f"nudge cadence: {n_checked} nudged waits driven through {minutes:g} minutes of silence on the compiled functions: "
+                + ("every gap from the end of one nudge line to the start of the next is the configured interval" if not bad else f"{bad} wrong"))
+
+
+def check_hush(ctx, out, report):
+    """Between `s.hush()` and `s.unhush()` no step may start a sound (the recorded voices are `say` steps and are not looked at)."""
+    n = 0
+    for scene in ctx.scenes:
+        inside = False
+        for st in scene.steps:
+            h = getattr(st, "hush", None)
+            if h == "begin":
+                inside, n = True, n + 1
+                continue
+            if h == "end":
+                inside = False
+                continue
+            if not inside:
+                continue
+            if st.kind == "after":
+                body = out.files.get(f"data/angel/function/{st.path}.mcfunction", "").splitlines()
+                ev = sounds_in(out, body, 0)
+            elif st.kind == "do":
+                ev = sounds_in(out, st.cmds, 0)
+            else:
+                continue
+            for _, d in ev:
+                report.error(f"scene {scene.n} step {st.index}: {d} starts inside a hush ({st.note[:50]})")
+    report.note(f"hush: {n} silent span(s); no step inside them starts a sound, music, bed or loop")
+
+
+def check_music(ctx, out, report):
+    """Every music cue and bed the story starts, against tools/sound/manifest.json: a cue that is a loop file restarts itself, one that is not
+    plays once (or is chained to its loop file); a bed is a loop file."""
+    import json
+    from audio import MUSIC_CHAIN, MUSIC_LOOP
+    mp = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "sound", "manifest.json")
+    try:
+        with open(mp, encoding="utf-8") as f:
+            man = json.load(f)
+        man = man.get("sounds", man)
+    except (OSError, ValueError) as e:
+        report.warn(f"music check skipped: cannot read tools/sound/manifest.json ({e})")
+        return
+    rows = []
+    for (kind, key), c in sorted(ctx.audio.cues.items()):
+        ev = c["event"].split(":", 1)[1]
+        ent = man.get(ev)
+        if not isinstance(ent, dict):
+            report.warn(f"{kind} {key}: {ev} is not in the sound manifest")
+            continue
+        is_loop = bool(ent.get("loop"))
+        if kind == "bed" and not is_loop:
+            report.error(f"bed {key}: {ev} is not a loop file in the manifest")
+        if kind == "music":
+            chained = key in MUSIC_CHAIN
+            if is_loop and not c["loop"]:
+                report.error(f"music {key}: {ev} is a loop file but the story plays it once (it would go silent after {ent.get('seconds')} s): add it to MUSIC_LOOP")
+            elif not is_loop and c["loop"]:
+                report.error(f"music {key}: {ev} is NOT a loop file but the story restarts it every {ent.get('seconds')} s")
+            elif chained:
+                lp = man.get(f"music.{MUSIC_CHAIN[key]}", {})
+                if not lp.get("loop"):
+                    report.error(f"music {key}: its chained loop file music.{MUSIC_CHAIN[key]} is not a loop in the manifest")
+                rows.append(f"{key} (then {MUSIC_CHAIN[key]} looped)")
+            else:
+                rows.append(f"{key} ({'loops' if c['loop'] else 'plays once, ' + str(ent.get('seconds')) + ' s'})")
+    report.note("music cues in the story: " + ", ".join(rows))
+
+
+def check_relocations(ctx, out, report):
+    """Every teleport of the player in a `do` or `after` step: made through `Scene.move_player` (dismount, forceload, teleport, WAIT until he is
+    there) or not.  A scene that begins in another set than the player's last one (2000 blocks, unloaded chunks, perhaps still on a vehicle seat)
+    must use it: for scenes 4 and up an unguarded teleport into a set other than the scene's own is an error; for the scenes that other hands are
+    editing (1 to 3) the call sites that should adopt it are listed."""
+    import lead
+    from core import P
+    pat = re.compile(re.escape(f"tp {P()} ") + r"(-?[\d.]+) (-?[\d.]+) (-?[\d.]+)")
+    adopt, guarded_n = [], 0
+    for scene in ctx.scenes:
+        tps = []                                            # (step, set, guarded)
+        for st in scene.steps:
+            if st.kind == "after":
+                cmds = out.files.get(f"data/angel/function/{st.path}.mcfunction", "").splitlines()
+            elif st.kind == "do":
+                cmds = st.cmds
+            else:
+                continue
+            for c in cmds:
+                m = pat.search(c)
+                if m:
+                    tps.append((st, lead._set_of(float(m.group(1))), bool(getattr(st, "guarded", False)), (m.group(1), m.group(2), m.group(3))))
+        guarded_n += sum(1 for t in tps if t[2])
+        home = next((t[1] for t in tps if t[2]), None)
+        for st, setname, g, xyz in tps:
+            if g:
+                continue
+            if home is None:
+                home = setname                              # the first teleport of a scene without a guarded move defines where it is
+                if scene.n >= 4:
+                    report.error(f"scene {scene.n} step {st.index}: the scene's first teleport ({setname}) is not made through Scene.move_player")
+                else:
+                    adopt.append(f"s{scene.n:02d} step {st.index} -> {setname} {', '.join(xyz)} ({st.note[:50]})")
+            elif setname != home:
+                if scene.n >= 4:
+                    report.error(f"scene {scene.n} step {st.index}: unguarded teleport from the {home} set into {setname} ({st.note[:50]})")
+                else:
+                    adopt.append(f"s{scene.n:02d} step {st.index} -> {setname} {', '.join(xyz)} ({st.note[:50]})")
+    report.note(f"player moves: {guarded_n} teleports go through Scene.move_player (dismount, forceload, teleport, wait until he is within 4 blocks, "
+                f"re-teleport every second); " + ("scenes 1 to 3 call sites that should adopt it: " + "; ".join(adopt) if adopt else "no unguarded cross-set teleport left"))
+
+
+def check_encoding(ctx, out, report):
+    """Everything generated is plain ASCII (non-ASCII text is written as \\uXXXX), and no story source file holds mojibake (a UTF-8 character that was
+    once read as Latin-1, like the bullet that made the speak prompt show boxes)."""
+    import os
+    bad = [rel for rel, text in out.files.items() if not text.isascii()]
+    for rel in bad[:5]:
+        report.error(f"generated file {rel} contains non-ASCII characters")
+    here = os.path.dirname(os.path.abspath(__file__))
+    # a UTF-8 lead byte read as Latin-1 / cp1252 (U+00C2, U+00C3, U+00E2) followed by a continuation byte read the same way, or U+FFFD; the pattern is
+    # built from code points so that this file itself holds no such text
+    lead_ = "".join(chr(c) for c in (0xC2, 0xC3, 0xE2))
+    cont_ = "".join(chr(c) for c in list(range(0x80, 0xC0)) + [0x152, 0x153, 0x160, 0x161, 0x178, 0x17D, 0x17E, 0x192, 0x2C6, 0x2DC] + list(range(0x2013, 0x203B)) + [0x20AC, 0x2122])
+    pat = re.compile(f"[{lead_}][{cont_}]|{chr(0xFFFD)}")
+    n_src = 0
+    for d, _, fs in os.walk(here):
+        if "__pycache__" in d:
+            continue
+        for f in fs:
+            if not f.endswith((".py", ".md")):
+                continue
+            n_src += 1
+            p = os.path.join(d, f)
+            try:
+                text = open(p, encoding="utf-8").read()
+            except UnicodeDecodeError as e:
+                report.error(f"{p}: not valid UTF-8 ({e})")
+                continue
+            for ln, line in enumerate(text.splitlines(), 1):
+                if pat.search(line):
+                    report.error(f"{os.path.relpath(p, here)}:{ln}: mojibake: {line.strip()[:80]!r}")
+    report.note(f"encoding: all {len(out.files)} generated files are ASCII; {n_src} story source files are valid UTF-8 with no mojibake")
+
+
+def check_prompt(out, report):
+    """The speak prompt's text, as it will be stored on the entity: the speech-bubble glyph (U+1F4AC, in the default font's Unifont layer) is an
+    escape, and the stored string decodes to it."""
+    import json
+    txt = out.files.get("data/angel/function/story/prompt/v0/spawn.mcfunction", "")
+    if "\\ud83d\\udcac" not in txt or "Your turn" not in txt:
+        report.error("the speak prompt does not hold the speech-bubble escape and 'Your turn'")
+        return
+    m = re.search(r'text:(\[\{.*?\}\]),transformation', txt)
+    if m:
+        comp = json.loads(m.group(1))
+        if comp[0]["text"] != "\U0001F4AC ":
+            report.error(f"the prompt's first component decodes to {comp[0]['text']!r}")
+            return
+    report.note("prompt: 'speech balloon (U+1F4AC) Your turn' + the small second line, stored as \\ud83d\\udcac escapes (ASCII)")
 
 
 def comfort(route):
@@ -486,7 +800,10 @@ def check_routes(ctx, report, step=2):
             else:
                 gy = probe.ground_under(x, z, yaw, ref_y=y)
                 gy = [v for v in gy if v is not None]
-                dy = y - (sum(gy) / len(gy)) if gy else 99
+                # a route may declare that its model rides above the ground on purpose (a car on a wagon's deck): Route.deck_lift[i] is the
+                # planned height of the deck above the set's ground at frame i; only what is left over counts as 'off the ground'
+                lift = getattr(r, "deck_lift", None)
+                dy = y - (lift[i] if lift else 0.0) - (sum(gy) / len(gy)) if gy else 99
                 hits = probe.box_hits(x, y, z, yaw, y_from=0.95, pitch=pitch)
             sn = probe.surface_name(x, z, y if not is_train else y - 1.0)
             sn = (sn or "none").replace("minecraft:", "").split("[")[0]
@@ -546,6 +863,12 @@ def main_check(ctx, out):
     check_descent(ctx, report)
     check_cards(ctx, out, report)
     waits_without_nudge(ctx, report)
+    check_nudge_cadence(ctx, out, report)
+    check_hush(ctx, out, report)
+    check_music(ctx, out, report)
+    check_encoding(ctx, out, report)
+    check_prompt(out, report)
+    check_relocations(ctx, out, report)
     check_commands(out, report)
     for l in check_routes(ctx, report):
         print(l)

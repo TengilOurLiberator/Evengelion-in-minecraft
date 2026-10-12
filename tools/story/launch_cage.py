@@ -2,12 +2,11 @@
 
 The lists in sets/hq.py (CAGE_LIGHTS, BOOTH_LIGHTS, EYES_LEFT, EYES_RIGHT) are in the set's local coordinates; the set stands at x 3000.
 """
-from context import cast_look, cast_mount, cast_remove, cast_summon, tp_player
+from context import cast_look, cast_mount, cast_remove, cast_scale, cast_summon, tp_player
 from core import NS, OBJ, P, PA, TAG, fn, num, sset
 import launch_geo
 
-EYE_ON = "minecraft:ochre_froglight"
-EYE_OFF = "minecraft:black_concrete"
+GENDO_SCALE = 2.0                 # the commander at the front edge of the booth: twice life size (scene 5 does the same)
 DIRTY_MINE = "#l.cage"          # 1 once scenes 6 / 7 have switched the cage lights or the eyes; the restore function puts them back
 DIRTY_ENGINE = "#hq.dirty"      # the engine's flag of the same meaning (hq_cage.py): its reset_all runs on stop when this is 1
 CAGE_CHUNKS = [(x, z) for x in range(3056, 3136, 16) for z in range(16, 144, 16)]        # the cage: x 3064..3128, z 24..137
@@ -28,12 +27,17 @@ def register(ctx):
     # every lamp (the booth's and the lights on the giant's face included), then the eyes
     ctx.extra_functions["story/launch/cage_lights_on"] = dirty + _setblocks(o, mod.CAGE_LIGHTS)
     eyes = [(x, y, z) for (x, y, z) in mod.EYES_LEFT + mod.EYES_RIGHT]
-    ctx.extra_functions["story/launch/eyes_on"] = dirty + _setblocks(o, [(x, y, z, EYE_ON) for (x, y, z) in eyes])
-    ctx.extra_functions["story/launch/eyes_off"] = _setblocks(o, [(x, y, z, EYE_OFF) for (x, y, z) in eyes])
+    ns = lambda b: b if ":" in b.split("[")[0] else "minecraft:" + b
+    EYE_ON, EYE_OFF = ns(mod.EYE_ON), ns(mod.EYE_OFF)        # the set decides what a lit and a dark eye are
+    # the eyes' own glow (hidden light blocks on the brow and the bridge end, built as air: hq.EYE_GLOW) is switched with the eyes
+    glow = [(x, y, z, b if ":" in b.split("[")[0] else "minecraft:" + b) for (x, y, z, b) in getattr(mod, "EYE_GLOW", [])]
+    glow_off = [(x, y, z, (probe.name(o[0] + x, y, z) or "minecraft:air")) for (x, y, z, b) in glow]
+    ctx.extra_functions["story/launch/eyes_on"] = dirty + _setblocks(o, [(x, y, z, EYE_ON) for (x, y, z) in eyes]) + _setblocks(o, glow)
+    ctx.extra_functions["story/launch/eyes_off"] = _setblocks(o, [(x, y, z, EYE_OFF) for (x, y, z) in eyes]) + _setblocks(o, glow_off)
     # the set as it was built: what the voxel build holds at each lamp (a dead lamp panel, or air for a hidden light block)
     off = [(x, y, z, (probe.name(o[0] + x, y, z) or "minecraft:air")) for (x, y, z, b) in mod.CAGE_LIGHTS]
     ctx.extra_functions["story/launch/cage_off"] = ([sset(DIRTY_MINE, 0)] + _setblocks(o, off)
-                                                    + _setblocks(o, [(x, y, z, EYE_OFF) for (x, y, z) in eyes]))
+                                                    + _setblocks(o, [(x, y, z, EYE_OFF) for (x, y, z) in eyes]) + _setblocks(o, glow_off))
     for (cx, cz) in CAGE_CHUNKS:
         ctx.forceloads.add((cx, cz))           # halt removes them again
 
@@ -59,7 +63,7 @@ def cast_for_cockpit(ctx):
             "function angel:cast/gurney_remove",
             cast_summon("misato", cm["x"], cm["y"], cm["z"], cm["yaw"]),
             cast_summon("ritsuko", sm["x"], sm["y"], sm["z"], sm["yaw"]),
-            cast_summon("gendo", bo["x"], bo["y"], bo["z"], bo["yaw"]),
+            cast_summon("gendo", bo["x"], bo["y"], bo["z"], bo["yaw"]), cast_scale("gendo", GENDO_SCALE),
             cast_look("misato", "player"), cast_look("ritsuko", "player"), cast_look("gendo", "player")]
 
 
@@ -71,7 +75,7 @@ def cast_for_ending(ctx):
             "function angel:cast/gurney_remove",
             cast_summon("misato", cm["x"], cm["y"], cm["z"], cm["yaw"]),
             cast_summon("ritsuko", sm["x"], sm["y"], sm["z"], sm["yaw"]),
-            cast_summon("gendo", bo["x"], bo["y"], bo["z"], bo["yaw"]),
+            cast_summon("gendo", bo["x"], bo["y"], bo["z"], bo["yaw"]), cast_scale("gendo", GENDO_SCALE),
             # the gurney, then Rei on it: gurney, summon, mount, lie (tools/cast/README.md)
             f"execute positioned {num(gm['x'])} {num(gm['y'])} {num(gm['z'])} rotated {num(gm['yaw'], 2)} 0 run function angel:cast/gurney {{}}",
             cast_summon("rei", gm["x"], gm["y"] + 0.82, gm["z"], gm["yaw"]),

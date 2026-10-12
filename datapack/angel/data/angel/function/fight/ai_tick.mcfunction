@@ -13,3 +13,5 @@ execute if score #st angel.fight matches 4 run function angel:fight/st_thrust_re
 execute if score #st angel.fight matches 5 run function angel:fight/st_stagger
 execute if score #st angel.fight matches 6 run function angel:fight/st_wrap_in
 execute if score #st angel.fight matches 7 run function angel:fight/st_wrapped
+execute if score #st angel.fight matches 9 run function angel:fight/st_bo_stagger
+execute if score #st angel.fight matches 10 run function angel:fight/st_bo_retreat

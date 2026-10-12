@@ -1,13 +1,4 @@
 scoreboard players set #force angel.story 0
-forceload add 3008 -16
-forceload add 3008 0
-forceload add 3008 16
-forceload add 3024 -16
-forceload add 3024 0
-forceload add 3024 16
-forceload add 3040 -16
-forceload add 3040 0
-forceload add 3040 16
 forceload add 2992 -16
 forceload add 2992 0
 forceload add 2992 16

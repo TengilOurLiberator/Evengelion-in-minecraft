@@ -1,4 +1,7 @@
 scoreboard players set #force angel.story 0
-schedule function angel:story/s6/f_a6 30t
-scoreboard players set #step angel.story 37
-function angel:story/s6/e37
+scoreboard players set #wait angel.story 1
+scoreboard players set #speaker angel.story 1
+scoreboard players set #pk angel.story 0
+scoreboard players set #wt angel.story 120
+scoreboard players set #nagt angel.story 0
+scoreboard players set #nagi angel.story 0

@@ -1,4 +1,6 @@
 scoreboard players set #force angel.story 0
-schedule function angel:story/s1/f_a10 86t
+function angel:story/card/off_text
+effect give @a minecraft:blindness 2 0 true
+function angel:story/card/off
 scoreboard players set #step angel.story 50
 function angel:story/s1/e50

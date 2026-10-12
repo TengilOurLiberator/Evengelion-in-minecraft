@@ -137,6 +137,13 @@ class Cage:
         self.eyes_off = {self.A(*c): self.bname(*c) for c in cells}
         for c, b in self.eyes_off.items():
             assert b == hq.EYE_OFF, f"eye cell {c} is {b}, not {hq.EYE_OFF}"
+        # the eyes' own glow (hidden light blocks over the brow and the bridge end, built as air) goes on and off WITH the eyes
+        glow = list(getattr(hq, "EYE_GLOW", []))
+        self.glow_cells = len(glow)
+        for (x, y, z, b) in glow:
+            a = self.A(x, y, z)
+            self.eyes_on[a] = b if ":" in b.split("[")[0] else "minecraft:" + b
+            self.eyes_off[a] = self.bname(x, y, z)
 
     # ------------------------------------------------------------------ doors
     def _doors(self):
@@ -377,19 +384,21 @@ class Cage:
         self.reg("rig_clear", ["kill @e[tag=angel.rigdrop]"])
         # ready-made bundles for the impacts
         # the chains of the hanging rigs rattle (their blocks cannot swing; the sound and the dust shaken loose stand for it)
-        rattle = []
-        for (cx_, cz_) in ((88, 78), (104, 90), (88, 102), (104, 114)):
-            for ev in ("minecraft:block.chain.hit", "minecraft:block.iron_chain.hit"):
-                rattle.append(sfx(ev, at=(cx_ + ox + 0.5, 96.0, cz_ + 0.5), vol=2.5, pitch=0.6, minvol=0.4))
-        self.reg("rattle", rattle)
+        # (the vanilla `block.iron_chain.hit` does not exist in 26.3 and `block.chain.hit` is a stand-in: the library has the real thing,
+        # sfx.chains (5 s of heavy chains swinging) and sfx.lake_ring (7 s of the coolant ringing, from the lake below the bridge))
+        self.reg("rattle", [sfx("sfx.chains", at=(88 + ox + 0.5, 96.0, 90.5), vol=2.6, pitch=0.9, minvol=0.5),
+                            sfx("sfx.chains", at=(104 + ox + 0.5, 96.0, 102.5), vol=2.0, pitch=0.8, minvol=0.4)])
+        self.reg("lake_ring_near", [sfx("sfx.lake_ring", at=(96.5 + ox, 38.0, 56.0), vol=3.0, pitch=1.0, minvol=0.6)])
         self.reg("impact1", [
             sfx("sfx.impact_above", at=(96.5 + ox, 100.0, 72.5), vol=4.0, pitch=0.85, minvol=0.9),
-            fn("story/hq/rattle"), self.sched("rattle", 7),
+            fn("story/hq/rattle"), self.sched("rattle", 7), self.sched("lake_ring_near", 6),
             sfx("sfx.lights_flicker", vol=0.8), sfx("sfx.dust_fall", vol=0.7), fn("story/hq/dust"), fn("story/hq/rings"),
             f"execute at {P()} run particle minecraft:falling_dust{{block_state:\"minecraft:stone\"}} ~ ~4 ~ 3 1.5 3 0.0 24 force"])
         self.flicker("far", [2, 5], [(0, "off"), (2, "on"), (5, "off"), (7, "on")])
+        self.reg("lake_ring_far", [sfx("sfx.lake_ring", at=(96.5 + ox, 38.0, 40.5), vol=1.4, pitch=0.9, minvol=0.35)])
         self.reg("impact_far", [
             sfx("sfx.impact_above", at=(96.5 + ox, 110.0, 40.5), vol=2.2, pitch=0.7, minvol=0.7),
+            sfx("sfx.chains", at=(104 + ox + 0.5, 96.0, 90.5), vol=1.2, pitch=0.8, minvol=0.3), self.sched("lake_ring_far", 8),
             fn("story/hq/fl_far"), fn("story/hq/dust_c"), self.sched("dust_c", 10)])
 
 

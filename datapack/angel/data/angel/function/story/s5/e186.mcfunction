@@ -1,7 +1,8 @@
 scoreboard players set #force angel.story 0
-function angel:story/snd/stop_music
-function angel:story/snd/stop_loop
-function angel:story/snd/stop_bed
-execute if score #f.alarm angel.story matches 1 run execute at @a[limit=1] run playsound angel:sfx.alarm_cut master @a ~ ~ ~ 1.0 1.0 1.0
-scoreboard players set #step angel.story 187
-function angel:story/s5/e187
+scoreboard players set #wait angel.story 2
+scoreboard players set #speaker angel.story 4
+scoreboard players set #pk angel.story 3
+scoreboard players set #wt angel.story -1
+execute if score #timeout_s angel.story matches 1.. run function angel:story/wt_global
+scoreboard players set #nagt angel.story 0
+scoreboard players set #nagi angel.story 0

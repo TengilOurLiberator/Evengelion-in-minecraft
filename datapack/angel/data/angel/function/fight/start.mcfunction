@@ -8,7 +8,7 @@ tag @e[tag=angel.pending] remove angel.pending
 execute as @e[tag=angel.giant] run function angel:fight/become_giant
 scoreboard players add #attempt angel.fight 1
 scoreboard players set #gh angel.fight 100
-scoreboard players set #ch angel.fight 40
+scoreboard players set #ch angel.fight 60
 scoreboard players set #phase angel.fight 0
 scoreboard players set #st angel.fight 0
 scoreboard players set #t angel.fight 0
@@ -26,10 +26,19 @@ scoreboard players set #gap angel.fight 0
 scoreboard players set #bt angel.fight 40
 scoreboard players set #locked angel.fight 0
 scoreboard players set #sl angel.fight 30
-scoreboard players set #wt angel.fight 280
+scoreboard players set #wt angel.fight 400
 scoreboard players set #dmg angel.fight 0
 scoreboard players set #blocked1 angel.fight 0
 scoreboard players set #destroy angel.fight 1
+scoreboard players set #bo angel.fight 0
+scoreboard players set #bar angel.fight 0
+scoreboard players set #barp angel.fight 0
+scoreboard players set #hold angel.fight 0
+scoreboard players set #hold_t angel.fight 0
+scoreboard players set #hb angel.fight 0
+scoreboard players set #blockcd angel.fight 0
+scoreboard players set #sparkcd angel.fight 0
+scoreboard players set #wallt angel.fight 0
 scoreboard players reset * angel.barks
 data modify storage angel:fight q set value []
 data modify storage angel:fight played set value []

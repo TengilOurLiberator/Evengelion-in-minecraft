@@ -186,9 +186,13 @@ class Session:
             try:
                 for s in shot.get("steps", []):
                     run.run(s, where)
+                if shot.get("nopic"):                      # additive: a shot that only runs its steps (clean-up between pictures)
+                    continue
                 rec = self.shoot(name, out, shot.get("settle", 4), shot.get("max", 25))
                 rec["steps"] = shot.get("steps", [])
                 self.manifest.append(rec)
+                for s in shot.get("after", []):            # additive: steps run after the picture (e.g. take a card down)
+                    run.run(s, where)
             except Exception as e:
                 if isinstance(e, (RuntimeError, ConnectionError)) and self.client.poll() is not None:
                     raise

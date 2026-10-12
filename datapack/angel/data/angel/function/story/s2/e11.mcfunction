@@ -1,9 +1,4 @@
 scoreboard players set #force angel.story 0
-scoreboard players set #mv.route angel.story 2
-scoreboard players set #mv.n angel.story 0
-scoreboard players set #mv.limit angel.story 551
-scoreboard players set #mv.on angel.story 1
-function angel:story/m/to_ridge/root
-function angel:story/snd/music_road/start
+function angel:story/snd/bed_car_interior/ramp_in20/start
 scoreboard players set #step angel.story 12
 function angel:story/s2/e12

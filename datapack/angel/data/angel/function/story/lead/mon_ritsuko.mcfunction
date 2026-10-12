@@ -3,4 +3,4 @@ execute if score #f.lp_ritsuko angel.story matches 1 as @e[type=minecraft:manneq
 scoreboard players set #c9 angel.story 9
 scoreboard players operation #lm angel.story = #tick angel.story
 scoreboard players operation #lm angel.story %= #c9 angel.story
-execute if score #lm angel.story matches 0 if score #f.lp_ritsuko angel.story matches 0 if score #arrived_ritsuko angel.cast matches 0 as @e[type=minecraft:mannequin,tag=angel.ritsuko,limit=1] at @s run playsound minecraft:block.deepslate_tiles.step master @a ~ ~ ~ 0.6 1.15 0.15
+execute if score #lm angel.story matches 0 unless score #hush angel.story matches 1 if score #f.lp_ritsuko angel.story matches 0 if score #arrived_ritsuko angel.cast matches 0 as @e[type=minecraft:mannequin,tag=angel.ritsuko,limit=1] at @s run playsound minecraft:block.deepslate_tiles.step master @a ~ ~ ~ 0.6 1.15 0.15

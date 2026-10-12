@@ -1,2 +1,2 @@
 scoreboard players set #force angel.story 0
-function angel:say/6_02
+function angel:say/6_01

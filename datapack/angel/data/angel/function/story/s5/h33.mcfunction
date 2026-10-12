@@ -1,1 +1,1 @@
-title @a actionbar {"text": "Walk to the end of the bridge.", "color": "gray"}
+title @a actionbar {"text": "Ritsuko is waiting for you.", "color": "gray"}

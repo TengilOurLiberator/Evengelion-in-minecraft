@@ -26,6 +26,11 @@ execute unless score #c20 angel.story matches -2147483648..2147483647 run scoreb
 execute unless score #looking angel.story matches -2147483648..2147483647 run scoreboard players set #looking angel.story 0
 execute unless score #pk angel.story matches -2147483648..2147483647 run scoreboard players set #pk angel.story 0
 execute unless score #line angel.story matches -2147483648..2147483647 run scoreboard players set #line angel.story 0
+execute unless score #rd angel.story matches -2147483648..2147483647 run scoreboard players set #rd angel.story 0
+execute unless score #placed angel.story matches -2147483648..2147483647 run scoreboard players set #placed angel.story 0
+execute unless score #nagt angel.story matches -2147483648..2147483647 run scoreboard players set #nagt angel.story 0
+execute unless score #nagi angel.story matches -2147483648..2147483647 run scoreboard players set #nagi angel.story 0
+execute unless score #hush angel.story matches -2147483648..2147483647 run scoreboard players set #hush angel.story 0
 execute unless score #present_misato angel.story matches -2147483648..2147483647 run scoreboard players set #present_misato angel.story 0
 execute unless score #present_ritsuko angel.story matches -2147483648..2147483647 run scoreboard players set #present_ritsuko angel.story 0
 execute unless score #present_gendo angel.story matches -2147483648..2147483647 run scoreboard players set #present_gendo angel.story 0

@@ -1,42 +1,107 @@
-setblock 3065 43 41 minecraft:gray_concrete
-setblock 3127 43 41 minecraft:gray_concrete
+setblock 3064 40 50 minecraft:air
+setblock 3128 40 83 minecraft:air
+setblock 3064 40 91 minecraft:air
+setblock 3128 41 75 minecraft:air
+setblock 3064 41 82 minecraft:air
+setblock 3128 42 66 minecraft:air
 setblock 3065 43 56 minecraft:gray_concrete
 setblock 3127 43 56 minecraft:gray_concrete
+setblock 3127 43 57 minecraft:air
+setblock 3128 43 98 minecraft:air
+setblock 3128 44 47 minecraft:air
+setblock 3066 44 55 minecraft:air
+setblock 3128 44 89 minecraft:air
+setblock 3064 44 97 minecraft:air
+setblock 3065 45 46 minecraft:air
+setblock 3064 45 87 minecraft:air
+setblock 3128 48 53 minecraft:air
+setblock 3128 48 94 minecraft:air
+setblock 3128 49 44 minecraft:air
+setblock 3064 49 51 minecraft:air
+setblock 3128 49 85 minecraft:air
+setblock 3064 49 91 minecraft:air
+setblock 3128 52 58 minecraft:air
+setblock 3128 52 99 minecraft:air
+setblock 3128 53 50 minecraft:air
+setblock 3064 53 56 minecraft:air
+setblock 3128 53 90 minecraft:air
+setblock 3064 53 97 minecraft:air
+setblock 3064 54 47 minecraft:air
+setblock 3064 54 88 minecraft:air
+setblock 3096 55 109 minecraft:air
+setblock 3096 55 113 minecraft:air
+setblock 3128 57 54 minecraft:air
+setblock 3128 57 95 minecraft:air
 setblock 3093 57 109 minecraft:gray_concrete
 setblock 3099 57 109 minecraft:gray_concrete
-setblock 3093 57 116 minecraft:gray_concrete
-setblock 3099 57 116 minecraft:gray_concrete
-setblock 3096 58 110 minecraft:air
-setblock 3096 58 116 minecraft:air
+setblock 3128 58 45 minecraft:air
+setblock 3064 58 52 minecraft:air
+setblock 3128 58 86 minecraft:air
+setblock 3064 58 94 minecraft:air
+setblock 3128 61 59 minecraft:air
+setblock 3128 61 100 minecraft:air
+setblock 3064 63 47 minecraft:air
+setblock 3128 63 50 minecraft:air
+setblock 3064 63 57 minecraft:air
+setblock 3064 63 89 minecraft:air
+setblock 3128 63 91 minecraft:air
+setblock 3064 63 98 minecraft:air
 setblock 3066 65 44 minecraft:gray_concrete
 setblock 3126 65 44 minecraft:gray_concrete
 setblock 3066 65 56 minecraft:gray_concrete
 setblock 3126 65 56 minecraft:gray_concrete
 setblock 3066 65 92 minecraft:gray_concrete
 setblock 3126 65 92 minecraft:gray_concrete
-setblock 3066 65 104 minecraft:gray_concrete
-setblock 3126 65 104 minecraft:gray_concrete
+setblock 3128 66 55 minecraft:air
+setblock 3064 66 62 minecraft:air
+setblock 3127 66 96 minecraft:air
+setblock 3128 67 46 minecraft:air
+setblock 3064 67 53 minecraft:air
+setblock 3128 67 87 minecraft:air
+setblock 3064 67 94 minecraft:air
+setblock 3128 68 78 minecraft:air
+setblock 3064 68 85 minecraft:air
+setblock 3128 69 69 minecraft:air
+setblock 3064 69 76 minecraft:air
+setblock 3128 70 60 minecraft:air
+setblock 3064 70 67 minecraft:air
+setblock 3128 71 51 minecraft:air
+setblock 3064 71 58 minecraft:air
+setblock 3128 71 91 minecraft:air
+setblock 3064 72 50 minecraft:air
+setblock 3128 72 83 minecraft:air
+setblock 3064 72 90 minecraft:air
+setblock 3128 73 74 minecraft:air
+setblock 3064 73 81 minecraft:air
+fill 3082 74 39 3083 74 39 minecraft:air
+setblock 3128 74 65 minecraft:air
+setblock 3064 74 72 minecraft:air
 fill 3082 75 40 3083 75 40 minecraft:gray_concrete
 fill 3103 75 40 3104 75 40 minecraft:gray_concrete
 fill 3082 75 41 3083 75 41 minecraft:gray_concrete
 fill 3103 75 41 3104 75 41 minecraft:gray_concrete
-setblock 3066 79 44 minecraft:gray_concrete
-setblock 3126 79 44 minecraft:gray_concrete
+setblock 3128 75 56 minecraft:air
+setblock 3064 75 63 minecraft:air
+setblock 3064 77 54 minecraft:air
+setblock 3128 77 79 minecraft:air
+setblock 3064 77 86 minecraft:air
+setblock 3128 77 88 minecraft:air
+setblock 3128 78 69 minecraft:air
+setblock 3064 78 77 minecraft:air
 setblock 3066 79 56 minecraft:gray_concrete
 setblock 3126 79 56 minecraft:gray_concrete
+setblock 3128 79 61 minecraft:air
+setblock 3064 79 68 minecraft:air
 setblock 3066 79 68 minecraft:gray_concrete
 setblock 3126 79 68 minecraft:gray_concrete
 setblock 3066 79 80 minecraft:gray_concrete
 setblock 3126 79 80 minecraft:gray_concrete
-setblock 3066 79 92 minecraft:gray_concrete
-setblock 3126 79 92 minecraft:gray_concrete
-setblock 3087 85 85 minecraft:gray_concrete
+setblock 3064 80 59 minecraft:air
+setblock 3128 81 84 minecraft:air
+setblock 3128 82 75 minecraft:air
+setblock 3128 83 66 minecraft:air
+setblock 3064 83 73 minecraft:air
 fill 3087 85 96 3088 85 96 minecraft:gray_concrete
 fill 3104 85 96 3105 85 96 minecraft:gray_concrete
 fill 3087 85 97 3088 85 97 minecraft:gray_concrete
 fill 3104 85 97 3105 85 97 minecraft:gray_concrete
-fill 3087 85 108 3088 85 108 minecraft:gray_concrete
-fill 3104 85 108 3105 85 108 minecraft:gray_concrete
-fill 3087 85 109 3088 85 109 minecraft:gray_concrete
-fill 3104 85 109 3105 85 109 minecraft:gray_concrete
-setblock 3126 93 68 minecraft:gray_concrete

@@ -1,9 +1,17 @@
 # stop everything the story started: timers, entities, cast, monster, forceloads, scene flags
-schedule clear angel:story/fx/birds_fly
 schedule clear angel:story/fx/birds_kill
 schedule clear angel:story/fx/cloud_1
 schedule clear angel:story/fx/cloud_2
-schedule clear angel:story/fx/impact
+schedule clear angel:story/fx/fire1b
+schedule clear angel:story/fx/fire1c
+schedule clear angel:story/fx/fire2b
+schedule clear angel:story/fx/fire2c
+schedule clear angel:story/fx/fire3b
+schedule clear angel:story/fx/fire3c
+schedule clear angel:story/fx/fire4b
+schedule clear angel:story/fx/fire4c
+schedule clear angel:story/fx/fire5b
+schedule clear angel:story/fx/fire5c
 schedule clear angel:story/fx/jolt2
 schedule clear angel:story/hq/door_close_1
 schedule clear angel:story/hq/door_close_2
@@ -28,6 +36,8 @@ schedule clear angel:story/hq/fl_hit2_back_2
 schedule clear angel:story/hq/fl_hit2_back_3
 schedule clear angel:story/hq/fl_hit2_back_4
 schedule clear angel:story/hq/impact_far
+schedule clear angel:story/hq/lake_ring_far
+schedule clear angel:story/hq/lake_ring_near
 schedule clear angel:story/hq/rattle
 schedule clear angel:story/hq/rig_break
 schedule clear angel:story/hq/rig_break_down
@@ -40,12 +50,66 @@ schedule clear angel:story/hq/ring_2
 schedule clear angel:story/hq/ring_3
 schedule clear angel:story/hq/ring_4
 schedule clear angel:story/hq/side_open_1
+schedule clear angel:story/launch/fp0
+schedule clear angel:story/launch/fp1
+schedule clear angel:story/launch/fp10
+schedule clear angel:story/launch/fp11
+schedule clear angel:story/launch/fp12
+schedule clear angel:story/launch/fp13
+schedule clear angel:story/launch/fp14
+schedule clear angel:story/launch/fp15
+schedule clear angel:story/launch/fp16
+schedule clear angel:story/launch/fp17
+schedule clear angel:story/launch/fp18
+schedule clear angel:story/launch/fp19
+schedule clear angel:story/launch/fp2
+schedule clear angel:story/launch/fp20
+schedule clear angel:story/launch/fp21
+schedule clear angel:story/launch/fp22
+schedule clear angel:story/launch/fp23
+schedule clear angel:story/launch/fp24
+schedule clear angel:story/launch/fp25
+schedule clear angel:story/launch/fp26
+schedule clear angel:story/launch/fp27
+schedule clear angel:story/launch/fp28
+schedule clear angel:story/launch/fp29
+schedule clear angel:story/launch/fp3
+schedule clear angel:story/launch/fp30
+schedule clear angel:story/launch/fp31
+schedule clear angel:story/launch/fp32
+schedule clear angel:story/launch/fp33
+schedule clear angel:story/launch/fp34
+schedule clear angel:story/launch/fp35
+schedule clear angel:story/launch/fp36
+schedule clear angel:story/launch/fp37
+schedule clear angel:story/launch/fp38
+schedule clear angel:story/launch/fp39
+schedule clear angel:story/launch/fp4
+schedule clear angel:story/launch/fp40
+schedule clear angel:story/launch/fp41
+schedule clear angel:story/launch/fp42
+schedule clear angel:story/launch/fp43
+schedule clear angel:story/launch/fp44
+schedule clear angel:story/launch/fp45
+schedule clear angel:story/launch/fp46
+schedule clear angel:story/launch/fp47
+schedule clear angel:story/launch/fp48
+schedule clear angel:story/launch/fp49
+schedule clear angel:story/launch/fp5
+schedule clear angel:story/launch/fp50
+schedule clear angel:story/launch/fp51
+schedule clear angel:story/launch/fp52
+schedule clear angel:story/launch/fp6
+schedule clear angel:story/launch/fp7
+schedule clear angel:story/launch/fp8
+schedule clear angel:story/launch/fp9
 schedule clear angel:story/s1/f_a1
 schedule clear angel:story/s1/f_a10
 schedule clear angel:story/s1/f_a11
 schedule clear angel:story/s1/f_a12
 schedule clear angel:story/s1/f_a13
 schedule clear angel:story/s1/f_a14
+schedule clear angel:story/s1/f_a15
 schedule clear angel:story/s1/f_a2
 schedule clear angel:story/s1/f_a3
 schedule clear angel:story/s1/f_a4
@@ -63,7 +127,11 @@ schedule clear angel:story/s2/f_a14
 schedule clear angel:story/s2/f_a15
 schedule clear angel:story/s2/f_a16
 schedule clear angel:story/s2/f_a17
+schedule clear angel:story/s2/f_a18
+schedule clear angel:story/s2/f_a19
 schedule clear angel:story/s2/f_a2
+schedule clear angel:story/s2/f_a20
+schedule clear angel:story/s2/f_a21
 schedule clear angel:story/s2/f_a3
 schedule clear angel:story/s2/f_a4
 schedule clear angel:story/s2/f_a5
@@ -73,13 +141,42 @@ schedule clear angel:story/s2/f_a8
 schedule clear angel:story/s2/f_a9
 schedule clear angel:story/s2/f_cleanup_air
 schedule clear angel:story/s3/f_a1
+schedule clear angel:story/s3/f_a10
+schedule clear angel:story/s3/f_a11
+schedule clear angel:story/s3/f_a12
+schedule clear angel:story/s3/f_a13
+schedule clear angel:story/s3/f_a14
+schedule clear angel:story/s3/f_a15
+schedule clear angel:story/s3/f_a16
+schedule clear angel:story/s3/f_a17
+schedule clear angel:story/s3/f_a18
+schedule clear angel:story/s3/f_a19
 schedule clear angel:story/s3/f_a2
+schedule clear angel:story/s3/f_a20
+schedule clear angel:story/s3/f_a21
+schedule clear angel:story/s3/f_a22
+schedule clear angel:story/s3/f_a23
+schedule clear angel:story/s3/f_a24
+schedule clear angel:story/s3/f_a25
+schedule clear angel:story/s3/f_a26
+schedule clear angel:story/s3/f_a27
+schedule clear angel:story/s3/f_a28
+schedule clear angel:story/s3/f_a29
 schedule clear angel:story/s3/f_a3
+schedule clear angel:story/s3/f_a30
+schedule clear angel:story/s3/f_a31
+schedule clear angel:story/s3/f_a32
+schedule clear angel:story/s3/f_a33
+schedule clear angel:story/s3/f_a34
+schedule clear angel:story/s3/f_a35
+schedule clear angel:story/s3/f_a36
+schedule clear angel:story/s3/f_a37
 schedule clear angel:story/s3/f_a4
 schedule clear angel:story/s3/f_a5
 schedule clear angel:story/s3/f_a6
 schedule clear angel:story/s3/f_a7
 schedule clear angel:story/s3/f_a8
+schedule clear angel:story/s3/f_a9
 schedule clear angel:story/s4/f_a1
 schedule clear angel:story/s4/f_a2
 schedule clear angel:story/s4/f_a3
@@ -88,7 +185,6 @@ schedule clear angel:story/s4/f_a5
 schedule clear angel:story/s4/f_a6
 schedule clear angel:story/s4/f_a7
 schedule clear angel:story/s4/f_a8
-schedule clear angel:story/s4/f_a9
 schedule clear angel:story/s5/f_a1
 schedule clear angel:story/s5/f_a10
 schedule clear angel:story/s5/f_a11
@@ -144,7 +240,6 @@ schedule clear angel:story/s7/f_a2
 schedule clear angel:story/s7/f_a3
 schedule clear angel:story/s7/f_a4
 schedule clear angel:story/s7/f_a5
-schedule clear angel:story/s7/f_a6
 kill @e[tag=angel.story]
 function angel:cast/remove {id:"misato"}
 function angel:cast/remove {id:"ritsuko"}
@@ -157,6 +252,15 @@ function angel:cast/gurney_remove
 function angel:story/snd/stop_all
 function angel:story/launch/restore
 function angel:angel/remove
+forceload remove 16 112
+forceload remove 16 128
+forceload remove 16 144
+forceload remove 32 112
+forceload remove 32 128
+forceload remove 32 144
+forceload remove 48 112
+forceload remove 48 128
+forceload remove 48 144
 forceload remove 80 112
 forceload remove 80 128
 forceload remove 80 144
@@ -202,6 +306,15 @@ forceload remove 2016 112
 forceload remove 2032 80
 forceload remove 2032 96
 forceload remove 2032 112
+forceload remove 2288 128
+forceload remove 2288 144
+forceload remove 2288 160
+forceload remove 2304 128
+forceload remove 2304 144
+forceload remove 2304 160
+forceload remove 2320 128
+forceload remove 2320 144
+forceload remove 2320 160
 forceload remove 2992 -16
 forceload remove 2992 0
 forceload remove 2992 16
@@ -313,6 +426,8 @@ scoreboard players set #line_left angel.story 0
 scoreboard players set #mv.on angel.story 0
 scoreboard players set #ride angel.story 0
 scoreboard players set #consent angel.story 0
+scoreboard players set #hush angel.story 0
+scoreboard players set #rd angel.story 0
 scoreboard players set #fx.air angel.story 0
 scoreboard players set #fx.crater angel.story 0
 scoreboard players set #fx.fall angel.story 0
@@ -328,6 +443,8 @@ scoreboard players set #f.lp_misato angel.story 0
 scoreboard players set #f.lp_ritsuko angel.story 0
 scoreboard players set #f.rei_here angel.story 0
 scoreboard players set #f.seen angel.story 0
+scoreboard players set #f.sp_misato angel.story 0
+scoreboard players set #f.sp_ritsuko angel.story 0
 scoreboard players set #f.turn_1 angel.story 0
 scoreboard players set #f.turn_10 angel.story 0
 scoreboard players set #f.turn_11 angel.story 0

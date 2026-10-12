@@ -57,6 +57,39 @@ def collect(pack):
     return files, ang, fgt, story_hand
 
 
+def known_sounds():
+    """(set of our sound events, set of vanilla ones or None).  Ours: pack\\angel-resources\\assets\\angel\\sounds.json.  Vanilla: the installed
+    client's sounds.json, found through the asset index under %APPDATA%\\.minecraft\\assets (read only)."""
+    ours = set(json.load(open(os.path.join(ROOT, "pack", "angel-resources", "assets", "angel", "sounds.json"), encoding="utf-8")))
+    vanilla = None
+    try:
+        adir = os.path.join(os.environ["APPDATA"], ".minecraft", "assets")
+        best = max((f for f in os.listdir(os.path.join(adir, "indexes")) if f.endswith(".json")), key=lambda f: int(f[:-5]) if f[:-5].isdigit() else -1)
+        h = json.load(open(os.path.join(adir, "indexes", best), encoding="utf-8"))["objects"]["minecraft/sounds.json"]["hash"]
+        vanilla = set(json.load(open(os.path.join(adir, "objects", h[:2], h), encoding="utf-8")))
+    except Exception:
+        pass
+    return ours, vanilla
+
+
+def check_sounds(allf):
+    """Every playsound / stopsound id the generated functions use must exist.  Returns [(id, where)]."""
+    ours, vanilla = known_sounds()
+    bad = []
+    for k, lines in allf.items():
+        for ln in lines:
+            for m in re.finditer(r"(?:playsound|stopsound @a \S+) ([a-z0-9_.:/]+)", ln):
+                sid = m.group(1)
+                ns, _, name = sid.rpartition(":")
+                if (ns or "minecraft") == "angel":
+                    ok = name in ours
+                else:
+                    ok = vanilla is None or name in vanilla
+                if not ok:
+                    bad.append((sid, k))
+    return bad
+
+
 def check(ang, fgt):
     import cmdcheck
     allf = {f"angel/{k}": v for k, v in ang.items()}
@@ -82,7 +115,10 @@ def check(ang, fgt):
             missing.append((f"angel:{ns}/{name}", where))
     for m in missing[:40]:
         say(f"  MISSING FUNCTION {m[0]} (called from {m[1]})")
-    return len(bad), len(missing)
+    snd = check_sounds(allf)
+    for sid, where in snd[:40]:
+        say(f"  UNKNOWN SOUND {sid} (in {where})")
+    return len(bad), len(missing) + len(snd)
 
 
 def write(pack, files, out_manifest=True):
@@ -123,7 +159,7 @@ def main():
     pack = os.path.abspath(a.out) if a.out else PACK
     files, ang, fgt, story_hand = collect(pack)
     nb, nm = check(ang, fgt)
-    say(f"checked {sum(len(v) for v in ang.values()) + sum(len(v) for v in fgt.values())} lines: {nb} command problems, {nm} missing functions")
+    say(f"checked {sum(len(v) for v in ang.values()) + sum(len(v) for v in fgt.values())} lines: {nb} command problems, {nm} missing functions or unknown sounds")
     if a.check:
         say(f"would write {len(files)} files")
         return 1 if (nb or nm) else 0

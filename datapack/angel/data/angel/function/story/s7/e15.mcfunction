@@ -1,4 +1,44 @@
 scoreboard players set #force angel.story 0
-schedule function angel:story/s7/f_a4 200t
+execute as @a[limit=1] at @s run tp @s ~ ~ ~ -90.0 -8.0
+forceload add 3056 16
+forceload add 3056 32
+forceload add 3056 48
+forceload add 3056 64
+forceload add 3056 80
+forceload add 3056 96
+forceload add 3056 112
+forceload add 3056 128
+forceload add 3072 16
+forceload add 3072 32
+forceload add 3072 48
+forceload add 3072 64
+forceload add 3072 80
+forceload add 3072 96
+forceload add 3072 112
+forceload add 3072 128
+forceload add 3088 16
+forceload add 3088 32
+forceload add 3088 48
+forceload add 3088 64
+forceload add 3088 80
+forceload add 3088 96
+forceload add 3088 112
+forceload add 3088 128
+forceload add 3104 16
+forceload add 3104 32
+forceload add 3104 48
+forceload add 3104 64
+forceload add 3104 80
+forceload add 3104 96
+forceload add 3104 112
+forceload add 3104 128
+forceload add 3120 16
+forceload add 3120 32
+forceload add 3120 48
+forceload add 3120 64
+forceload add 3120 80
+forceload add 3120 96
+forceload add 3120 112
+forceload add 3120 128
 scoreboard players set #step angel.story 16
 function angel:story/s7/e16

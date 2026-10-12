@@ -1,6 +1,6 @@
-execute if score #step angel.story matches 94 run function angel:story/s4/p94
-execute if score #step angel.story matches 95 run function angel:story/s4/p95
-execute if score #step angel.story matches 97 run function angel:story/s4/p97
-execute if score #step angel.story matches 98 run function angel:story/s4/p98
-execute if score #step angel.story matches 100 run function angel:story/s4/p100
-execute if score #step angel.story matches 101 run function angel:story/s4/p101
+execute if score #step angel.story matches 103 run function angel:story/s4/p103
+execute if score #step angel.story matches 104 run function angel:story/s4/p104
+execute if score #step angel.story matches 106 run function angel:story/s4/p106
+execute if score #step angel.story matches 107 run function angel:story/s4/p107
+execute if score #step angel.story matches 109 run function angel:story/s4/p109
+execute if score #step angel.story matches 110 run function angel:story/s4/p110

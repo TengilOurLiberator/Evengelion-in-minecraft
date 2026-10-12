@@ -20,11 +20,11 @@ fill 3065 47 28 3065 48 28 minecraft:ladder[facing=south]
 fill 3016 48 2 3016 48 15 minecraft:sea_lantern
 fill 3002 48 1 3015 48 1 minecraft:sea_lantern
 fill 3009 48 16 3011 48 16 minecraft:sea_lantern
-fill 3013 48 16 3015 48 16 minecraft:sea_lantern
 setblock 3096 48 56 minecraft:lime_concrete_stairs[facing=south,half=top,shape=straight]
 fill 3001 48 2 3001 48 15 minecraft:sea_lantern
-fill 3002 48 16 3005 48 16 minecraft:sea_lantern
+fill 3013 48 16 3015 48 16 minecraft:sea_lantern
 setblock 3095 48 56 minecraft:purple_concrete_stairs[facing=south,half=top,shape=straight]
+fill 3002 48 16 3005 48 16 minecraft:sea_lantern
 fill 3095 49 54 3096 49 54 minecraft:purple_concrete_slab[type=top]
 fill 3095 50 52 3096 50 52 minecraft:purple_concrete_slab[type=top]
 setblock 3095 51 45 minecraft:black_concrete_stairs[facing=south,half=bottom,shape=straight]
@@ -79,31 +79,31 @@ fill 3095 91 28 3096 92 28 minecraft:iron_bars
 fill 3104 95 120 3104 96 120 minecraft:iron_chain[axis=y]
 fill 3103 95 40 3103 96 40 minecraft:iron_chain[axis=y]
 fill 3104 95 132 3104 96 132 minecraft:iron_chain[axis=y]
-fill 3121 95 50 3121 96 50 minecraft:iron_chain[axis=y]
-fill 3082 95 40 3082 96 40 minecraft:iron_chain[axis=y]
 fill 3088 95 120 3088 96 120 minecraft:iron_chain[axis=y]
+fill 3082 95 40 3082 96 40 minecraft:iron_chain[axis=y]
+fill 3114 95 54 3114 96 54 minecraft:iron_chain[axis=y]
 fill 3103 95 52 3103 96 52 minecraft:iron_chain[axis=y]
+fill 3112 95 62 3112 96 62 minecraft:iron_chain[axis=y]
 fill 3104 95 84 3104 96 84 minecraft:iron_chain[axis=y]
-fill 3105 95 58 3105 96 58 minecraft:iron_chain[axis=y]
-fill 3123 95 62 3123 96 62 minecraft:iron_chain[axis=y]
+fill 3080 95 62 3080 96 62 minecraft:iron_chain[axis=y]
 fill 3104 95 108 3104 96 108 minecraft:iron_chain[axis=y]
 fill 3080 95 101 3080 96 101 minecraft:iron_chain[axis=y]
 fill 3088 95 96 3088 96 96 minecraft:iron_chain[axis=y]
+fill 3105 95 54 3105 96 54 minecraft:iron_chain[axis=y]
 fill 3088 95 108 3088 96 108 minecraft:iron_chain[axis=y]
 fill 3084 95 61 3084 96 61 minecraft:iron_chain[axis=y]
 fill 3082 95 52 3082 96 52 minecraft:iron_chain[axis=y]
 fill 3088 95 132 3088 96 132 minecraft:iron_chain[axis=y]
-fill 3105 95 50 3105 96 50 minecraft:iron_chain[axis=y]
-fill 3121 95 58 3121 96 58 minecraft:iron_chain[axis=y]
+fill 3105 95 49 3105 96 49 minecraft:iron_chain[axis=y]
 fill 3104 95 96 3104 96 96 minecraft:iron_chain[axis=y]
 fill 3088 95 72 3088 96 72 minecraft:iron_chain[axis=y]
 fill 3104 95 72 3104 96 72 minecraft:iron_chain[axis=y]
 fill 3088 95 84 3088 96 84 minecraft:iron_chain[axis=y]
-fill 3079 95 62 3079 96 62 minecraft:iron_chain[axis=y]
+fill 3114 95 49 3114 96 49 minecraft:iron_chain[axis=y]
 fill 3002 96 1 3015 96 1 minecraft:sea_lantern
 fill 3002 96 16 3005 96 16 minecraft:sea_lantern
-fill 3013 96 16 3015 96 16 minecraft:sea_lantern
 fill 3001 96 2 3001 96 15 minecraft:sea_lantern
+fill 3013 96 16 3015 96 16 minecraft:sea_lantern
 fill 3009 96 16 3011 96 16 minecraft:sea_lantern
 fill 3016 96 2 3016 96 15 minecraft:sea_lantern
 setblock 3007 96 16 minecraft:sea_lantern
@@ -138,7 +138,7 @@ fill 3076 143 160 3076 144 160 minecraft:iron_chain[axis=y]
 fill 3016 144 2 3016 144 15 minecraft:sea_lantern
 fill 3002 144 1 3015 144 1 minecraft:sea_lantern
 fill 3009 144 16 3011 144 16 minecraft:sea_lantern
-fill 3013 144 16 3015 144 16 minecraft:sea_lantern
 fill 3001 144 2 3001 144 15 minecraft:sea_lantern
+fill 3013 144 16 3015 144 16 minecraft:sea_lantern
 fill 3002 144 16 3005 144 16 minecraft:sea_lantern
 schedule function angel:world/hq/p42 1t

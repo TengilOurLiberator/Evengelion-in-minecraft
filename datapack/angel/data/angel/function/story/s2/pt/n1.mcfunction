@@ -1,2 +1,2 @@
-execute if score #step angel.story matches 1..19 run function angel:story/s2/pt/n2
-execute if score #step angel.story matches 20..42 run function angel:story/s2/pt/n5
+execute if score #step angel.story matches 1..25 run function angel:story/s2/pt/n2
+execute if score #step angel.story matches 26..51 run function angel:story/s2/pt/n5

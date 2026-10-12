@@ -32,7 +32,6 @@ from core import blind, P, PA, T, fn, fnum, local_to_world, num, sset, TAG
 from engine import C
 from models import Rig, car_parts, cartrain_rig, wagon_parts
 from motion import Path
-from scenes.s02 import nudge
 
 N = 3
 TITLE = "The descent"
@@ -75,9 +74,9 @@ def gate_leaves(ctx, probe, gate):
     width = (x_hi - x_lo) / 2.0
     info = dict(x_lo=x_lo, x_hi=x_hi, height=height, width=width, centre=cx)
 
-    def part(tag, block, u0, y0, w, h, dz=0.0, dd=0.0):
-        return (f'summon minecraft:block_display {num(ox[tag])} {num(gy)} {num(z0)} {{Tags:["{TAG}","angel.gate","angel.gate_{tag}"],block_state:"minecraft:{block}",'
-                f'brightness:{{sky:0,block:12}},view_range:2.0f,teleport_duration:15,'
+    def part(tag, block, u0, y0, w, h, dz=0.0, dd=0.0, bright=12, extra=""):
+        return (f'summon minecraft:block_display {num(ox[tag])} {num(gy)} {num(z0)} {{Tags:["{TAG}","angel.gate","angel.gate_{tag}"{extra}],block_state:"minecraft:{block}",'
+                f'brightness:{{sky:0,block:{bright}}},view_range:2.0f,teleport_duration:15,'
                 f'transformation:{{translation:[{fnum(u0)},{fnum(y0)},{fnum(-dd)}],left_rotation:[0f,0f,0f,1f],'
                 f'scale:[{fnum(w)},{fnum(h)},{fnum(depth + 2 * dd)}],right_rotation:[0f,0f,0f,1f]}}}}')
 
@@ -96,6 +95,9 @@ def gate_leaves(ctx, probe, gate):
         cmds.append(part(tag, "iron_block", 0.0, 0.0, width, 0.4, dd=0.02))
         cmds.append(part(tag, "iron_block", 0.0, height - 0.4, width, 0.4, dd=0.02))
         cmds.append(part(tag, "iron_block", uu(width - 0.4, 0.4), 0.0, 0.4, height, dd=0.02))
+        # two amber hazard lamps on the hall face of each leaf (a boy looking back over his shoulder sees them flash as the daylight narrows)
+        for yy in (height - 1.3, height * 0.45):
+            cmds.append(part(tag, "orange_concrete", uu(width - 1.2, 0.5), yy, 0.5, 0.5, dd=0.2, bright=15, extra=',"angel.gate_lamp"'))
     # the moves: the first begins at tick GATE_SEGMENTS[0], each later one 15 ticks after the previous (= the entities' teleport_duration, so the
     # glide is continuous); move k takes the leaves to smoothstep(k / n) of the way, the last one to the closed position at end_tick
     n = len(GATE_SEGMENTS) - 1
@@ -104,6 +106,12 @@ def gate_leaves(ctx, probe, gate):
     for k in range(1, n + 1):
         u = smoothstep(k / float(n))
         moves = [f"execute as @e[tag=angel.gate_{tg}] run tp @s {num(ox[tg] + (closed[tg] - ox[tg]) * u)} {num(gy)} {num(z0)}" for tg in ("w", "e")]
+        # sparks off the leading edges (the leaves are heavy and scrape their tracks), and a little dust shaken off the lintel
+        edge_w = ox["w"] + (closed["w"] - ox["w"]) * u + width
+        edge_e = ox["e"] + (closed["e"] - ox["e"]) * u
+        for ex in (edge_w, edge_e):
+            moves.append(f"particle minecraft:electric_spark {num(ex)} {num(gy + 1.0)} {num(z0 - 0.4)} 0.15 1.0 0.3 0.5 14 force")
+            moves.append(f"particle minecraft:dust_plume {num(ex)} {num(gy + height - 0.5)} {num(z0 - 0.8)} 0.6 0.3 0.6 0.01 4 force")
         sched.append((t, moves))
         t += GATE_SEGMENTS[min(k, len(GATE_SEGMENTS) - 1)]
     info["end_tick"] = t
@@ -140,6 +148,8 @@ def build(s, ctx):
         ctx.warn("scene 3 gate_to_cartrain: " + w)
     route_a = ctx.new_route("gate_to_wagon", car)
     route_a.add_leg("roll", Path(pts), vmax=3.2, a_acc=0.8, a_dec=1.0, a_lat=1.2)
+    # the car climbs the ramp onto the wagon's deck, one block above the passage floor: the checker is told (sim.check_routes reads deck_lift)
+    route_a.deck_lift = [max(0.0, float(f[1]) - gate["y"]) for f in route_a.frames]
     gate_pose = (gate["x"], gate["y"], gate["z"], gate["yaw"], 0.0)
     leaf_cmds, leaf_sched, leaf_info = gate_leaves(ctx, probe_o, gate)
     # the car's tail must be clear of the doorway before the leaves reach its lane
@@ -159,7 +169,7 @@ def build(s, ctx):
     ir = int(np.argmin((xs - reveal["x"]) ** 2 + (zs - reveal["z"]) ** 2))
     ptsA = [(xs[i], ys[i], zs[i]) for i in range(i0, iS + 1)]
     ptsB = [(xs[i], ys[i], zs[i]) for i in range(iS, it + 1)]
-    ctrain_b = ctx.register_rig(cartrain_rig("cartrain_b", reversed_car=True, ramp=False, bright=(0, 8)))
+    ctrain_b = ctx.register_rig(cartrain_rig("cartrain_b", reversed_car=True, ramp=False, bright=(0, 8), low_side="R"))
     ride = ctx.new_route("geofront_ride", ctrain_b)
     ride.add_leg("tunnel", Path(ptsA), vmax=1.15, a_acc=0.35, a_dec=0.4, a_lat=1.0, station="tunnel", smooth=0.8)
     pB = Path(ptsB)
@@ -202,10 +212,9 @@ def build(s, ctx):
     sx, sy, sz = carfx.seat_world(gate_pose, "passenger")
     s.do(blind(3.5), note="fade out")
     s.sleep(0.4)
-    s.do(*ctx.preload(gate["x"], gate["z"]), tp_player(sx, sy, sz), *worldgen_sky.sky("outskirts"), note="the player to the gate, in the dark")
-    s.sleep(0.9)
+    s.move_player(sx, sy, sz, before=worldgen_sky.sky("outskirts"), settle=0.9, note="the player to the gate, in the dark")
     s.do(*ctx.rig_spawn(car, "closed", gate_pose),
-         cast_summon("misato", gate["x"], gate["y"], gate["z"], gate["yaw"]), cast_mount("misato", "driver"), cast_look("misato", "ahead"), *ride_passenger(),
+         cast_summon("misato", gate["x"], gate["y"], gate["z"], gate["yaw"]), cast_mount("misato", "driver"), *car.ahead_cmds(), *ride_passenger(),
          sset("#beat", 30), sset("#present_misato", 1), sset("#present_ritsuko", 0), sset("#present_gendo", 0), sset("#present_rei", 0),
          *ctx.audio.start("bed", "car_interior"),
          note="the car at the gate (a jump: the engine's bed as scene 2 leaves it)")
@@ -220,6 +229,11 @@ def build(s, ctx):
             note="the gate begins to close: sfx.gate_close (motor, then the slide from 0.7 s, the boom at 5.35 s)")
     for tick, moves in leaf_sched:
         s.after(GATE_TRIGGER + tick / 20.0, *moves, note=f"gate leaves slide in (tick {tick})" if tick == leaf_sched[0][0] else "")
+    # the hazard lamps flash from the moment the leaves start to move until they have shut (a flip every 0.35 s)
+    lamp_on = "execute as @e[tag=angel.gate_lamp] run data merge entity @s {brightness:{sky:15,block:15}}"
+    lamp_off = "execute as @e[tag=angel.gate_lamp] run data merge entity @s {brightness:{sky:0,block:2}}"
+    for k in range(int((GATE_TRIGGER + leaf_info["end_tick"] / 20.0 + 0.8) / 0.35)):
+        s.after(0.2 + 0.35 * k, lamp_off if k % 2 else lamp_on, note="gate lamp" if k == 0 else "")
     s.say("3.01")
     s.until(route_a.cond_done(), est=route_a.seconds(), timeout=60, note="the car is on the wagon")
     s.bed_out("car_interior", 1.5, note="the engine is switched off")
@@ -227,7 +241,7 @@ def build(s, ctx):
     ca_pose = (cart["x"], top, cart["z"], 180.0, 0.0)
     s.do(sset("#ride", 0), "kill @e[tag=angel.rig_car]", "kill @e[tag=angel.rig_wagon_o]", cast_remove("misato"),
          *ctx.rig_spawn(ctrain_a, "loaded", ca_pose),
-         cast_summon("misato", cart["x"], top, cart["z"], 180.0), cast_mount("misato", "driver"), cast_look("misato", "ahead"), *ride_passenger(),
+         cast_summon("misato", cart["x"], top, cart["z"], 180.0), cast_mount("misato", "driver"), *ctrain_a.ahead_cmds(), *ride_passenger(),
          note="the car and the wagon become one rig (same picture, same place)")
     # the gate has shut by GATE_TRIGGER + 5.35 s after the roll began; the bolts run to 6.3 s: let them finish before the fade
     s.sleep(max(0.4, GATE_TRIGGER + 6.5 - route_a.seconds() - 0.5), note="the gate's boom and bolts finish")
@@ -235,29 +249,30 @@ def build(s, ctx):
     # ================================================================ fade, and down
     s.do(blind(4.6), sfx("sfx.train_start", vol=1.0), note="to the Geofront: sfx.train_start (6.5 s) in the dark")
     s.sleep(0.5)
-    s.do(sset("#ride", 0), "kill @e[tag=angel.rig_cartrain_a]", "kill @e[tag=angel.gate]", cast_remove("misato"), *ctx.preload(start_pose[0], start_pose[2]),
-         tp_player(start_pose[0], start_pose[1], start_pose[2]), *worldgen_sky.sky("geofront"), note="in the dark: to geofront.start")
-    s.sleep(1.4, note="the chunks load")
+    s.do(sset("#ride", 0), "kill @e[tag=angel.rig_cartrain_a]", "kill @e[tag=angel.gate]", cast_remove("misato"), note="the car train and the gate are taken away")
+    s.move_player(start_pose[0], start_pose[1], start_pose[2], before=worldgen_sky.sky("geofront"), settle=1.4, note="in the dark: to geofront.start")
+    s.sleep(0.6, note="the chunks settle")
     s.do(*ctx.rig_spawn(ctrain_b, "ride", start_pose),
          cast_summon("misato", start_pose[0], start_pose[1], start_pose[2], start_pose[3] + 180.0), cast_mount("misato", "driver"),
-         cast_look("misato", "ahead"), *ride_passenger(), sset("#present_misato", 1), note="the wagon at the mouth of the tunnel")
+         *ctrain_b.ahead_cmds(), *ride_passenger(), sset("#present_misato", 1), note="the wagon at the mouth of the tunnel (the car turned about: the boy's window faces the cavern)")
     s.sleep(1.6)
     s.do(*ride.start_cmds(limit="tunnel"), *ctx.audio.start("bed", "tunnel", fade=3.0),
          note="the wagon creeps into the dark; amb.tunnel comes in under the end of sfx.train_start")
     s.sleep(1.5)
+    s.do(*carfx.look_boy(), note="3.02: she asks, looking at him")
     s.say("3.02")
-    s.wait_answer(speaker="misato", prompt="answer Misato", nudges=nudge("Misato"))
+    s.wait_answer(speaker="misato", prompt="answer Misato")
     booklet = ("give " + PA() + ' minecraft:written_book[written_book_content={title:"NERV",author:"NERV",pages:'
                '[{raw:"NERV\\nFor Your Eyes Only"},{raw:"There is no test."}]}]')
-    s.do(booklet, play_at("minecraft:entity.item.pickup", start_pose[0], start_pose[1], start_pose[2], 0.6, 0.9, 0.0),
-         note="a booklet in his lap (no library event for paper: a vanilla pickup stands in)")
-    s.say("3.03")
+    s.do(booklet, note="a booklet in his lap (left silent: the library has no paper event and a vanilla pickup would be a stand-in)")
+    carfx.say_glancing(s, ctrain_b, "3.03", glance=2.6)
     s.say("3.04")
+    s.do(*carfx.look_boy(), note="3.05: she asks, looking at him")
     s.say("3.05")
-    s.wait_answer(speaker="misato", prompt="answer Misato", nudges=nudge("Misato"))
+    s.wait_answer(speaker="misato", prompt="answer Misato")
     s.say("3.06")
-    s.wait_answer(speaker="misato", prompt="answer Misato", nudges=nudge("Misato"))
-    s.say("3.07")
+    s.wait_answer(speaker="misato", prompt="answer Misato")
+    carfx.say_glancing(s, ctrain_b, "3.07", glance=3.0)
 
     # ---------------------------------------------------------------- let the wagon go, with the music exactly 8.000 s before the reveal
     s.until(ride.cond_at("tunnel"), est=ride.stations["tunnel"] / 20.0, timeout=150,
@@ -272,6 +287,7 @@ def build(s, ctx):
     s.beat(31)
     s.do(sfx("sfx.air_open", vol=1.0), *ctx.audio.start("bed", "geofront", fade=2.5, out="tunnel", out_fade=1.2),
          note="the wall falls away: sfx.air_open, the tunnel bed drops away into amb.geofront")
+    s.do(*carfx.look_boy(), note="3.08: she looks at him, past him to the window: the open air is on his side")
     s.say("3.08")
     s.say("3.09")
     s.say("3.10")
@@ -284,9 +300,9 @@ def build(s, ctx):
 
     # ================================================================ the terminal
     s.sleep(1.2)
-    s.do(sset("#ride", 0), f"ride {P()} dismount", cast_remove("misato"),
-         tp_player(out_spot[0], oy1, out_spot[2]), cast_summon("misato", out_spot2[0], oy2, out_spot2[2], end_pose[3] + 90.0),
-         note="both get out")
+    s.do(sset("#ride", 0), cast_remove("misato"), note="both get out")
+    s.move_player(out_spot[0], oy1, out_spot[2], r=2.5, settle=0.2, note="the boy steps onto the platform")
+    s.do(cast_summon("misato", out_spot2[0], oy2, out_spot2[2], end_pose[3] + 90.0), note="Misato beside him")
     s.sleep(3.0)
     s.next_scene(4, jump=True)
 

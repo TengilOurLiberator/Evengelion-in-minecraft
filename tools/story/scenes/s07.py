@@ -40,10 +40,20 @@ TITLE = "The fight"
 
 # ---------------------------------------------------------------------------------------------------- the ending, in seconds
 HOLD_BEFORE_DAWN = 2.0                  # on the empty avenue before the sky begins to change
-DAWN_STEP = 2.5                         # the sky clock changes speed every 2.5 s ...
-DAWN_RATES = (6, 10, 15, 22, 30, 36)    # ... through these rates (x normal clock speed): 15 s from the middle of the night to the rim of the sun
-DAWN_AFTER = 3                          # rate once the sun is up
-CARD_AT = 27.0                          # seconds after the dawn begins that the card cuts in (music.victory is 40 s and thinning by then)
+# The sun rises in the EAST (the sun_angle track of angel:sky is the vanilla one: its path is the x-y plane, +x east, so its azimuth never changes;
+# tick 0 of the day clock is the sun 12.4 degrees above the east horizon, tick 1000 27.5, tick 1600 34.8 -- computed from the track's cubic-bezier).
+# The boy stands on the lift at the plaza's centre (city 1160.5, 160.5), and the plaza's main avenue runs due EAST from there for 130 blocks to the
+# mountain wall at the edge of the city plate, whose ridge stands 27 degrees above his eyes (measured in the built set: skyline 26.5..27.6 degrees
+# for +-10 degrees either side of east).  He is turned to the east in a short black before the dawn begins, so that the sun comes up over that ridge:
+# it is hidden below it until day tick ~490, passes it between ticks 490 and 1600 (the disc, ~17 degrees across, is clear of it by tick ~1600) and
+# stands ~35 degrees high at the end of the run.
+DAWN_FACING = (-90.0, -8.0)             # yaw (east), pitch the boy is turned to during the black (checked in the game: at tick 500 the sun is hidden behind the
+                                        # ridge, at 1000 it stands on it, at 1300 it is clear of it: a white disc over the mountain wall at the end of the avenue)
+DAWN_BLACK = 1.2                        # seconds of black for the turn
+# (seconds, clock rate): the clock runs from 18000 (midnight) through the twilight (22400..24000) to day tick 1600 (25600 in all):
+DAWN = ((4.0, 30), (4.0, 30), (3.0, 14), (3.0, 14), (8.0, 7))          # 2400 + 2400 + 840 + 840 + 1120 = 7600 ticks in 22 s
+DAWN_AFTER = 1.5                        # rate once the sun stands over the ridge
+CARD_AT = 30.0                          # seconds after the dawn begins that the card cuts in (music.victory is 40 s and thinning by then)
 CAGE_DARK = 4.5                         # seconds of black after the card for the move to the cage (the chunks must reach the headset)
 
 
@@ -61,12 +71,12 @@ def build(s, ctx):
     ctx.extra_functions["story/fight_done"] = ["$function angel:story/s7/f_done_$(result)"]
 
     # ================================================================ setup (for a direct entry; the hand-over from scene 6 skips it)
-    s.do(blind(3.5), note="fade out")
+    s.do(blind(4.5), note="fade out")
     s.sleep(0.4)
-    s.do(*ctx.preload(top["x"], top["z"]), *ctx.preload(angel_start["x"], angel_start["z"]), fn("cast/remove_all"),
+    s.do(*ctx.preload(angel_start["x"], angel_start["z"]), fn("cast/remove_all"),
          "function angel:cast/gurney_remove", *audio.stop("bed"), sset("#ride", 0), note="preload the city")
-    s.sleep(0.9)
-    s.do(*worldgen_sky.sky("city"), f"tp {P()} {num(top['x'])} {num(top['y'])} {num(top['z'])} 180 0",
+    s.move_player(top["x"], top["y"], top["z"], yaw=180.0, pitch=0.0, settle=0.9, note="the player to the lift in the city")
+    s.do(*worldgen_sky.sky("city"),
          f"execute as {P()} run function angel:fight/become_giant",
          sset("#present_misato", 2), sset("#present_ritsuko", 2), sset("#present_gendo", 2), sset("#present_rei", 0), sset("#beat", 70),
          f"gamemode adventure {PA()}", note="the boy is the giant on the lift at night")
@@ -97,24 +107,34 @@ def build(s, ctx):
 
     # ================================================================ after the win: the dawn
     s.sleep(HOLD_BEFORE_DAWN, note="the empty avenue")
-    s.do(*cg.forceload_cage(), "time of angel:day resume", f"time of angel:day rate {DAWN_RATES[0]}.0",
-         note="the dawn begins (the sky clock speeds up)")
+    # a short black: he is turned to the east, where the sun will rise over the mountain wall at the end of the avenue (see DAWN_FACING), and the
+    # dawn starts under it; the head is turned only here, in the dark
+    turn = f"execute as {P()} at @s run tp @s ~ ~ ~ {num(DAWN_FACING[0])} {num(DAWN_FACING[1])}"
+    s.do(blind(DAWN_BLACK + 1.0), note="to black for the turn to the east")
+    s.sleep(0.5, note="dark")
+    s.do(turn, *cg.forceload_cage(), note="turned east (yaw -90): down the avenue to the mountain wall where the sun will come up")
+    s.sleep(DAWN_BLACK - 0.5, note="the black lifts")
+    s.do("time of angel:day resume", f"time of angel:day rate {num(DAWN[0][1])}", note="the dawn begins (the sky clock speeds up)")
     s.music("victory")
-    for k, r in enumerate(DAWN_RATES[1:], 1):
-        s.after(DAWN_STEP * k, f"time of angel:day rate {r}.0", note=f"sky clock x{r}")
-    s.after(DAWN_STEP * len(DAWN_RATES), f"time of angel:day rate {DAWN_AFTER}.0", note="the sun is up")
-    s.sleep(CARD_AT, note="dawn over the empty avenue")
+    t_ = 0.0
+    for (sec, r), (_, r_next) in zip(DAWN, list(DAWN[1:]) + [(0, DAWN_AFTER)]):
+        t_ += sec
+        s.after(t_, f"time of angel:day rate {num(r_next)}", note=f"sky clock x{r_next}" + (" (the sun stands over the ridge)" if r_next == DAWN_AFTER else ""))
+    s.sleep(CARD_AT, note="dawn over the empty avenue: the sun climbs over the ridge")
 
     # ================================================================ the card, and the cage
     s.music(None, note="silence for the card")
     s.bed(None)
     s.card("TO BE CONTINUED", small="an unofficial fan work")
-    s.do(blind(CAGE_DARK), note="black a little longer: the cage must arrive")
-    s.do("time of angel:day rate 1.0", *worldgen_sky.sky("hq"),
-         tp_player(face["x"], face["y"], face["z"]),
-         cg.lights_on(), fn("story/launch/eyes_off"), *cg.cast_for_ending(ctx),
+    s.do(blind(CAGE_DARK + 1.0), note="black a little longer: the cage must arrive")
+    s.do("time of angel:day rate 1.0", *worldgen_sky.sky("hq"), note="the clock stops its run; the cage's sky")
+    # city -> hq is 2000 blocks: the guarded move (forceload the cage, dismount, teleport, wait until he is really there)
+    s.move_player(face["x"], face["y"], face["z"], yaw=face["yaw"], pitch=face["pitch"], settle=1.2, before=cg.forceload_cage(),
+                  note="the player to the cage (hq.face), turned to the giant's face (he was facing east in the city)")
+    s.do(cg.lights_on(), fn("story/launch/eyes_off"), *cg.cast_for_ending(ctx),
          sset("#present_misato", 1), sset("#present_ritsuko", 1), sset("#present_gendo", 1), sset("#present_rei", 1), sset("#beat", 80),
          note="the cage at human size: lights on, eyes dark, Misato and Ritsuko on their marks, Gendo in the booth, Rei on the gurney; beat 80")
     s.bed("cage")
     s.sleep(CAGE_DARK, note="the black lifts")
     # the story is over: the boy is free in the cage at human size, everyone present; the bridge lets them talk
+

@@ -1,0 +1,2 @@
+execute if score #f.sp_misato angel.story matches 1 if score #arrived_misato angel.cast matches 1 as @e[type=minecraft:mannequin,tag=angel.misato,limit=1] at @s if entity @a[limit=1,distance=..1.8] run function angel:story/lead/space_misato
+execute if score #f.sp_misato angel.story matches 2 as @e[type=minecraft:mannequin,tag=angel.misato,limit=1] at @s unless entity @a[limit=1,distance=..2.4] run scoreboard players set #f.sp_misato angel.story 1

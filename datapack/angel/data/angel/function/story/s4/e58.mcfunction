@@ -1,4 +1,4 @@
 scoreboard players set #force angel.story 0
-execute at @a[limit=1] run playsound angel:sfx.pa_chime master @a ~ ~ ~ 1.0 1.0 1.0
+function angel:cast/walk {id:"misato",x:3109.5,y:131.0,z:153.0,speed:0.12}
 scoreboard players set #step angel.story 59
 function angel:story/s4/e59

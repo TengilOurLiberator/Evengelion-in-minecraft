@@ -20,6 +20,13 @@ the player behind:
     face_player(who) / look_ahead(who)  the cast's own player-tracking look on / off
 
 The footsteps (a soft hard-floor step every 9 ticks while she walks) are played by the monitor.
+
+Personal space.  A character who WAITS (a stop with wait=True, her companion beside her) never stands within SPACE (1.8) blocks of the player:
+while she waits for him to catch up she is "armed" with an escape point 2.6 blocks on along the way she arrived (her own route: always
+walkable), and when he walks into her space she walks there (`angel:cast/walk`, not a teleport) and turns back to look at him.  A companion's
+place beside the leader is never closer than 2.0 blocks to the side and 3.0 behind.  `space_on(ctx, who, x, y, z)` / `space_off(who)` arm and
+disarm the same rule for a character outside a lead (the loop door of scene 4).  The rule does not apply while she walks (a walking
+character is stopped by the pause rule above when he lags, and he cannot overtake her at her own walking speed without meaning to).
 """
 import math
 
@@ -29,6 +36,10 @@ from engine import C, Cond
 
 FAR = 9.0
 NEAR = 6.0
+SPACE = 1.8                  # a waiting character never stands closer than this to the player
+SPACE_STEP = 2.6             # ... and steps this far on when he walks into her
+COMPANION_MIN_SIDE = 2.0     # a companion walks at least this far to the side of the leader's line and this far behind the leader
+COMPANION_MIN_BACK = 3.0
 CHAR = "@e[type=minecraft:mannequin,tag=angel.{who},limit=1]"
 NAMES = {"misato": "Misato", "ritsuko": "Ritsuko", "gendo": "your father", "rei": "Rei"}
 
@@ -38,9 +49,15 @@ def char(who):
 
 
 class Stop:
-    def __init__(self, x, y, z, wait=True, say_while=(), say_at=(), then=(), note=""):
+    """A place to walk to.  wait: stand there until the player has caught up; space: while she waits she keeps SPACE blocks from him by
+    stepping on along the way she arrived (False: she stays put, for a stop with a wall or a door straight ahead); escape=(dx, dz): a unit
+    direction to step in instead (to the side of the way she came, say)."""
+
+    def __init__(self, x, y, z, wait=True, say_while=(), say_at=(), then=(), note="", space=True, escape=None):
         self.x, self.y, self.z = float(x), float(y), float(z)
         self.wait = wait
+        self.space = space
+        self.escape = escape
         self.say_while = list(say_while)
         self.say_at = list(say_at)
         self.then = list(then)
@@ -68,7 +85,7 @@ def ensure_monitor(ctx, who, near=NEAR, far=FAR):
         f"scoreboard players set #c9 {OBJ} 9",
         f"scoreboard players operation #lm {OBJ} = #tick {OBJ}",
         f"scoreboard players operation #lm {OBJ} %= #c9 {OBJ}",
-        f"execute if score #lm {OBJ} matches 0 if score {flag_lp} {OBJ} matches 0 if score {arrived} matches 0 as {c} at @s "
+        f"execute if score #lm {OBJ} matches 0 unless score #hush {OBJ} matches 1 if score {flag_lp} {OBJ} matches 0 if score {arrived} matches 0 as {c} at @s "
         f"run playsound minecraft:block.deepslate_tiles.step master @a ~ ~ ~ 0.6 {'1.15' if who == 'ritsuko' else '0.95'} 0.15",
     ]
     ctx.extra_functions[f"story/lead/pause_{who}"] = [
@@ -76,6 +93,63 @@ def ensure_monitor(ctx, who, near=NEAR, far=FAR):
     ctx.extra_functions[f"story/lead/resume_{who}"] = [
         sset(flag_lp, 0), cast_look(who, "ahead"), f"function {NS}:cast/walk with storage {NS}:story lead.{who}"]
     ctx.fx_tick.append(f"execute if score {flag_on} {OBJ} matches 1 run function {NS}:story/lead/mon_{who}")
+
+
+def ensure_space(ctx, who):
+    """The per-tick personal-space rule of `who` (a continuous effect, armed by the flag #f.sp_<who>: 1 armed, 2 stepping away)."""
+    key = ("space", who)
+    if key in ctx.helpers:
+        return
+    ctx.helpers[key] = True
+    c = char(who)
+    flag = f"#f.sp_{who}"
+    ctx.extra_functions[f"story/lead/sp_{who}"] = [
+        f"execute if score {flag} {OBJ} matches 1 if score #arrived_{who} angel.cast matches 1 as {c} at @s "
+        f"if entity {P(f'distance=..{num(SPACE)}')} run function {NS}:story/lead/space_{who}",
+        f"execute if score {flag} {OBJ} matches 2 as {c} at @s unless entity {P(f'distance=..{num(SPACE + 0.6)}')} run {sset(flag, 1)}"]
+    ctx.extra_functions[f"story/lead/space_{who}"] = [
+        sset(flag, 2), f"function {NS}:cast/walk with storage {NS}:story space.{who}"]
+    ctx.fx_tick.append(f"execute if score {flag} {OBJ} matches 1..2 run function {NS}:story/lead/sp_{who}")
+
+
+def _set_of(x):
+    return "outskirts" if x < 1000 else "city" if x < 2000 else "geofront" if x < 3000 else "hq"
+
+
+def _floor_ok(ctx, x, y, z):
+    """floor within 0.75 of y under (x, z) and two blocks of headroom, in the built voxel set"""
+    probe = ctx.probe(_set_of(x))
+    if probe.solid(x, y + 0.6, z) or probe.solid(x, y + 1.6, z):
+        return False
+    sf = probe.surface(x, z, y)
+    return sf is not None and abs(sf - y) <= 0.75
+
+
+def way_clear(ctx, x, y, z, ex, ez, length=SPACE_STEP):
+    """True when the straight line from (x, y, z) `length` blocks in direction (ex, ez) has floor under it (within 0.75) and two blocks of
+    headroom all along, in the built voxel set (so an escape step never walks a character into a wall or off a ledge)."""
+    probe = ctx.probe(_set_of(x))
+    t = 0.4
+    while t <= length + 1e-6:
+        px, pz = x + ex * t, z + ez * t
+        if probe.solid(px, y + 0.6, pz) or probe.solid(px, y + 1.6, pz):
+            return False
+        sf = probe.surface(px, pz, y)
+        if sf is None or abs(sf - y) > 0.75:
+            return False
+        t += 0.4
+    return True
+
+
+def space_on(ctx, who, x, y, z, speed=0.12):
+    """Arm the personal-space rule of `who` with the escape point (x, y, z): she walks there when the player comes within SPACE blocks."""
+    ensure_space(ctx, who)
+    return [f'data modify storage {NS}:story space.{who} set value {{id:"{who}",x:"{num(x)}",y:"{num(y)}",z:"{num(z)}",speed:"{num(speed)}"}}',
+            sset(f"#f.sp_{who}", 1)]
+
+
+def space_off(who):
+    return [sset(f"#f.sp_{who}", 0)]
 
 
 def walk_cmds(who, x, y, z, speed=0.14):
@@ -104,6 +178,11 @@ def lead(s, ctx, who, stops, speed=0.14, near=NEAR, far=FAR, companion=None, sta
     ensure_monitor(ctx, who, near, far)
     if companion:
         ensure_monitor(ctx, companion[0], near, far)
+        cw_, back_, side_ = companion
+        side_orig = side_
+        # personal space: a companion never walks closer than 2 to the side and 3 behind (the boy who follows the leader at a few blocks' distance
+        # then stands at least SPACE from her) -- where the built set has floor for it (_floor_ok), else her old place
+        companion = (cw_, max(back_, COMPANION_MIN_BACK), math.copysign(max(abs(side_), COMPANION_MIN_SIDE), side_))
     prev = start
     name = NAMES.get(who, who)
     last = None
@@ -112,11 +191,16 @@ def lead(s, ctx, who, stops, speed=0.14, near=NEAR, far=FAR, companion=None, sta
         d = math.hypot(st.x - prev[0], st.z - prev[1]) if prev else 10.0
         est = d / (speed * 20.0) + 1.0
         cmds = walk_cmds(who, st.x, st.y, st.z, speed)
+        ux, uz = ((st.x - prev[0]) / max(d, 0.01), (st.z - prev[1]) / max(d, 0.01)) if prev and d > 0.5 else (None, None)
+        comp_at = None
         if companion and prev:
             cw, back, side = companion
-            ux, uz = (st.x - prev[0]) / max(d, 0.01), (st.z - prev[1]) / max(d, 0.01)
-            gx = st.x - ux * back + uz * side
-            gz = st.z - uz * back - ux * side
+            for sd in (side, side * 0.8, side_orig):                      # the wider berth if the built set has floor there, else the old one
+                gx = st.x - ux * back + uz * sd
+                gz = st.z - uz * back - ux * sd
+                if _floor_ok(ctx, gx, st.y, gz):
+                    break
+            comp_at = (gx, gz)
             cmds += walk_cmds(cw, gx, st.y, gz, speed)             # the companion has the same monitor: she too waits for the player
         s.do(*cmds, note=f"{who} walks to {st.note or f'({st.x:.1f}, {st.z:.1f})'}")
         for ln in st.say_while:
@@ -132,16 +216,38 @@ def lead(s, ctx, who, stops, speed=0.14, near=NEAR, far=FAR, companion=None, sta
         s.until(arrived(who, est=est), est=est, timeout=180, on_timeout=bring,
                 hint=(f"{name} is waiting for you.", []), hint_after=35, note=f"{who} reaches the stop")
         if st.wait:
-            s.do(cast_look(who, "player"), sset(f"#f.lp_{who}", 0), note=f"{who} turns to look for the player")
+            arm = []
+            if st.space and ux is not None:
+                # the way to step: given, else on towards the next stop (the line she is about to walk anyway), else on the way she came;
+                # a direction is only used if the built set shows floor and headroom along it
+                cands = [st.escape] if st.escape else []
+                if n + 1 < len(stops):
+                    nx_ = _stop(stops[n + 1])
+                    dn = math.hypot(nx_.x - st.x, nx_.z - st.z)
+                    if dn > 0.5:
+                        cands.append(((nx_.x - st.x) / dn, (nx_.z - st.z) / dn))
+                cands.append((ux, uz))
+                esc = next((c for c in cands if way_clear(ctx, st.x, st.y, st.z, c[0], c[1])), None)
+                if esc is None:
+                    ctx.warn(f"lead: no clear way for {who} to step aside at {st.note or (st.x, st.z)}: personal space not armed there")
+                else:
+                    ex, ez = esc
+                    arm += space_on(ctx, who, st.x + ex * SPACE_STEP, st.y, st.z + ez * SPACE_STEP)
+                    if companion and comp_at and way_clear(ctx, comp_at[0], st.y, comp_at[1], ex, ez):
+                        arm += space_on(ctx, companion[0], comp_at[0] + ex * SPACE_STEP, st.y, comp_at[1] + ez * SPACE_STEP)
+            s.do(cast_look(who, "player"), sset(f"#f.lp_{who}", 0), *arm, note=f"{who} turns to look for the player" + (" (personal space armed)" if arm else ""))
             s.until(near_char(who, near), timeout=180, est=0.5, on_timeout=bring[2:],
                     hint=(f"{name} is waiting for you.", []), hint_after=35, note=f"the player catches up with {who}")
+            if arm:
+                s.do(*space_off(who), *(space_off(companion[0]) if companion else []), note="personal space off")
         for ln in st.say_at:
             s.say(ln)
         if st.then:
             s.do(*st.then)
         prev = (st.x, st.z)
         last = st
-    s.do(*lead_off(who), *(lead_off(companion[0]) if companion else []), note=f"{who} stops leading")
+    s.do(*lead_off(who), *(lead_off(companion[0]) if companion else []), *space_off(who), *(space_off(companion[0]) if companion else []),
+         note=f"{who} stops leading")
     return last
 
 

@@ -1,0 +1,2 @@
+execute if score #f.sp_ritsuko angel.story matches 1 if score #arrived_ritsuko angel.cast matches 1 as @e[type=minecraft:mannequin,tag=angel.ritsuko,limit=1] at @s if entity @a[limit=1,distance=..1.8] run function angel:story/lead/space_ritsuko
+execute if score #f.sp_ritsuko angel.story matches 2 as @e[type=minecraft:mannequin,tag=angel.ritsuko,limit=1] at @s unless entity @a[limit=1,distance=..2.4] run scoreboard players set #f.sp_ritsuko angel.story 1

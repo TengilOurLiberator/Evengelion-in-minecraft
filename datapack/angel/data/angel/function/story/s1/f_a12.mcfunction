@@ -1,1 +1,1 @@
-execute at @a[limit=1] run playsound angel:sfx.jet_pass master @a ~ ~ ~ 0.8 0.93 1.0
+execute at @e[tag=angel.cmark,limit=1] run playsound angel:sfx.gunfire_far master @a ~ ~ ~ 2.5 0.95 0.0

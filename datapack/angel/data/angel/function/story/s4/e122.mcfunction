@@ -1,2 +1,4 @@
 scoreboard players set #force angel.story 0
-scoreboard players set #sleep angel.story 10
+schedule function angel:story/s4/f_a1 16t
+scoreboard players set #step angel.story 123
+function angel:story/s4/e123

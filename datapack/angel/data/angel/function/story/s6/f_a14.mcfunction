@@ -13,3 +13,4 @@ summon minecraft:block_display 3095.0 61.3 64.67 {Tags:["angel.story","angel.lau
 summon minecraft:block_display 3095.0 61.3 61.7 {Tags:["angel.story","angel.launch","angel.lcock","angel.lcock_d"],block_state:"minecraft:white_concrete",teleport_duration:0,interpolation_duration:0,view_range:1.0f,brightness:{sky:13,block:13},transformation:{translation:[0.0f,0.0f,0.0f],left_rotation:[0f,0f,0f,1f],scale:[3.0f,0.03f,3.0f],right_rotation:[0f,0f,0f,1f]}}
 summon minecraft:block_display 3095.0 64.27 61.7 {Tags:["angel.story","angel.launch","angel.lcock","angel.lcock_u"],block_state:"minecraft:white_concrete",teleport_duration:0,interpolation_duration:0,view_range:1.0f,brightness:{sky:13,block:13},transformation:{translation:[0.0f,0.0f,0.0f],left_rotation:[0f,0f,0f,1f],scale:[3.0f,0.03f,3.0f],right_rotation:[0f,0f,0f,1f]}}
 kill @e[tag=angel.lfluid]
+kill @e[tag=angel.lmen]

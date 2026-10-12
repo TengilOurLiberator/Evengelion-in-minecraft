@@ -35,6 +35,7 @@ class Context:
         self.cards = {}                   # (text, small) -> index, see cards.py
         self.turns = []                   # smooth turns of characters (lead.py)
         self.helpers = {}                 # per-module caches (hq_cage etc.)
+        self.enter_hooks = {}             # scene number -> commands run when the scene is entered (jump or hand-over): see system.py
         from audio import Audio
         self.audio = Audio(self)
 
@@ -129,6 +130,11 @@ def cast_summon(cid, x, y, z, yaw=0.0):
     return f'execute positioned {num(x)} {num(y)} {num(z)} rotated {num(yaw, 2)} 0 run function {NS}:cast/summon {{id:"{cid}"}}'
 
 
+def cast_scale(cid, scale):
+    """Make a character bigger or smaller (the `scale` attribute; a fresh summon is back at 1.0, so call it after every summon)."""
+    return f'function {NS}:cast/scale {{id:"{cid}",scale:{num(scale, 3)}}}'
+
+
 def cast_remove(cid):
     return f'function {NS}:cast/remove {{id:"{cid}"}}'
 
@@ -161,13 +167,13 @@ def dismount_player():
 def title(main, sub=None, color="white", fade_in=15, stay=60, fade_out=25):
     cmds = [f"title {PA()} times {fade_in} {stay} {fade_out}"]
     if sub:
-        cmds.append(f'title {PA()} subtitle {json.dumps({"text": sub, "color": "gray"}, ensure_ascii=False)}')
-    cmds.append(f'title {PA()} title {json.dumps({"text": main, "color": color}, ensure_ascii=False)}')
+        cmds.append(f'title {PA()} subtitle {json.dumps({"text": sub, "color": "gray"}, ensure_ascii=True)}')
+    cmds.append(f'title {PA()} title {json.dumps({"text": main, "color": color}, ensure_ascii=True)}')
     return cmds
 
 
 def actionbar(text, color="gray"):
-    return f'title {PA()} actionbar {json.dumps({"text": text, "color": color}, ensure_ascii=False)}'
+    return f'title {PA()} actionbar {json.dumps({"text": text, "color": color}, ensure_ascii=True)}'
 
 
 def play_at(sound, x, y, z, vol=1.0, pitch=1.0, minvol=0.0, source="master"):

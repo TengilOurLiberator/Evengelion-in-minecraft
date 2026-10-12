@@ -1,4 +1,2 @@
 scoreboard players set #force angel.story 0
-function angel:cast/walk {id:"misato",x:3109.5,y:131.0,z:153.0,speed:0.12}
-scoreboard players set #step angel.story 53
-function angel:story/s4/e53
+scoreboard players set #sleep angel.story 8

@@ -4,6 +4,7 @@ execute if score #fx.air angel.story matches 1 run function angel:story/fx/air_t
 execute if score #fx.wreck angel.story matches 1 run function angel:story/fx/wreck_tick
 execute if score #fx.crater angel.story matches 1 run function angel:story/fx/crater_tick
 execute if score #f.lead_misato angel.story matches 1 run function angel:story/lead/mon_misato
+execute if score #f.sp_misato angel.story matches 1..2 run function angel:story/lead/sp_misato
 execute if score #f.turn_1 angel.story matches 1.. run function angel:story/turn/t1
 execute if score #f.turn_2 angel.story matches 1.. run function angel:story/turn/t2
 execute if score #f.turn_3 angel.story matches 1.. run function angel:story/turn/t3
@@ -11,6 +12,7 @@ execute if score #f.turn_4 angel.story matches 1.. run function angel:story/turn
 execute if score #f.turn_5 angel.story matches 1.. run function angel:story/turn/t5
 execute if score #f.turn_6 angel.story matches 1.. run function angel:story/turn/t6
 execute if score #f.lead_ritsuko angel.story matches 1 run function angel:story/lead/mon_ritsuko
+execute if score #f.sp_ritsuko angel.story matches 1..2 run function angel:story/lead/sp_ritsuko
 execute if score #f.turn_7 angel.story matches 1.. run function angel:story/turn/t7
 execute if score #f.turn_8 angel.story matches 1.. run function angel:story/turn/t8
 execute if score #f.turn_9 angel.story matches 1.. run function angel:story/turn/t9

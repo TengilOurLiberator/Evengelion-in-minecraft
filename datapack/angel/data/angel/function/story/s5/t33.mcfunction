@@ -1,2 +1,2 @@
-tp @a[limit=1] 3096.5 54.0 72.5
+tp @a[limit=1] 3098.33 54.0 78.493
 function angel:story/s5/x33

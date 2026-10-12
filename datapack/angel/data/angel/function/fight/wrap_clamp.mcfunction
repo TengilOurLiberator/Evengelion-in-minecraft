@@ -1,6 +1,6 @@
 scoreboard players set #st angel.fight 7
 scoreboard players set #t angel.fight 0
-scoreboard players set #wt angel.fight 280
+scoreboard players set #wt angel.fight 400
 function angel:angel/stop_walking
 function angel:fight/wrap_follow
 scoreboard players set #dur angel.mon 8

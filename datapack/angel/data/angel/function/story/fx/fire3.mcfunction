@@ -1,2 +1,3 @@
-execute as @e[tag=angel.rig_ac3,tag=angel.pt_fuselage,limit=1] at @s facing entity @e[tag=angel.cmark,limit=1] feet run function angel:story/fx/tracer
-schedule function angel:story/fx/impact 13t append
+execute as @e[tag=angel.rig_ac3,tag=angel.pt_fuselage,limit=1] at @s facing entity @e[tag=angel.cmark,limit=1] feet run function angel:story/fx/tr_spawn
+schedule function angel:story/fx/fire3b 3t append
+schedule function angel:story/fx/fire3c 6t append

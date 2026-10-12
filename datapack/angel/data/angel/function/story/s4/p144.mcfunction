@@ -1,5 +1,3 @@
-execute as @e[type=minecraft:mannequin,tag=angel.ritsuko,limit=1] at @s if entity @a[limit=1,distance=..11.0] run function angel:story/s4/x144
-scoreboard players add #stept angel.story 1
-scoreboard players add #nagt angel.story 1
-execute if score #step angel.story matches 144 if score #stept angel.story matches 1800 run function angel:story/s4/t144
+scoreboard players remove #sleep angel.story 1
+execute if score #sleep angel.story matches ..0 run function angel:story/s4/x144
 execute if score #step angel.story matches 144 if score #force angel.story matches 1 run function angel:story/s4/x144

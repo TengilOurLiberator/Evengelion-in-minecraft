@@ -9,8 +9,7 @@ tag @e[tag=angel.wnew] remove angel.wnew
 particle minecraft:flash{color:[1.0,1.0,1.0,1.0]} ~ ~10 ~ 0 0 0 0 1 force
 particle minecraft:end_rod ~ ~ ~ 4 40 4 0.3 200 force
 particle minecraft:explosion_emitter ~ ~12 ~ 5 5 5 0 6 force
-playsound minecraft:entity.lightning_bolt.thunder hostile @a ~ ~ ~ 12 0.6
+playsound angel:sfx.cross master @a ~ ~ ~ 8 1
 playsound minecraft:entity.generic.explode hostile @a ~ ~ ~ 12 0.5
-playsound minecraft:entity.wither.death hostile @a ~ ~ ~ 12 0.6
 schedule function angel:fight/fx_fade 90t
 schedule function angel:fight/fx_clear 112t

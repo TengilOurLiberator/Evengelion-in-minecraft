@@ -54,13 +54,18 @@ Fake players on `angel.story`, exactly as `characters_bridge/rcon_commands.py` e
 
 ## The speak prompt
 
-Whenever `#wait` is 1 or 2, no recorded line is playing and the bridge is not speaking, a small `text_display` (billboarded, full
-brightness, about 0.3 scale) appears with three gold dots and "Your turn - answer Misato" (for the consent wait "Your turn - will you
-pilot it?"), a soft amethyst chime plays, and the same words go on the action bar for flat-screen play. It is placed a metre from the
-boy's eyes toward the character who asked when she is close; two and a half metres in front of her, toward him, when she is across the
-room; close to him in her direction when she is very far (the commander in the booth); in front of where he is looking when she is
-only a voice. In a vehicle it is fixed in the vehicle's frame, ahead of the passenger seat, and travels with it. It disappears the
-moment the wait ends or the bridge starts to voice a reply.
+Whenever `#wait` is 1 or 2, no recorded line is playing and the bridge is not speaking, a small two-line panel appears (two billboarded,
+full-brightness `text_display`s, tags `angel.prompt` + `angel.prompt_main` / `angel.prompt_sub`): a gold speech-bubble glyph and **Your turn** in
+bold white on the first line (letters about 12 cm tall: readable at 2 to 3 m in a headset), and in smaller grey letters beneath it what to do
+("answer Misato"; for the consent wait "will you pilot it?"). A soft amethyst chime plays. The glyph is U+1F4AC, a 16 x 16 glyph of the default
+font's Unifont layer (looked up in the 26.3 asset index: `unifont.zip`, 114432 code points); it is written to the function files as the escape
+`💬`, because **every generated file is plain ASCII** (`core.ascii_only`: whatever is above U+007F becomes a `\uXXXX` escape, so what the
+game shows can never depend on the encoding a file is read in; `--check` fails on a non-ASCII generated file and on mojibake in any story source).
+Placement (never over the speaker's face): near the player it hangs between him and her, 0.5 to 0.7 below his line of sight to her eyes (1.0 m from his eyes when she is closer than 2.2 m, else 1.5 m); farther away
+(across the room, the commander in the booth) it hangs 2.1 m from his eyes in her direction, 0.8 below that line; for a voice only (telephone) it hangs
+2 m ahead of where he looks; in a vehicle it is fixed in the vehicle's frame, ahead of the passenger seat, and travels with it. The same words go on
+the action bar **only when no panel could be placed**. `function angel:story/prompt/pulse` swells the panel and plays the chime again (the nudge of a
+silent player, below). It disappears the moment the wait ends or the bridge starts to voice a reply.
 
 ## Writing a scene
 
@@ -88,6 +93,8 @@ def build(s, ctx): ...
 | `s.label("x")`, `s.goto("x")`, `s.branch(cond, "x")` | jumps (e.g. on `#consent`) |
 | `s.setup_done()` | marks the end of the steps that rebuild the starting state (see below) |
 | `s.next_scene(n, jump=False)` | hand over to scene n: `jump=False` carries the state on (`angel:story/sN/cont`, no rebuild, no flicker); `jump=True` is `angel:story/scene {n:N}` (rebuild with a fade; use when the next scene is elsewhere) |
+| `s.move_player(x, y, z, yaw=None, pitch=None, r=4, settle=0.8, before=())` | **the guarded move**, for any teleport that crosses sets (2000+ blocks, unloaded chunks, perhaps still on a seat): dismount (`ride dismount`, `#ride 0`), forceload the destination, `before`, wait `settle` s, dismount again and `tp` (turning the head only if `yaw` is given), then WAIT until he is within `r` blocks, re-issuing the dismount and the teleport every second (12 s limit: one more teleport, then on). Every scene's first teleport and every cross-set move goes through it (`sim.check_relocations`) |
+| `s.hush(what)` / `s.unhush()` | a span in which nothing may START to sound but the recorded voices (the checker follows every step in it; lead.py's footsteps are muted by `#hush`) |
 | `s.function(name, lines)` | a reusable function of the scene; returns the call |
 
 Conditions (`engine.C`): `C.near(x, y, z, r)`, `C.score("#name", "1..")`, `C.flag("name")`, `C.entity(selector)`,
@@ -119,6 +126,30 @@ A rig is a set of display entities all at one position (the rig's), each holding
 `tp` with the route's yaw and pitch moves the lot; seats are `item_display` entities tagged `angel.seat_driver` / `angel.seat_passenger`
 (the rider's feet end up 0.6 below the seat entity: measured). The player is `ride`n onto the seat once and never teleported while it moves.
 The route table is played from `#mv.n` (one frame per tick); legs start and end at rest, so holding at a station is natural.
+
+**The car** (`models.py`) is an open-top blue roadster, right-hand drive, 60 display parts: 3.0 wide over the body (3.6 over the wheels), 6.65 long,
+door tops at 0.75, a raked windscreen (glass and two posts, no top rail) that ends at 1.11, a bonnet falling 11 degrees to the nose, two seats with
+headrests and humps, wing mirrors, head and tail lights, and a dash, column and steering wheel in front of the DRIVER only.  Model space is +x LEFT:
+the boy (passenger, the player) sits on the LEFT at (0.72, 0.17, -0.12) (feet), Misato on the RIGHT at (-0.72, 0.17, 0.12): 1.44 apart across the
+car, 1.46 centre to centre, her seat a quarter of a block ahead of his; the seat entity is 0.6 above the feet.  The passenger door is the left one
+(`carfx.door_world`): on the street the car stops with its left flank to the boy.  A rider's eye is 1.5 to 1.8 above his feet (1.62 flat-screen):
+at every such height nothing of the car is above the horizon in the forward 160 degrees or overhead, and about 80 % of a 100-degree forward frame is
+clear (the scuttle takes the lower tenth, the bonnet the next); `ride_view.py` ray-casts it (below).  Lying on its side it rests on its right wheels
+(`ROLL_PIVOT`), open top to the right.  `cartrain_rig(..., reversed_car=True, low_side="R")` turns the car end for end on the wagon (seats and their
+yaw with it) and takes the railing and posts off the wagon's right side (a 0.22-high kerb stays): the Geofront's cavern is on the right of the
+direction of travel, so the passenger's window faces it.  Misato's head: `carfx.look_boy()` (the cast turns her to the boy, 12 degrees a tick),
+`carfx.look_road(rig)` (the rig holds her facing the way the car goes), `carfx.say_glancing(s, rig, "2.01", glance=3.6)` (she looks at him as the line
+begins and at the road again `glance` seconds in).  Every rig part is tagged `angel.rpart`, never `angel.part` (that is the Angel's: `angel:angel/sync` teleports every block display carrying it to the monster each tick, which is why the aircraft of the first playthrough were never seen).  `Rig(driver_face=0.0)` hides the "driver" seat key from system.py's own facing line (it only zeroes
+the pitch), and puts the facing in the rig's follow function, switched off while `#look_misato` is 1.
+
+`ride_view.py` is the first-person ray-caster used to design the car and the wagon's open side: `python ride_view.py car` renders forward / left /
+right / up / back / down and the conversation view from the passenger's eye over the car's boxes and a box model of Misato, and prints the obstruction
+numbers (opaque parts, glass counted apart, highest part in the forward 160 degrees, Misato's azimuths) for eyes 1.5 / 1.62 / 1.8 above the feet and
+a seated-low 1.15; `python ride_view.py wagon` casts rays through the built Geofront from the passenger's eye at `geofront.wall_opens`, `geofront.reveal`
+and 2 s after, for the pyramid, the lake and the hanging towers, and renders looking out of the window; `ride_view_old.py` keeps the first (closed)
+coupe for the before / after numbers.  `ride_air.py` is scene 1's air attack (five VTOLs 13 blocks long circling the walking Angel at different heights,
+tracers flying to it and bursting in flashes, one hit and falling burning to `outskirts.crash`, the wreck, the birds on the wires).  A route that rides
+above the ground on purpose declares `route.deck_lift = [..]` (planned height per frame) and the checker subtracts it.
 
 ### A worked example
 
@@ -185,9 +216,16 @@ runs `angel:story/consented`) that ALSO ends, without consent (`#consent` stays 
 that was not a yes. It uses only what the bridge already writes: `#bridge_speaking` going from 0 to a character id and back to 0 (the
 bridge's `_pilot` speaks the addressed character's reply on a non-yes and leaves `#wait` alone). Give it a `timeout`: if the answer is not
 addressed to anyone the bridge says nothing, and the wait would hold. `s.wait_consent/wait_answer(..., nudges=Nudges(first, repeat, cmds,
-loop_from=1, lines=[...]))` runs reminders while it waits: the first after `first` seconds, then every `repeat`, never while a line plays or
-the bridge speaks, in the order `cmds[0], cmds[1], ..., cmds[n-1], cmds[loop_from], ...` (scene 5: 5.39, 5.40, 5.41, 5.40, 5.41 ...).
-`lines` is what the checker records as said on a path where the player agrees after the first pass. `s.branch(...)` plus
+loop_from=1, lines=[...]))` runs reminders while it waits: the first after `first` seconds of SILENCE, then one every `repeat` seconds of silence,
+in the order `cmds[0], cmds[1], ..., cmds[n-1], cmds[loop_from], ...` (scene 5: 5.39, 5.40, 5.41, 5.40, 5.41 ...). Silence is the clock: the nudge
+counter `#nagt` only counts ticks in which no recorded line plays and the bridge is not speaking, so **the gap between the END of one nudge line and the
+START of the next is exactly `repeat`**. (What was wrong before: when the counter reached `first` the body started a line, and the gate that followed
+it in the same function saw `#talking` already 1 and "tried again in a second", over and over: each nudge came one second after the previous line ended.
+The same ordering bug was in the `until` nags; both are fixed, and `sim.check_nudge_cadence` runs every compiled nudge series through 3 minutes of
+silence on the generated functions and fails the build on any other gap.) A wait with **no** `nudges` gets the engine's gentle default
+(`Nudges.gentle_for`): after 12 s of silence the asking character turns to look at the player (when she is there in person) and the prompt pulses with
+its chime again, repeated every 15 s; no spoken lines. `lines` is what the checker records as said on a path where the player agrees after the first
+pass. `s.branch(...)` plus
 `s.sim_path("early_yes", take=["label"], skip=("5.25", "5.41"))` makes the checker walk a second route and verify its lines.
 
 **Sound** (`audio.py`): `s.bed("hq")` / `s.bed(None)` an ambience bed that restarts itself every N seconds (the length of its .ogg, read
@@ -235,6 +273,17 @@ builds a flicker. `angel:story/hq/reset_all` puts the whole set back as built; `
 when the story has been in the set (`#hq.dirty`). A scene that wants the cage lit after scene 5 must switch the lights on itself
 (`angel:story/hq/lights_on`, `booth_on`).
 
+## What the engine keeps out of the picture
+
+* **Vanilla toasts**: `datapack/angel/pack.mcmeta` has a `filter` block that hides every vanilla advancement and recipe from the packs below ours
+  (`{"namespace": "minecraft", "path": "^(advancement|recipe)/.*"}`), so that giving an item can never unlock a recipe and the shaft can never
+  complete "Great View From Up Here"; our own namespace is not touched.
+* **"Press Left Shift to dismount"**: the client shows it on the action bar when it learns that it is a passenger. A seat the engine has not seen
+  yet (`angel.rd_seen` tag) arms `#rd`, and for 80 ticks an empty action bar goes out every tick (`story/t_ride`).
+* **Props in the hand**: written books and paper (the letter, the photograph, the booklet) that land in the hotbar are moved to the same slot of the
+  main inventory every 5 ticks (`story/t_inv`), so nothing sits in the selected slot as a big block in the lower right of the view; they are cleared by
+  `story/start` and when scene 4 is entered (`ctx.enter_hooks`).
+
 ## Files
 
 | file | role |
@@ -246,6 +295,7 @@ when the story has been in the set (`#hq.dirty`). A scene that wants the cage li
 | `engine.py` | `Scene` (the step API), `Cond`/`C`, the compiler |
 | `system.py` | load, tick, halt, entry points, ride lock, look check, the speak prompt, rig functions |
 | `models.py`, `movers.py`, `motion.py`, `paths.py`, `carfx.py`, `fx.py` | display models, routes, speed profiles, drivable paths, effects |
+| `ride_view.py`, `ride_view_old.py`, `ride_air.py` | the passenger's-eye ray-caster and the before / after numbers; scene 1's aircraft, wreck and birds |
 | `world_probe.py` | read-only access to the built voxel worlds |
 | `sim.py` | the offline simulator / checker |
 | `scenes/` | one module per scene |

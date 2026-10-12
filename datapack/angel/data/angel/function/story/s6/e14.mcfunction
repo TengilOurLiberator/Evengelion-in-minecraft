@@ -1,2 +1,7 @@
 scoreboard players set #force angel.story 0
-scoreboard players set #sleep angel.story 16
+scoreboard players set #present_misato angel.story 2
+scoreboard players set #present_ritsuko angel.story 2
+scoreboard players set #present_gendo angel.story 2
+scoreboard players set #present_rei angel.story 0
+scoreboard players set #step angel.story 15
+function angel:story/s6/e15

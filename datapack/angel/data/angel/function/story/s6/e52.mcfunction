@@ -1,4 +1,4 @@
 scoreboard players set #force angel.story 0
-function angel:story/launch/eyes_on
+schedule function angel:story/s6/f_a17 13t
 scoreboard players set #step angel.story 53
 function angel:story/s6/e53

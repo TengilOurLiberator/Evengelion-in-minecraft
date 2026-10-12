@@ -41,13 +41,14 @@ def build(s, ctx):
     NORTH, SOUTH = 155.5, 165.5
 
     # ================================================================ setup (a jump runs it; a hand-over from scene 3 comes here too)
-    s.do(blind(3.5), note="fade out")
+    s.do(blind(4.5), note="fade out")
     s.sleep(0.4)
-    s.do(*ctx.preload_rect(3000, 128, 3190, 176), note="preload the corridors, the lobby, the lake hall")
-    s.sleep(1.2, note="the chunks load")
-    s.do(fn("story/hq/reset_cage"), fn("story/hq/reset_lobby"), dirty_cmd(), fn("story/hq/side_closed"), fn("story/hq/lift_closed"),
+    # the move from the geofront (2000 blocks away: unloaded chunks, the player perhaps still on the wagon seat) is the guarded one: it dismounts,
+    # forceloads, teleports and WAITS until he is really at hq.start (re-issuing the teleport every second)
+    s.move_player(start["x"], start["y"], start["z"], settle=1.2, before=ctx.preload_rect(3000, 128, 3190, 176),
+                  note="the player to hq.start (the head is not turned)")
+    s.do(fn("story/hq/reset_cage"), fn("story/hq/reset_lobby"), dirty_cmd(), fn("story/hq/side_closed"), fn("story/hq/lift_closed"), *worldgen_sky.sky("hq"),
          note="the set as it should stand: cage dark and shut, the lift's door closed, the hospital door closed")
-    s.do(tp_player(start["x"], start["y"], start["z"]), *worldgen_sky.sky("hq"), note="the player to hq.start (the head is not turned)")
     s.do(sset("#beat", 40), sset("#present_misato", 1), sset("#present_ritsuko", 0), sset("#present_gendo", 0), sset("#present_rei", 0),
          cast_summon("misato", start["x"] - 2.0, start["y"], start["z"], 90.0), cast_look("misato", "ahead"),
          cast_summon("ritsuko", elev_in["x"], elev_in["y"], elev_in["z"], -90.0), cast_look("ritsuko", "ahead"),
@@ -74,7 +75,11 @@ def build(s, ctx):
     L.lead(s, ctx, "misato", [L.Stop(loop_door["x"], Y_UP, loop_door["z"], wait=False, note="hq.loop_door, the second time")],
            speed=SPEED, start=(EAST, NORTH))
     door_pt = (loop_door["x"], Y_UP + 1.6, loop_door["z"] + 3.2)               # the orange hatch, in the wall just south of her
-    s.do(*L.face(ctx, "misato", *door_pt), note="she stops dead and looks at the door")
+    # personal space at the door: she stands at the stop, and when he walks up to her she steps on, away from him (never within 1.8 blocks of
+    # the lens): the first of north, west, east, south in which the built set has floor and headroom for the step
+    esc = next((d_ for d_ in ((0.0, -1.0), (-1.0, 0.0), (1.0, 0.0), (0.0, 1.0)) if L.way_clear(ctx, loop_door["x"], Y_UP, loop_door["z"], *d_)), None)
+    arm_door = L.space_on(ctx, "misato", loop_door["x"] + esc[0] * L.SPACE_STEP, Y_UP, loop_door["z"] + esc[1] * L.SPACE_STEP) if esc else []
+    s.do(*L.face(ctx, "misato", *door_pt), *arm_door, note="she stops dead and looks at the door (personal space armed)")
     s.until(L.near_char("misato", 6.0), timeout=120, est=0.5, hint=("Misato has stopped at a door.", []), hint_after=30,
             on_timeout=[tp_player(loop_door["x"] + 2.5, Y_UP, loop_door["z"] - 1.0)], note="the player catches up")
     s.sleep(0.9)
@@ -82,6 +87,7 @@ def build(s, ctx):
     s.do(L.face_player("misato"), note="she turns to him")
     s.wait_answer(speaker="misato", prompt="answer Misato")
     s.say("4.04")
+    s.do(*L.space_off("misato"), note="personal space off: she walks to the panel")
     # she presses a wall panel (the north wall of the ring, opposite the door)
     panel = (loop_door["x"], Y_UP + 1.4, 151.9)
     s.do(f'function angel:cast/walk {{id:"misato",x:{num(loop_door["x"])},y:{num(Y_UP)},z:{num(153.0)},speed:0.12}}', note="she steps to the wall")
@@ -150,12 +156,17 @@ def build(s, ctx):
     s.sleep(0.5)
 
     # ================================================================ down: all three into the lift
-    car_c = (elev_in["x"], Y_LO, elev_in["z"])                     # (3005.5, 107, 160.5)
-    s.do(f'function angel:cast/walk {{id:"ritsuko",x:{num(car_c[0] - 1.0)},y:{num(Y_LO)},z:{num(car_c[2] - 1.0)},speed:0.14}}',
-         f'function angel:cast/walk {{id:"misato",x:{num(car_c[0] - 1.0)},y:{num(Y_LO)},z:{num(car_c[2] + 1.0)},speed:0.14}}',
-         note="Ritsuko and Misato step into the lift")
-    s.until([C.near(car_c[0], Y_LO, car_c[2], 1.2, est=6)], timeout=50, est=6.0, hint=("Step into the lift (all the way in: the doors close).", []), hint_after=14,
-            on_timeout=[tp_player(car_c[0], Y_LO, car_c[2])], note="the player steps into the lift")
+    car_c = (elev_in["x"], Y_LO, elev_in["z"])                     # (3005.5, 107, 160.5): the car is 3 x 3 (x 3004..3007, z 159..162), its doors on the east side
+    # fixed places in the car: the two women stand at the back wall (west), in the two corners, facing the doors; the boy's place is at the doors, in the
+    # middle: 1.9 blocks from each of them (a 3 x 3 car holds three people no farther apart)
+    LIFT_R = (car_c[0] - 1.0, car_c[2] - 1.0)                      # Ritsuko: back wall, south-west corner (3004.5, 159.5)
+    LIFT_M = (car_c[0] - 1.0, car_c[2] + 1.0)                      # Misato: back wall, north-west corner (3004.5, 161.5)
+    LIFT_P = (car_c[0] + 0.6, car_c[2])                            # the boy: by the doors (3006.1, 160.5)
+    s.do(f'function angel:cast/walk {{id:"ritsuko",x:{num(LIFT_R[0])},y:{num(Y_LO)},z:{num(LIFT_R[1])},speed:0.14}}',
+         f'function angel:cast/walk {{id:"misato",x:{num(LIFT_M[0])},y:{num(Y_LO)},z:{num(LIFT_M[1])},speed:0.14}}',
+         note="Ritsuko and Misato step into the lift, to the back corners")
+    s.until([C.near(LIFT_P[0], Y_LO, LIFT_P[1], 0.9, est=6)], timeout=50, est=6.0, hint=("Step into the lift (all the way in: the doors close).", []), hint_after=14,
+            on_timeout=[tp_player(LIFT_P[0], Y_LO, LIFT_P[1])], note="the player steps into the lift")
     s.until(Cond(["if score #arrived_ritsuko angel.cast matches 1", "if score #arrived_misato angel.cast matches 1"], 2.0, "both in the car"),
             timeout=15, est=1.0, note="both are in")
     east = (car_c[0] + 8.0, Y_LO + 1.6, car_c[2])
@@ -164,14 +175,15 @@ def build(s, ctx):
     s.do(fn("story/hq/lift_closed"), sfx("sfx.elevator_doors", at=(car_c[0] + 1.5, Y_LO + 1.5, car_c[2]), vol=2.0, minvol=0.6), note="the doors close")
     s.sleep(1.4)
     # the ride: through black.  The motor is a vanilla stand-in (a low hum and a thump) until a recorded one exists.
-    s.do(blind(7), *ctx.audio.stop("bed"), sfx("minecraft:block.beacon.ambient", vol=0.9, pitch=0.5), note="the lift goes down: to black")
+    # the ride has a bed of its own: the hum of the corridors gives way to the machine pulse of amb.plug (a sealed, humming space) over 1.2 s and,
+    # at the lower stop, to the lake hall's air over 1.5 s; no vanilla stand-in sounds
+    s.do(blind(7), *ctx.audio.start("bed", "plug", fade=1.2, out="hq", out_fade=1.2), note="the lift goes down: to black; amb.plug is the ride's bed")
     s.sleep(0.6)
-    s.do(cast_remove("ritsuko"), cast_remove("misato"), tp_player(car_c[0], Y_DK, car_c[2]),
-         cast_summon("ritsuko", car_c[0] - 1.0, Y_DK, car_c[2] - 1.0, -90.0), cast_summon("misato", car_c[0] - 1.0, Y_DK, car_c[2] + 1.0, -90.0),
-         cast_look("ritsuko", "ahead"), cast_look("misato", "ahead"), note="in the dark: the lower stop")
-    s.after(2.6, sfx("minecraft:block.beacon.ambient", vol=0.9, pitch=0.5), note="the hum goes on")
-    s.after(4.2, sfx("minecraft:block.piston.contract", vol=1.0, pitch=0.5), note="the lift slows")
-    s.after(4.9, sfx("sfx.elevator_arrive", vol=1.0), *ctx.audio.start("bed", "lake"), note="a tone; the lake hall's air")
+    s.do(cast_remove("ritsuko"), cast_remove("misato"), tp_player(LIFT_P[0], Y_DK, LIFT_P[1]),
+         cast_summon("ritsuko", LIFT_R[0], Y_DK, LIFT_R[1], -90.0), cast_summon("misato", LIFT_M[0], Y_DK, LIFT_M[1], -90.0),
+         cast_look("ritsuko", "ahead"), cast_look("misato", "ahead"), note="in the dark: the lower stop (same places in the car, facing the doors)")
+    s.after(4.3, sfx("sfx.elevator_arrive", vol=0.6, pitch=0.8), note="the lift slows: a soft tone")
+    s.after(4.9, sfx("sfx.elevator_arrive", vol=1.0), *ctx.audio.start("bed", "lake", fade=1.5, out="plug", out_fade=1.5), note="a tone; the lake hall's air")
     s.sleep(5.6, note="the dark lifts")
     s.do(sfx("sfx.elevator_doors", vol=0.8), L.face_player("ritsuko"), note="the doors are open on the dock")
     s.sleep(0.8)
@@ -183,8 +195,8 @@ def build(s, ctx):
         L.Stop(crossing["x"], Y_DK, crossing["z"], say_while=["4.13", "4.14"], note="hq.crossing"),
         L.Stop(xl, Y_DK, Z, wait=False, say_while=["4.15", "4.16"], note="the corner of the catwalk"),
         L.Stop(xl, Y_DK, cdoor["z"] + 5.0, wait=False, say_while=["4.17"], note="up to the cage door"),
-        L.Stop(xl, Y_DK, cdoor["z"] - 1.8, note="in front of the cage door"),
-    ], speed=SPEED, companion=("misato", 2.6, 1.3), start=(car_c[0] - 1.0, car_c[2] - 1.0))
+        L.Stop(xl, Y_DK, cdoor["z"] - 1.8, note="in front of the cage door", space=False),        # the door is straight ahead: she stays put
+    ], speed=SPEED, companion=("misato", 2.6, 1.3), start=LIFT_R)
     s.do(L.face_player("misato"), note="Misato arrives and looks at him")
     s.sleep(0.6)
     # 4.18 at hq.cage_door, as the door opens onto darkness

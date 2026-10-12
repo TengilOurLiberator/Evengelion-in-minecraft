@@ -25,7 +25,7 @@ import math
 
 import lead as L
 from audio import sfx
-from context import cast_look, cast_mount, cast_pose, cast_remove, cast_summon, tp_player
+from context import cast_look, cast_mount, cast_pose, cast_remove, cast_scale, cast_summon, tp_player
 from core import OBJ, P, PA, T, blind, dir_to_yaw, fn, num, sset
 from engine import C, Cond, Nudges
 from hq_cage import N_BANKS, cage, dirty_cmd
@@ -57,7 +57,8 @@ def build(s, ctx):
     MIS_STEP = (XC - 1.5, Y, face["z"] + 1.9)          # Misato steps forward on 5.07: beside and a little behind the boy
     REI_MID = (XC - 0.5, Y, 77.4)                      # where Rei lies after she is thrown (her middle); the shield column is z 78.5
     EYE = 1.6
-    BOOTH_EYE = (booth["x"], booth["y"] + EYE, booth["z"])
+    GENDO_SCALE = 2.0                                  # he is 25 blocks away at the front edge of the booth: 1.0 is a doll in a window, 2.0 a figure
+    BOOTH_EYE = (booth["x"], booth["y"] + 1.62 * GENDO_SCALE, booth["z"])      # (the scaled mannequin's eyes)
     HE_STOPS = (face["x"], face["y"] + EYE, face["z"])  # the boy's eyes at the stop, which Gendo looks at
     GURNEY_START = (gin["x"] - 5.0, Y, gin["z"])       # inside the hospital vestibule, behind the door at x = gin.x
     SEAT = (gmark["x"] + 0.9, Y + 0.945, gmark["z"])   # where Rei's foot end is on the gurney at the mark
@@ -66,13 +67,12 @@ def build(s, ctx):
         return (p[0], p[1] + EYE, p[2])
 
     # ================================================================ setup (a jump runs it; a hand-over from scene 4 skips it)
-    s.do(blind(3.5), note="fade out")
+    s.do(blind(4.5), note="fade out")
     s.sleep(0.4)
-    s.do(*ctx.preload_rect(3040, 16, 3135, 176), note="preload the whole cage and the lake hall")
-    s.sleep(1.4, note="the chunks load")
-    s.do(fn("story/hq/reset_cage"), fn("story/hq/reset_lobby"), dirty_cmd(), fn("story/hq/door_opened"), fn("story/hq/side_closed"),
+    s.move_player(cdoor["x"], cdoor["y"], cdoor["z"], settle=1.4, before=ctx.preload_rect(3040, 16, 3135, 176),
+                  note="the player to hq.cage_door (the head is not turned), the whole cage and the lake hall forceloaded")
+    s.do(fn("story/hq/reset_cage"), fn("story/hq/reset_lobby"), dirty_cmd(), fn("story/hq/door_opened"), fn("story/hq/side_closed"), *worldgen_sky.sky("hq"),
          note="the set as scene 4 leaves it: cage dark, the cage door open, the hospital door closed, hand lowered, eyes dark")
-    s.do(tp_player(cdoor["x"], cdoor["y"], cdoor["z"]), *worldgen_sky.sky("hq"), note="the player to hq.cage_door (the head is not turned)")
     s.do(sset("#beat", 41), sset("#present_misato", 1), sset("#present_ritsuko", 1), sset("#present_gendo", 0), sset("#present_rei", 0),
          cast_summon("ritsuko", XC, Y, cdoor["z"] - 1.8, 180.0), cast_summon("misato", XC - 1.1, Y, cdoor["z"] + 1.8, 180.0),
          note="Ritsuko in front of the door, Misato beside the boy")
@@ -126,10 +126,12 @@ def build(s, ctx):
     # ================================================================ the father
     flick_booth = cg.flicker("booth", [], [(0, "on"), (3, "off"), (5, "on"), (9, "off"), (11, "on")], extra_off=["booth"])
     gyaw = dir_to_yaw(HE_STOPS[0] - booth["x"], HE_STOPS[2] - booth["z"])
-    s.do(cast_summon("gendo", booth["x"], booth["y"], booth["z"], gyaw), *L.face(ctx, "gendo", *HE_STOPS, ticks=8),
+    # Gendo stands exactly on hq.booth (the front edge of the balcony, so that no pane or rail crosses him), at twice life size: a mannequin with
+    # the `scale` attribute 2.0 (angel:cast/scale), looking down at the boy's stop
+    s.do(cast_summon("gendo", booth["x"], booth["y"], booth["z"], gyaw), cast_scale("gendo", GENDO_SCALE), *L.face(ctx, "gendo", *HE_STOPS, ticks=8),
          sset("#present_gendo", 1), flick_booth, sfx("sfx.booth_light", at=(booth["x"], booth["y"] + 4, booth["z"] - 1), vol=2.5, minvol=0.7),
-         note="the booth lights come on: Gendo stands in the glass, looking down")
-    s.sleep(2.0, note="a beat")
+         note="the booth lights come on (they stutter for 0.55 s): Gendo stands at the front edge, looking down")
+    s.sleep(0.55 + 2.0, note="the lights settle, then TWO FULL SECONDS of him lit and still before he speaks")
     s.do(*ctx.audio.start("music", "father"), note="music: the father")
     s.say("5.04")
     s.say("5.05")
@@ -276,26 +278,29 @@ def build(s, ctx):
     s.beat(54)
     s.do(*ctx.audio.stop("music"), *ctx.audio.stop("loop"), *ctx.audio.stop("bed"), f"execute if score #f.alarm {OBJ} matches 1 run " + sfx("sfx.alarm_cut"),
          note="EVERYTHING STOPS: the music, the alarm cuts (if it was sounding)")
-    s.sleep(1.4, note="silence")
-    s.do(*ctx.audio.start("music", "resolve"), L.face_player("misato"), L.face_player("ritsuko"), note="music: the resolve")
+    s.sleep(1.2, note="silence")
+    s.do(*ctx.audio.start("music", "resolve"), L.face_player("misato"), L.face_player("ritsuko"), note="music: the resolve, under 5.42 and 5.43 only")
     s.say("5.42")
-    s.say("5.43")
-    # Ritsuko walks toward the door; Misato stays by Rei (late path); Gendo has not moved: two seconds on him, then the booth lights go out
-    s.do(*L.walk_cmds("ritsuko", XC, Y, 125.0, SPEED),
-         f"execute if score #f.rei_here {OBJ} matches 1 run " + walk("misato", REI_MID[0] - 1.0, Y, REI_MID[2] - 0.2, speed=0.12),
-         note="Ritsuko walks toward the door; Misato stays by Rei")
-    s.sleep(2.0, note="hold on Gendo: he has not moved, he says nothing")
-    s.do(fn("story/hq/booth_off"), sfx("sfx.booth_light", at=(booth["x"], booth["y"] + 4, booth["z"] - 1), vol=2.0, pitch=0.7, minvol=0.7),
-         note="the booth lights go out")
-    # as the boy follows her, 5.44 from behind
+    s.say("5.43", gap=0)
+    s.music(None, note="the music is OUT here: nothing but the room from now until 5.44 has been said")
+    s.hush("the hold on the father and 5.44")
+    # Gendo has not moved: two seconds on him in silence, then the booth lights go out.  Only then does Ritsuko walk toward the door (her
+    # footsteps would be the one sound in the hold); Misato stays by Rei (late path, no footsteps)
+    s.do(f"execute if score #f.rei_here {OBJ} matches 1 run " + walk("misato", REI_MID[0] - 1.0, Y, REI_MID[2] - 0.2, speed=0.12),
+         note="Misato stays by Rei")
+    s.sleep(2.0, note="hold on Gendo: he has not moved, he says nothing; SILENCE")
+    s.do(fn("story/hq/booth_off"), *L.walk_cmds("ritsuko", XC, Y, 125.0, SPEED), note="the booth lights go out (no sound); Ritsuko walks toward the door")
+    # as the boy follows her, 5.44 from behind: still silence under it
     rx, rz = REI_MID[0], REI_MID[2]
     s.until(Cond([f"positioned {num(rx)} {num(Y)} {num(rz)} unless entity {P('distance=..6.5')}"], 6.0, "the boy is 6.5 blocks from Rei"),
             timeout=60, est=6.0, hint=("Follow Ritsuko.", []), hint_after=20, note="he follows Ritsuko")
+    s.say("5.44")
+    s.unhush()
+    # now the cage goes dark behind them, bank by bank, each with its breaker
     s.do(sfx("sfx.breaker_1", at=cg.bank_pos[N_BANKS - 1], vol=2.0, pitch=0.8, minvol=0.5), fn(f"story/hq/bank_off_{N_BANKS - 1}"), note="the cage goes dark behind them")
     for j, k in enumerate(range(N_BANKS - 2, 0, -1)):
         s.after(1.0 + 1.1 * j, fn(f"story/hq/bank_off_{k}"), sfx(f"sfx.breaker_{k % 3 + 1}", at=cg.bank_pos[k], vol=1.5, pitch=0.85, minvol=0.4),
                 note=f"bank {k} off")
-    s.say("5.44")
     s.until(L.arrived("ritsuko", est=10), timeout=60, est=10.0, note="Ritsuko reaches the middle of the bridge")
     s.until(L.near_char("ritsuko", 6.0), timeout=60, est=0.5, on_timeout=[tp_player(XC, Y, 119.5)], note="the boy is with her")
     s.do(*L.lead_off("ritsuko"), fn("story/hq/bank_off_0"), fn("story/hq/vest_off"), sfx("sfx.breaker_2", at=cg.bank_pos[0], vol=1.5, pitch=0.8, minvol=0.4), note="the last light")

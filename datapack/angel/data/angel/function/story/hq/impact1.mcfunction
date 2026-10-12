@@ -1,6 +1,7 @@
 playsound angel:sfx.impact_above master @a 3096.5 100.0 72.5 4.0 0.85 0.9
 function angel:story/hq/rattle
 schedule function angel:story/hq/rattle 7t
+schedule function angel:story/hq/lake_ring_near 6t
 execute at @a[limit=1] run playsound angel:sfx.lights_flicker master @a ~ ~ ~ 0.8 1.0 1.0
 execute at @a[limit=1] run playsound angel:sfx.dust_fall master @a ~ ~ ~ 0.7 1.0 1.0
 function angel:story/hq/dust

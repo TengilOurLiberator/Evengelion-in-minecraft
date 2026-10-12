@@ -1,3 +1,6 @@
-scoreboard players remove #sleep angel.story 1
-execute if score #sleep angel.story matches ..0 run function angel:story/s6/x101
+execute store result score #l.y angel.story run data get entity @a[limit=1] Pos[1] 1
+execute if score #l.y angel.story matches 108.. run function angel:story/s6/x101
+scoreboard players add #stept angel.story 1
+scoreboard players add #nagt angel.story 1
+execute if score #step angel.story matches 101 if score #stept angel.story matches 180 run function angel:story/s6/t101
 execute if score #step angel.story matches 101 if score #force angel.story matches 1 run function angel:story/s6/x101

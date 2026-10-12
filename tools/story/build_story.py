@@ -54,10 +54,11 @@ def build(dry=False, out_dir=None, warn=print, quiet=False):
     from context import Context
     from engine import Compiler, Scene
     from lines import write_lines
-    from system import build_system
+    from system import build_system, register as register_system
 
     ctx = Context(warn)
     out = Out(out_dir) if out_dir else Out()
+    register_system(ctx)
     mods = discover()
     for mod in mods:
         s = Scene(mod.N, mod.TITLE, ctx)

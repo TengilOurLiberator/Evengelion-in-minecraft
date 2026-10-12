@@ -2,6 +2,9 @@ scoreboard players set #phase angel.fight 3
 scoreboard players set #st angel.fight 6
 scoreboard players set #t angel.fight 0
 scoreboard players set #nav angel.fight 99
+scoreboard players set #bar angel.fight 0
+scoreboard players set #hold angel.fight 0
+scoreboard players set #bo angel.fight 0
 function angel:angel/stop_walking
 scoreboard players set #dur angel.mon 10
 function angel:angel/pose_wrap_open

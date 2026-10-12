@@ -49,7 +49,7 @@ def _auto_scale(text, target=TARGET_WIDTH, lo=0.35, hi=1.7, font=CARD_FONT):
 def _text_display(comp, scale, dy, rot_yaw):
     t = (f'summon minecraft:text_display ~ ~ ~ {{Tags:["{TAG}","angel.card","angel.card_text"],billboard:"center",background:0,'
          f'brightness:{{sky:15,block:15}},line_width:4000,shadow:0b,see_through:0b,alignment:"center",view_range:3.0f,'
-         f'text:{json.dumps(comp, ensure_ascii=False)},'
+         f'text:{json.dumps(comp, ensure_ascii=True)},'
          f'transformation:{{translation:[0f,0f,0f],left_rotation:[0f,0f,0f,1f],scale:[{fnum(scale)},{fnum(scale)},{fnum(scale)}],right_rotation:[0f,0f,0f,1f]}}}}')
     return (f"execute as {P()} at @s anchored eyes rotated ~{int(rot_yaw)} 0 positioned ^ ^{num(dy)} ^{num(DIST)} run {t}")
 

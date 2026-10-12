@@ -8,6 +8,5 @@ scoreboard players set #dur angel.mon 8
 function angel:angel/pose_idle
 execute at @e[type=minecraft:marker,tag=angel.root,limit=1] positioned ^ ^25.36 ^5.35 run summon minecraft:marker ~ ~ ~ {Tags:["angel.fight","angel.bo"]}
 execute at @e[type=minecraft:marker,tag=angel.root,limit=1] positioned ^ ^25.36 ^5.35 facing entity @e[type=minecraft:marker,tag=angel.aimpt,limit=1] feet run function angel:fight/beam_step
-execute at @e[type=minecraft:marker,tag=angel.root,limit=1] run playsound minecraft:entity.warden.sonic_boom hostile @a ~ ~ ~ 10 0.8
-execute at @e[type=minecraft:marker,tag=angel.bo,limit=1] run playsound minecraft:entity.lightning_bolt.thunder hostile @a ~ ~ ~ 8 1.8
+execute at @e[type=minecraft:marker,tag=angel.root,limit=1] run playsound angel:sfx.beam_fire hostile @a ~ ~ ~ 9 1
 execute if entity @e[type=minecraft:marker,tag=angel.bi] run function angel:fight/beam_visual

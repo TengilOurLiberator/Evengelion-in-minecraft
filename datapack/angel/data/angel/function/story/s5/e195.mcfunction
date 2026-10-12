@@ -1,5 +1,2 @@
 scoreboard players set #force angel.story 0
-function angel:story/hq/booth_off
-playsound angel:sfx.booth_light master @a 3110.5 67.0 56.5 2.0 0.7 0.7
-scoreboard players set #step angel.story 196
-function angel:story/s5/e196
+function angel:say/5_43

@@ -1,3 +1,6 @@
-scoreboard players remove #sleep angel.story 1
-execute if score #sleep angel.story matches ..0 run function angel:story/s4/x177
+execute if score #arrived_ritsuko angel.cast matches 1 run function angel:story/s4/x177
+scoreboard players add #stept angel.story 1
+scoreboard players add #nagt angel.story 1
+execute if score #step angel.story matches 177 if score #stept angel.story matches 3600 run function angel:story/s4/t177
+execute if score #step angel.story matches 177 if score #stept angel.story matches 700 run function angel:story/s4/h177
 execute if score #step angel.story matches 177 if score #force angel.story matches 1 run function angel:story/s4/x177

@@ -1,5 +1,6 @@
 scoreboard players set #force angel.story 0
-kill @e[tag=angel.ia_phone,limit=1]
-playsound angel:sfx.phone_pickup master @a 65.5 65.5 113.5 1.2 1.0 0.0
+function angel:story/card/off_text
+effect give @a minecraft:blindness 3 0 true
+function angel:story/card/off
 scoreboard players set #step angel.story 18
 function angel:story/s1/e18

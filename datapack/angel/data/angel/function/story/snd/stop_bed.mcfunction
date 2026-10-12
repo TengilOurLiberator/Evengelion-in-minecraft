@@ -1,3 +1,5 @@
+schedule clear angel:story/snd/bed_lake/ramp_in15_out_plug15/s1
+schedule clear angel:story/snd/bed_plug/ramp_in12_out_hq12/s1
 schedule clear angel:story/snd/bed_geofront/ramp_in25_out_tunnel12/s2
 schedule clear angel:story/snd/bed_geofront/ramp_in25_out_tunnel12/s1
 schedule clear angel:story/snd/bed_tunnel/ramp_in30/s3

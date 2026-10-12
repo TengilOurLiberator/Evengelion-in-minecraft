@@ -1,2 +1,2 @@
 scoreboard players set #force angel.story 0
-scoreboard players set #sleep angel.story 64
+function angel:say/2_10

@@ -124,7 +124,7 @@ def say_function(ln):
         out.append(f"execute if score #played {OBJ} matches 0 at {P()} "
                    f"run playsound {ln.event} voice {PA()} ~ ~ ~ 1 1 1")
     show_text = "tellraw @a " + json.dumps({"text": f"<{NAMES[ln.speaker]}> {ln.text or '(' + ln.direction + ')'}",
-                                            "color": COLORS[ln.speaker]}, ensure_ascii=False)
+                                            "color": COLORS[ln.speaker]}, ensure_ascii=True)
     if ln.has_sound:
         out.append(f"execute if score #subtitles {OBJ} matches 1 run {show_text}")
     else:

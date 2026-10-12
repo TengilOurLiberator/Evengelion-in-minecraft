@@ -7,4 +7,6 @@ scoreboard players set #talking angel.story 0
 scoreboard players set #line_left angel.story 0
 scoreboard players set #mv.on angel.story 0
 scoreboard players set #ride angel.story 0
+clear @a minecraft:written_book
+clear @a minecraft:paper
 function angel:story/s4/e0

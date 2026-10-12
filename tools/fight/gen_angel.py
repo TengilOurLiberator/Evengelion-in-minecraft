@@ -197,9 +197,9 @@ def gen(F, add_block_tag=None):
         vol = min(8.0, 1.5 + k * 3.5)
         n = int(min(60, 10 + k * 40))
         put(f"fx_foot_{H}_at", [
-            f"playsound minecraft:entity.warden.step hostile @a ~ ~ ~ {vol:.1f} 0.5",
-            f"playsound minecraft:entity.iron_golem.step hostile @a ~ ~ ~ {vol:.1f} 0.5",
-            f"playsound minecraft:block.anvil.land hostile @a ~ ~ ~ {vol * 0.6:.1f} 0.5",
+            # the library's own footfall (sfx.footfall_giant, 6 s, mono: positional) replaces the three vanilla stand-ins; same volume rule, and a
+            # minimum volume so that a far step is still heard, faintly, from its side
+            f"playsound angel:sfx.footfall_giant hostile @a ~ ~ ~ {vol:.1f} 1.0 {min(0.5, vol * 0.1):.2f}",
             f'particle minecraft:block{{block_state:"minecraft:gray_concrete"}} ~ ~0.2 ~ {sc * 2.0:.1f} 0.2 {sc * 2.0:.1f} 0.08 {n} force',
             f"particle minecraft:large_smoke ~ ~0.4 ~ {sc * 2.5:.1f} 0.1 {sc * 2.5:.1f} 0.01 {max(4, n // 3)} force",
             f"particle minecraft:poof ~ ~0.3 ~ {sc * 3.0:.1f} 0.1 {sc * 3.0:.1f} 0.04 {max(4, n // 4)} force",
@@ -390,8 +390,9 @@ def gen(F, add_block_tag=None):
         "scoreboard players operation #dy angel.mon -= #yr angel.mon",
         "execute if score #dy angel.mon matches 1801.. run scoreboard players remove #dy angel.mon 3600",
         "execute if score #dy angel.mon matches ..-1801 run scoreboard players add #dy angel.mon 3600",
-        "execute if score #dy angel.mon matches 80.. as @e[type=minecraft:marker,tag=angel.root,limit=1] run rotate @s ~8 ~",
-        "execute if score #dy angel.mon matches ..-80 as @e[type=minecraft:marker,tag=angel.root,limit=1] run rotate @s ~-8 ~",
+        "# (a relative rotate is relative to the execute context, not to the entity: `at @s` first, or it would set the yaw to +-8 each time)",
+        "execute if score #dy angel.mon matches 80.. as @e[type=minecraft:marker,tag=angel.root,limit=1] at @s run rotate @s ~8 ~",
+        "execute if score #dy angel.mon matches ..-80 as @e[type=minecraft:marker,tag=angel.root,limit=1] at @s run rotate @s ~-8 ~",
         "execute if score #dy angel.mon matches -79..79 run tp @e[type=minecraft:marker,tag=angel.root,limit=1] @e[type=minecraft:marker,tag=angel.aim,limit=1]",
     ])
     put("walk_tick", [
@@ -401,6 +402,8 @@ def gen(F, add_block_tag=None):
         "# arrived?",
         "function angel:angel/walk_arrive_check with storage angel:mon walk",
         "execute unless score #walking angel.mon matches 1 run return 0",
+        "# more than 16 degrees off the target: turn on the spot (it moves 0.3-0.9 blocks per tick and turns 4 degrees per tick, so with a target inside its turning circle it would orbit it)",
+        "execute unless score #dy angel.mon matches -159..159 run return run function angel:angel/walk_pivot",
         "# one update of movement: 2 ticks worth",
         "function angel:angel/walk_move with storage angel:mon walk",
         "function angel:angel/sync",
@@ -408,6 +411,7 @@ def gen(F, add_block_tag=None):
         "execute if score #step angel.mon matches ..0 run function angel:angel/step",
         "schedule function angel:angel/walk_tick 2t",
     ])
+    put("walk_pivot", ["function angel:angel/sync", "schedule function angel:angel/walk_tick 2t"])
     put("walk_arrive_check", [
         "$execute at @e[type=minecraft:marker,tag=angel.target,limit=1] if entity @e[type=minecraft:marker,tag=angel.root,distance=..$(stopd)] run function angel:angel/walk_arrive",
     ])

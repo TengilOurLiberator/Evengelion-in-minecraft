@@ -1,2 +1,2 @@
-scoreboard players set #step angel.story -1
-# end of scene 7
+scoreboard players set #step angel.story 33
+function angel:story/s7/e33

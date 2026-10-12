@@ -6,4 +6,6 @@ effect clear @a minecraft:blindness
 scoreboard players set #running angel.story 1
 scoreboard players set #consent angel.story 0
 gamemode adventure @a
+clear @a minecraft:written_book
+clear @a minecraft:paper
 function angel:story/scene {n:1}

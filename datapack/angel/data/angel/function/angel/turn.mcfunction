@@ -7,6 +7,7 @@ scoreboard players operation #dy angel.mon = #ya angel.mon
 scoreboard players operation #dy angel.mon -= #yr angel.mon
 execute if score #dy angel.mon matches 1801.. run scoreboard players remove #dy angel.mon 3600
 execute if score #dy angel.mon matches ..-1801 run scoreboard players add #dy angel.mon 3600
-execute if score #dy angel.mon matches 80.. as @e[type=minecraft:marker,tag=angel.root,limit=1] run rotate @s ~8 ~
-execute if score #dy angel.mon matches ..-80 as @e[type=minecraft:marker,tag=angel.root,limit=1] run rotate @s ~-8 ~
+# (a relative rotate is relative to the execute context, not to the entity: `at @s` first, or it would set the yaw to +-8 each time)
+execute if score #dy angel.mon matches 80.. as @e[type=minecraft:marker,tag=angel.root,limit=1] at @s run rotate @s ~8 ~
+execute if score #dy angel.mon matches ..-80 as @e[type=minecraft:marker,tag=angel.root,limit=1] at @s run rotate @s ~-8 ~
 execute if score #dy angel.mon matches -79..79 run tp @e[type=minecraft:marker,tag=angel.root,limit=1] @e[type=minecraft:marker,tag=angel.aim,limit=1]

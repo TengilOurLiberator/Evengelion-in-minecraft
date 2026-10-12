@@ -1,0 +1,5 @@
+execute positioned 3009.5 107.0 160.5 if entity @a[limit=1,distance=..8.5] run function angel:story/s4/x93
+scoreboard players add #stept angel.story 1
+scoreboard players add #nagt angel.story 1
+execute if score #step angel.story matches 93 if score #stept angel.story matches 1800 run function angel:story/s4/t93
+execute if score #step angel.story matches 93 if score #force angel.story matches 1 run function angel:story/s4/x93

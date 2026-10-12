@@ -115,20 +115,41 @@ def at_xyz(x, y, z, yaw=None, pitch=None):
 
 
 # --------------------------------------------------------------------------------------------------- output
+def ascii_only(text):
+    """Every character above U+007F as a \\uXXXX escape (a surrogate pair for the ones beyond the BMP).  Inside the quoted strings of a
+    command's JSON or SNBT this reads back as the same text, so what the game shows never depends on the encoding a file is read in
+    (a bullet that was once written to a source file as UTF-8 and read as Latin-1 turned into three boxes on the speak prompt).
+    Outside a string a non-ASCII character is never valid in a command anyway; in a comment the escape is harmless."""
+    if text.isascii():
+        return text
+    out = []
+    for ch in text:
+        c = ord(ch)
+        if c < 0x80:
+            out.append(ch)
+        elif c < 0x10000:
+            out.append("\\u%04x" % c)
+        else:
+            c -= 0x10000
+            out.append("\\u%04x\\u%04x" % (0xD800 + (c >> 10), 0xDC00 + (c & 0x3FF)))
+    return "".join(out)
+
+
 class Out:
-    """Collects files in memory, then writes them under the pack and removes what an earlier build wrote and this one did not."""
+    """Collects files in memory, then writes them under the pack and removes what an earlier build wrote and this one did not.
+    Everything written is plain ASCII (see ascii_only)."""
 
     def __init__(self, base=PACK):
         self.base = base
         self.files = {}
 
     def put(self, rel, text):
-        self.files[rel] = text if isinstance(text, str) else json.dumps(text, indent=1)
+        self.files[rel] = ascii_only(text if isinstance(text, str) else json.dumps(text, indent=1))
 
     def function(self, path, lines):
         if isinstance(lines, str):
             lines = [lines]
-        self.files[f"data/{NS}/function/{path}.mcfunction"] = "\n".join(lines) + "\n"
+        self.files[f"data/{NS}/function/{path}.mcfunction"] = ascii_only("\n".join(lines) + "\n")
 
     def has_function(self, path):
         return f"data/{NS}/function/{path}.mcfunction" in self.files

@@ -1,2 +1,2 @@
-execute if score #step angel.story matches 81..93 run function angel:story/s6/pt/n13
-execute if score #step angel.story matches 94..104 run function angel:story/s6/pt/n14
+execute if score #step angel.story matches 89..101 run function angel:story/s6/pt/n13
+execute if score #step angel.story matches 102..113 run function angel:story/s6/pt/n14

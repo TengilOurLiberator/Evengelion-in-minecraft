@@ -32,7 +32,12 @@ DEFAULT_SECONDS = 60.0
 BED_VOL = {"hq": 0.55, "lake": 0.6, "cage": 0.55, "cicadas": 0.7, "town_empty": 0.7, "car_interior": 0.7, "tunnel": 0.7, "geofront": 0.7}
 MUSIC_VOL = {"cage": 0.7, "father": 0.7, "decision": 0.75, "resolve": 0.8, "dread": 0.75, "road": 0.7, "descent": 0.85, "fight": 0.75,
              "fight_final": 0.8, "defeat": 0.9}
-MUSIC_LOOP = {"decision": True, "dread": True, "road": True, "fight": True, "fight_final": True}   # music that restarts itself until it is stopped
+# Music that restarts itself until it is stopped: exactly the files that tools/sound/manifest.json flags `loop` (checked by sim.check_music).
+# A file that is NOT a loop (descent, defeat, resolve, victory, and the long decision and launch files) plays once.
+MUSIC_LOOP = {"cage": True, "father": True, "dread": True, "road": True, "fight": True, "fight_final": True}
+# A long file followed by its loop file: the loop starts when the long file ends and repeats by its own length (the library table says so:
+# the last 13.85 s of music.decision are music.decision_loop; music.launch is 20 s of build and then the drive cycle twice).
+MUSIC_CHAIN = {"decision": "decision_loop", "launch": "launch_loop"}
 LOOP_PERIOD = {"klaxon": 11.0}                   # a "loop" is an effect layer (an alarm) that repeats every so many seconds until stopped (else: its own length)
 LOOP_VOL = {"klaxon": 0.4, "siren": 0.6}
 RAMP_STEP = 0.8                                  # seconds per step of a fade
@@ -102,7 +107,9 @@ class Audio:
             if vol is not None:
                 v = vol
             secs = (LOOP_PERIOD.get(ek) or event_file_seconds(event)) if kind == "loop" else event_file_seconds(event)
-            self.cues[k] = dict(kind=kind, key=key, event=event, source=source, vol=v, loop=loop, secs=secs or DEFAULT_SECONDS, known=bool(secs), at=at)
+            chain = MUSIC_CHAIN.get(ek) if kind == "music" else None
+            self.cues[k] = dict(kind=kind, key=key, event=event, source=source, vol=v, loop=loop, secs=secs or DEFAULT_SECONDS, known=bool(secs), at=at,
+                                chain=(f"{NS}:music.{chain}", event_file_seconds(f"{NS}:music.{chain}") or DEFAULT_SECONDS) if chain else None)
         return self.cues[k]
 
     def _mix(self, key):
@@ -212,9 +219,17 @@ class Audio:
                 ex[f"{base}/loop"] = [f"# {c['event']}: {c['secs']:.1f}s{'' if c['known'] else ' (recording not found: default length)'}",
                                       play, f"schedule function {NS}:{base}/loop {max(1, T(c['secs']))}t"]
                 ex[f"{base}/start"] = [fn(f"story/snd/stop_{kind}"), fn(f"{base}/loop")]
+            elif c.get("chain"):
+                cev, csecs = c["chain"]
+                cplay = play.replace(c["event"], cev)
+                ex[f"{base}/chain"] = [f"# {cev}: {csecs:.2f}s, repeats until stopped (it follows {c['event']}, {c['secs']:.2f}s)",
+                                       cplay, f"schedule function {NS}:{base}/chain {max(1, T(csecs))}t"]
+                ex[f"{base}/start"] = [fn(f"story/snd/stop_{kind}"), play, f"schedule function {NS}:{base}/chain {max(1, T(c['secs']))}t"]
             else:
                 ex[f"{base}/start"] = [fn(f"story/snd/stop_{kind}"), play]
             stops[kind] += ([f"schedule clear {NS}:{base}/loop"] if c["loop"] else []) + [f"stopsound {PA()} {c['source']} {c['event']}"]
+            if c.get("chain"):
+                stops[kind] += [f"schedule clear {NS}:{base}/chain", f"stopsound {PA()} {c['source']} {c['chain'][0]}"]
         for stem, parts in self.mixes.items():
             ex[f"story/snd/bed_{stem}/start"] = [fn("story/snd/stop_bed")] + [fn(f"story/snd/bed_{p}/loop") for p in parts]
         for path, lines in self.ramps:

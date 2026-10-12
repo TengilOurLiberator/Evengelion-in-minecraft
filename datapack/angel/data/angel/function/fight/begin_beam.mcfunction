@@ -6,5 +6,5 @@ execute if score #phase angel.fight matches 2.. run scoreboard players set #bt a
 function angel:angel/stop_walking
 scoreboard players set #dur angel.mon 14
 function angel:angel/pose_charging
-execute at @e[type=minecraft:marker,tag=angel.root,limit=1] run playsound minecraft:entity.warden.sonic_charge hostile @a ~ ~ ~ 8 0.9
+execute at @e[type=minecraft:marker,tag=angel.root,limit=1] run playsound angel:sfx.beam_charge hostile @a ~ ~ ~ 8 1
 function angel:fight/bark_beam

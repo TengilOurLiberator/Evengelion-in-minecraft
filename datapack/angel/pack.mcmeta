@@ -3,5 +3,13 @@
     "description": "Angel Attack: the giant-robot story",
     "min_format": 121,
     "max_format": 121
+  },
+  "filter": {
+    "block": [
+      {
+        "namespace": "minecraft",
+        "path": "^(advancement|recipe)/.*"
+      }
+    ]
   }
 }
