@@ -1,1 +1,1 @@
-time of angel:day rate 7.0
+time of angel:day rate 1.5

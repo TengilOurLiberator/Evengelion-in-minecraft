@@ -1,0 +1,3 @@
+execute as @e[type=minecraft:block_display,tag=angel.hota] run data merge entity @s {start_interpolation:0,interpolation_duration:10,transformation:{translation:[-2.600f,-2.600f,-2.600f],scale:[5.200f,5.200f,5.200f]}}
+execute as @e[type=minecraft:block_display,tag=angel.hotb] run data merge entity @s {start_interpolation:0,interpolation_duration:10,transformation:{translation:[-3.677f,-2.600f,0.000f],scale:[5.200f,5.200f,5.200f]}}
+execute as @e[type=minecraft:interaction,tag=angel.core,limit=1] at @s positioned ~ ~3.00 ~ run particle minecraft:dust{color:[1.0,0.1,0.1],scale:3.0} ~ ~ ~ 1.8 1.8 1.8 0 8 force

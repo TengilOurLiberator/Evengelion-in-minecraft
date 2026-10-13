@@ -35,6 +35,7 @@ class Context:
         self.cards = {}                   # (text, small) -> index, see cards.py
         self.turns = []                   # smooth turns of characters (lead.py)
         self.helpers = {}                 # per-module caches (hq_cage etc.)
+        self.companion_legs = []          # lead.py: every leg a companion walks (the checker proves each is walkable, sim.check_companions)
         self.objectives = []              # objective.Objective, index = k of angel:story/ob/b<k>
         self.prompt_loud = set()          # prompt texts drawn in yellow (the consent wait)
         self.enter_hooks = {}             # scene number -> commands run when the scene is entered (jump or hand-over): see system.py

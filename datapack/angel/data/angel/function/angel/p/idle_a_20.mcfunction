@@ -140,5 +140,5 @@ data merge entity @e[type=minecraft:block_display,tag=angel.p135,limit=1] {trans
 data merge entity @e[type=minecraft:block_display,tag=angel.p136,limit=1] {transformation:{translation:[-0.875f,15.18f,2.093f],left_rotation:[-0.083f,-0.063f,-0.599f,0.794f],scale:[0.16f,1.4f,0.14f]}}
 execute as @e[type=minecraft:block_display,tag=angel.eye] run data merge entity @s {block_state:"minecraft:black_concrete"}
 data merge entity @e[type=minecraft:interaction,tag=angel.body,limit=1] {width:4.8f,height:11.2f}
-data modify storage angel:mon off set value {cx:"0.000",cy:"13.229",cz:"2.552",bx:"0.000",by:"7.600",bz:"0.000"}
+data modify storage angel:mon off set value {cx:"0.000",cy:"12.729",cz:"2.552",bx:"0.000",by:"7.600",bz:"0.000",nx:"0.000",ny:"11.229",nz:"2.552"}
 function angel:angel/sync_hit with storage angel:mon off

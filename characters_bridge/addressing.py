@@ -10,9 +10,12 @@ Order of rules (first that gives an answer wins):
   4. last resort: any voice-only character, else the nearest in-person one at any distance
   nobody present -> None (silence)
 """
+import os
 import math
+import os
 import re
 
+import os
 from config import ALIASES, CHARACTERS, IN_PERSON, SETTINGS, VOICE_ONLY
 
 _NOT_VOCATIVE = {"my", "your", "the", "a", "his", "her", "our", "that", "this", "their", "said", "says", "about", "like"}
@@ -106,6 +109,12 @@ def resolve(text, present, player=None, rotation=None, chars=None, last_speaker=
     c = named(text, can_hear)
     if c:
         return c, "named in the utterance"
+
+    if os.environ.get("ANGEL_COMMENTARY") == "1":
+        # he is recording and talks to his audience: answer only when the story is waiting for him, or he says a name
+        if asker and present.get(asker, 0) > 0:
+            return asker, "the one who asked"
+        return None, "commentary (no name spoken, no question pending)"
 
     gaze = gaze_candidates(player, rotation, chars, cfg)
     if gaze:

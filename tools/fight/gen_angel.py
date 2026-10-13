@@ -127,18 +127,28 @@ def foot_offsets(k):
     return (fl[0] * k, fl[2] * k), (fr[0] * k, fr[2] * k)
 
 
+def cfg():
+    """The fight preset in force (gen_fight.CFG; imported late: gen_fight imports this module)."""
+    import gen_fight
+    return gen_fight.CFG
+
+
 def pose_hit_offsets(pose, k, wrapped=False):
-    """Offsets (left, up, forward) in blocks of the two interaction boxes' feet (their bottom centre) for a pose.
-    `wrapped`: the body box is the big one."""
+    """Offsets (left, up, forward) in blocks of the interaction boxes' feet (their bottom centre) for a pose: the core box, the body box and, if the preset
+    has one, the larger "near miss" box (centred on the core's centre; None otherwise).  `wrapped`: the body box is the big one."""
     bs = model.pose_boxes(pose)
     core = [e for e in bs if e["name"] == "coreA"][0]["centre"]
-    ch = CORE_BOX * k * 100
+    ch = cfg()["core_box"] * k * 100
     c = (core[0] * k, core[1] * k - ch / 2, (core[2] + CORE_FWD) * k)
     bh = BODY_H * k * 100
     body = (0.0, 0.66 * k * 100 - bh / 2, 0.0)
     if wrapped:
         body = (0.0, WRAP_BODY_Y * k * 100, 0.0)
-    return c, body
+    near = None
+    if cfg()["near_box"] > 0:
+        nh = cfg()["near_box"] * k * 100
+        near = (c[0], c[1] + ch / 2 - nh / 2, c[2])
+    return c, body, near
 
 
 def gen(F, add_block_tag=None):
@@ -160,9 +170,12 @@ def gen(F, add_block_tag=None):
                  'summon minecraft:marker ~ ~ ~ {Tags:["angel.mon","angel.aim","angel.new"]}',
                  'summon minecraft:marker ~ ~ ~ {Tags:["angel.mon","angel.target","angel.new"]}',
                  'summon minecraft:marker ~ ~ ~ {Tags:["angel.mon","angel.aimpt","angel.new"]}']
-        cs = CORE_BOX * H
+        cs = cfg()["core_box"] * H
         lines.append(f'summon minecraft:interaction ~ ~ ~ {{Tags:["angel.mon","angel.core","angel.new"],width:{f(cs)},height:{f(cs)},response:1b}}')
         lines.append(f'summon minecraft:interaction ~ ~ ~ {{Tags:["angel.mon","angel.body","angel.new"],width:{f(BODY_W * H)},height:{f(BODY_H * H)},response:1b}}')
+        if cfg()["near_box"] > 0:
+            ns = cfg()["near_box"] * H
+            lines.append(f'summon minecraft:interaction ~ ~ ~ {{Tags:["angel.mon","angel.nearbox","angel.new"],width:{f(ns)},height:{f(ns)},response:1b}}')
         for i, (p, e) in enumerate(zip(P, bs0)):
             bl, sk = BRIGHT.get(p["block"], (15, 15))
             blockname = "minecraft:air" if p["tag"] in HIDDEN_AT_SUMMON else p["block"]
@@ -194,10 +207,11 @@ def gen(F, add_block_tag=None):
             eye = model.EYE_ON if pose.get("eyes") else model.EYE_OFF
             lines.append(f'execute as @e[type=minecraft:block_display,tag=angel.eye] run data merge entity @s {{block_state:"{eye}"}}')
             wr = pn in WRAP_POSES
-            c, b = pose_hit_offsets(pose, k, wr)
+            c, b, nr = pose_hit_offsets(pose, k, wr)
             bw_, bh_ = (WRAP_BODY_W, WRAP_BODY_H) if wr else (BODY_W, BODY_H)
             lines.append(f"data merge entity @e[type=minecraft:interaction,tag=angel.body,limit=1] {{width:{f(bw_ * H)},height:{f(bh_ * H)}}}")
-            lines.append(f'data modify storage angel:mon off set value {{cx:"{c[0]:.3f}",cy:"{c[1]:.3f}",cz:"{c[2]:.3f}",bx:"{b[0]:.3f}",by:"{b[1]:.3f}",bz:"{b[2]:.3f}"}}')
+            near_kv = f',nx:"{nr[0]:.3f}",ny:"{nr[1]:.3f}",nz:"{nr[2]:.3f}"' if nr else ""
+            lines.append(f'data modify storage angel:mon off set value {{cx:"{c[0]:.3f}",cy:"{c[1]:.3f}",cz:"{c[2]:.3f}",bx:"{b[0]:.3f}",by:"{b[1]:.3f}",bz:"{b[2]:.3f}"{near_kv}}}')
             lines.append("function angel:angel/sync_hit with storage angel:mon off")
             put(f"p/{pn}_{H}", lines)
 
@@ -254,7 +268,8 @@ def gen(F, add_block_tag=None):
         "# keeps the two hit boxes at their offsets from the root (macro args: cx cy cz bx by bz, left/up/forward)",
         "$execute at @e[type=minecraft:marker,tag=angel.root,limit=1] run tp @e[type=minecraft:interaction,tag=angel.core,limit=1] ^$(cx) ^$(cy) ^$(cz)",
         "$execute at @e[type=minecraft:marker,tag=angel.root,limit=1] run tp @e[type=minecraft:interaction,tag=angel.body,limit=1] ^$(bx) ^$(by) ^$(bz)",
-    ])
+    ] + (["$execute at @e[type=minecraft:marker,tag=angel.root,limit=1] run tp @e[type=minecraft:interaction,tag=angel.nearbox,limit=1] ^$(nx) ^$(ny) ^$(nz)"]
+         if cfg()["near_box"] > 0 else []))
     put("sync", [
         "# moves every part and both hit boxes to the root",
         "execute as @e[type=minecraft:block_display,tag=angel.part] run tp @s @e[type=minecraft:marker,tag=angel.root,limit=1]",

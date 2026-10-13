@@ -81,7 +81,9 @@ class Objective:
         self.at = at
         self.line = line if line is not None else text
         self.how = HOW[how] if isinstance(how, str) and how in HOW else how
-        self.grace = CFG.ob_grace if grace is None else float(grace)
+        import pace
+        cap = pace.PACE.ob_grace_cap                          # the video pacing shows even the objectives that had a long grace within 3 s
+        self.grace = CFG.ob_grace if grace is None else (float(grace) if cap is None else min(float(grace), cap))
         self.waypoint = bool(waypoint) and at is not None
         self.lines = lines
         self.bearing = bearing and at is not None
@@ -425,14 +427,39 @@ def tutorial_objectives():
     return look, move, speak, light
 
 
+def tutorial_short(s, pl):
+    """The video pacing's tutorial: TWO lines, under 12 s in all, and each is over the moment he does the thing:
+    1. "Look around, and walk: left thumbstick (keyboard W A S D)": done when he has moved 2.5 blocks (or after 5 s);
+    2. 'When you see "Your turn", just speak aloud', with a sample waypoint beside him ("a light like this marks where to go"): done when he has walked
+       another few blocks (or after 4 s)."""
+    from engine import C, Cond
+    move = Objective("Move", line=("Look around, and walk: left thumbstick (keyboard: W A S D)", "Look around, and walk: left thumbstick",
+                                   "Look around (mouse), and walk: W A S D"),
+                     grace=0.3, waypoint=False, bearing=False, sound=False, secs=FOREVER, repeat=3600)
+    speak = Objective("Like this", at=Ahead(7.0, 2.5, -1.6),
+                      line='When you see "Your turn", just speak aloud  -  a light like this marks where to go',
+                      grace=0.3, waypoint=True, bearing=True, sound=True, secs=FOREVER, repeat=3600)
+    far = lambda r: Cond([f"as @e[tag=angel.tut_mark,limit=1] at @s unless entity {pl.replace('limit=1', f'limit=1,distance=..{r}')}"], 3.0, f"he has moved {r} blocks")
+    s.branch(C.score("#tut.off", "1"), "tutorial_done")
+    s.do(f'execute as {pl} at @s run summon minecraft:marker ~ ~ ~ {{Tags:["{TAG}","angel.tut_mark"]}}', note="tutorial: mark where he stands")
+    s.until(far(2.5), timeout=5.0, objective=move, no_skip=True, est=2.5, note="TUTORIAL 1/2 'Look around, and walk' (over at 2.5 blocks, or after 5 s)")
+    s.until(far(7.0), timeout=4.0, objective=speak, no_skip=True, est=3.5,
+            note="TUTORIAL 2/2 'When you see Your turn, just speak aloud' + a sample light (over at 7 blocks, or after 4 s)")
+    s.do("kill @e[tag=angel.tut_mark]", note="tutorial over")
+    s.label("tutorial_done")
+
+
 def tutorial(s):
     """The 20-second opening tutorial (scene 1, just after he wakes: the A.D. 2015 card stays the film's first image and the tutorial happens in the world
     he will walk in).  One line at a time, in the speak prompt's look, each leaving as he does the thing, or after 8 s: look around (60 degrees of yaw),
     move (3 blocks), 'Your turn' means speak (a 5 s hold), a sample waypoint beside him (a 6 s hold).  Skipped when #tut.off is 1
     (`function angel:story/start_no_tutorial`)."""
     from engine import C, Cond
-    look, move, speak, light = tutorial_objectives()
+    import pace
     pl = P()
+    if pace.PACE.tutorial == "short":
+        return tutorial_short(s, pl)
+    look, move, speak, light = tutorial_objectives()
     y_get = lambda n: f"execute as {pl} store result score #tut.{n} {OBJ} run data get entity @s Rotation[0] 10"
     s.branch(C.score("#tut.off", "1"), "tutorial_done")
     s.do(y_get("y0"), sset("#tut.m", 0), note="tutorial: remember where he looks")

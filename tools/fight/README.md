@@ -3,15 +3,42 @@
 Generator for two things in the Angel Attack datapack (namespace `angel`): the monster (`angel:angel/...`) and the scene-7
 boss fight in the night city (`angel:fight/...`).  Run with the voice-assistant Python (numpy, pillow):
 
-    python build_fight.py            # writes functions + a block tag into datapack\angel, removes what the last build wrote
+    python build_fight.py            # writes functions + a block tag into datapack\angel, removes what the last build wrote (preset: video)
+    python build_fight.py --pace full   # the same with the earlier numbers and behaviour (also: environment variable ANGEL_PACE=full|video; --pace wins)
+    python build_fight.py --out DIR  # writes into DIR instead (a copy of the datapack, for tests; does not touch the build manifest)
     python build_fight.py --check    # only the checks (command tree check of every line, every called function exists)
     python build_fight.py --previews # also renders preview\*.png
     python selftest.py               # live test on a scratch copy of the server (ports 25608/25618), about 10 minutes (also checks the model geometry: model.eye_clearance_table())
-    python estimate.py               # how long the fight takes, from CFG, for a scripted attacker and a first-time player
+    python selftest.py --pack DIR    # test a built pack in DIR (a full datapack folder with pack.mcmeta) instead of the repo's; the preset is read from it
+    python selftest.py --pack DIR --only rules   # only the video rules (about 2 minutes: no city, no beams, no wrap)
+    python estimate.py [--pace full|video]   # how long the fight takes, from the preset, for a scripted attacker and a first-time player
 
 Files: `model.py` (the skeleton of boxes and the poses), `preview.py` (a z-buffer renderer of the same boxes),
-`gen_angel.py`, `gen_fight.py` (the functions; all fight numbers are in `CFG` at the top of gen_fight.py),
+`gen_angel.py`, `gen_fight.py` (the functions; all fight numbers are in the two preset tables `FULL` and `VIDEO` at the top of gen_fight.py; `CFG` is the chosen one),
 `build_fight.py`, `selftest.py`, `estimate.py`, `build_manifest.json` (what the last build wrote; the next build removes exactly that).
+
+## Presets: `video` (default) and `full`
+
+Two named tables of numbers (and a few on/off switches) in gen_fight.py.  `video` is the paced fight for the film, `full` is exactly the earlier build:
+`build_fight.py --pace full` reproduces the earlier `fight\` and `angel\` functions byte for byte (checked: 444 files identical to the baseline build).
+Everything the video preset adds is OFF in `full` (the keys `core_box` 0.15, `near_box` 0, `visible` False, `beam_first` False, `hit_cd` 24) and generates no code there.
+`estimate.py` and `selftest.py` follow the same switch (the selftest reads the preset from the pack it tests: the guard's function `core_guarded` exists only in `full`).
+
+| Key | `full` | `video` | Why |
+|---|---|---|---|
+| `core_hp` (hits to win) | 60 | 42 | the pacing: with no guard a hit takes the player about 1.3 s, not 2 s |
+| `crack_at` (hits left when the core cracks = the checkpoint) | 30 | 22 | 20 hits into the fight |
+| `backoff_hits` | 8 | 9 | back-offs after hits 9, 18, 27 (3 instead of 6) |
+| `backoff_dist` / `backoff_speed` / `backoff_cd` | 30 / 0.45 / 50 | 20 / 0.5 / 30 | a 4-second walk back for the player; the barrier is up 8.6 s (11 s) |
+| `cd_thrust` / `cd_thrust_b` (ticks) | 100 / 70 | 120 / 90 | the arm thrust costs a first-timer less dodging |
+| `intro_after_step` (ticks) | 120 | 80 | the Angel sets off 4 s after his first steps |
+| `hit_cd` (core guard, ticks) | 24 | **0 = none** | the guard code is not even generated |
+| `core_box` / `near_box` (fractions of the height; blocks at height 30) | 0.15 (4.5) / none | 0.20 (6.0) / 0.35 (10.5) | a generous target |
+| `visible` | False | True | the one visible state and the feedback, below |
+| `beam_first` | False | True | the first attack after a back-off is always the eye beam |
+| `shield_dist` `shield_bar` `halo_small` `halo_big` `halo_period` `dim_light` `flinch_back` `flinch_ticks` `drop_pitch` `block_pitch` `crack_marks` | - | 6.0 0.9 3.6 5.2 20 4 0.7 3 1.8 1.4 (0.4, 0.8) | the look of the states and the feedback |
+
+Unchanged in both: the wrap (10 hits, 16 s bar, +0.5 s per landed hit: a hit every 1.5 s wins with 5.5 s to spare), the beam (charge 40 / 34 ticks, recover 24, cooldown 150 / 105), the thrust windup and recovery, the giant's health.
 
 Output (all under `data\angel\`): `function\angel\**`, `function\fight\**` (including `say\7_NN`), `tags\block\fight\beam_pass.json`.
 It does not touch `minecraft:load` / `minecraft:tick` tags (they already list `angel:fight/load` and `angel:fight/tick`).
@@ -109,7 +136,7 @@ Keep the player's own VR World Scale setting at 1: it multiplies.
 1. Bossbars `angel:fight/giant` (UNIT-01, green/yellow/red) and `angel:fight/angel` (core hits left, notched), and
    `angel:fight/wrap` (the self-destruct countdown).  The real player also takes a 1-point `minecraft:magic` hit followed at
    once by instant health (for the hurt flash and haptics); the true health is the score `#gh`.
-2. The barrier: a click on the core box from more than 12.5 blocks (core centre to the giant's shoulders, 22 up) stops on an
+2. The barrier (this is the `full` preset; what the `video` preset does differently is under "The video rules" below): a click on the core box from more than 12.5 blocks (core centre to the giant's shoulders, 22 up) stops on an
    orange octagon of light (bars + glass squares, flashes and fades, `angel:sfx.barrier`); a faint dotted octagon hangs in front of it
    while the giant is too far to cancel it.  Inside 12.5 the hit lands.  Hits on the body box only spark.  Hit boxes: core 4.5 blocks,
    body 7.2 x 16.8; the core box sits in front of the body box so it wins the ray.
@@ -171,6 +198,8 @@ Keep the player's own VR World Scale setting at 1: it multiplies.
    white cross-shaped pillar of light (190 tall, 60 across) with `angel:sfx.cross`, the body is removed, the lines 7.15-7.18 play, the
    giant is put back at human size on the lift at (1160.5, 64, 160.5) facing north, the fight is cleaned up and the story is told.
 
+(The values in this table and in the mechanics above are the `full` preset's; the `video` preset's differences are in the preset table at the top and under "The video rules".)
+
 | Number | Value | Where (CFG key) |
 |---|---|---|
 | giant health / monster core hits | 100 / 60 | giant_hp, core_hp |
@@ -191,10 +220,65 @@ Keep the player's own VR World Scale setting at 1: it multiplies.
 | walk speed A / B / wrap | 0.30 / 0.42 / 0.90 blocks per tick | speed_a, speed_b, wrap_speed |
 | intro | the Angel waits until 6 s after the first steps (or 25 s) | intro_* |
 
+### The video rules (preset `video`): one visible state, a message for every swing
+
+The first headset fight (the user): "the swings hit, but it didn't seem to work all the time, only during specific phases".  The rules that decide whether a swing counts were
+invisible (a 1.2 s guard after each hit, a faint dotted barrier, a back-off barrier that looked like nothing).  In `video` there is no hidden gate, and what is left is drawn.
+
+**One test.**  A swing that hits the core (the core box or the larger near-miss box) counts if and only if `#vuln` is 1 (`vis_state`, run every tick and again by `core_hit`):
+the barrier is down (`#bar` 0) AND the giant is within 12.5 blocks of the core (shoulders 22 up to the core centre; the wrap, phase 3, is always vulnerable).  Nothing else can
+swallow it: no guard (`hit_cd` 0: the guard's function, its score `#hitcd`, its timer and the line that arms it are not generated).  Everything else is *blocked*, never silently.
+
+**Two looks, no third.**
+* VULNERABLE (`#vs` 1): the core is full bright red concrete (magma once cracked), its glow strips and the red glass veil are on, a halo of two red glass cubes
+  (one turned 45 degrees) breathes round it between 3.6 and 5.2 blocks every 1 s, with a puff of red light on each swell; nothing stands in front of it.
+* SHIELDED (`#vs` 2, the giant too far OR the back-off barrier up): the core is dimmed (terracotta at light 4), the strips, veil and halo are out, and a persistent bright octagon of
+  light (8 bars of orange concrete 0.9 thick + 2 translucent squares, 27 blocks across, full bright) stands 6 blocks in front of the core on the line to the giant's eyes,
+  re-aimed every tick (entities `angel.shield`, `angel.sbar`, `angel.sfill`; teleport_duration 2).  The old dotted outline and its once-per-hit flash are gone.
+The look changes only when the state changes (one batch of data merges), so the cost is a handful of commands per tick.
+
+**What a swing does.**
+* landed (flash, crits, red dust, `sfx.giant_punch`, counter -1): also the monster **flinches** (it is thrown back 0.7 blocks for 3 ticks and returns; not while it staggers, retreats, is wrapped),
+  the crack slivers of light 1 and 2 open as the core nears the crack and then the wrap, and `#blk_n` / `#blk_why` reset.
+* blocked (`core_blocked`): the octagon flares white for 3 ticks with a burst of light, `sfx.barrier` rings (pitch 1.4; at most one per 2 s, the effects at most one per 0.3 s, the counters
+  always), the first time the barks 7.06-7.08.  Counters for the story, below.  The giant too far and the back-off barrier look the same on purpose (the octagon); `#blk_why` tells them apart.
+* a body hit (arms, legs, head above the near-miss box): small sparks and a low stone thud at the body, and the core flashes once (`core_point`, at most one per 0.7 s) to point at the place to hit.
+* the barrier of a back-off goes up: the octagon is built and flares, with the rising `sfx.barrier` tone (pitch 1.0); when it comes down (`bo_release`: the end of its first attack) the cue is
+  `sfx.barrier` at pitch 1.8 + a vanilla beacon chime (`block.beacon.activate`) + a pale blue flash and a burst of end rod light at the core; the look follows at once (burning core if he is in reach,
+  else the octagon of range).  The first attack after a back-off is always the eye beam (`beam_first`), wherever the giant stands.
+
+**The target.**  A 16x player's roomscale swing: eye 25.9 up, hands 16 to 24 up, the core centre 22.1 up and 3.8 in front of the monster's root.  The earlier 4.5-block core box was hit by
+102 of 216 rays from plausible hand positions (3 distances x 3 sideways offsets x 3 heights, aimed within 3 blocks of the core centre, the nearest box entered wins, reach 18).  The video core box is 6.0
+and a second interaction entity `angel.nearbox`, 10.5 x 10.5 x 10.5 centred on the core, is a click on the core as well (`near_hit` -> `core_hit`): all 216 register.  The near-miss box lies in
+front of the body box, so it is entered first; the core box lies inside it; a hand inside it (10 blocks or closer to the monster) counts every swing, as good as touching the chest; swings at
+the crest of the head from a hand at head height clip its upper front corner and count too (18 of 18 in the test); arms and legs remain body hits.  Both boxes follow every pose and the walk
+(`sync_hit` teleports three boxes; the selftest measures the offset: 0.000) and the wrap's 14 x 30 body box is unchanged.
+
+**Scores the story can read** (objective `angel.fight`; all new ones exist only in `video`; the meaning of every earlier score is unchanged):
+
+| Score | Values | Meaning |
+|---|---|---|
+| `#vuln` | 1 / 0 | 1: a swing at the core counts right now (barrier down and in reach, or the wrap).  0: shielded.  Updated every tick |
+| `#blk_n` | 0.. | blocked swings since the last landed hit or barrier change (back-off start, barrier down, or the giant coming into reach); resets to 0 on those |
+| `#blk_why` | 0 / 1 / 2 | the reason for the last blocked swing: 1 = out of reach (too far), 2 = the back-off barrier is up.  0 when `#blk_n` is 0 |
+| `#blk_tot` | 0.. | blocked swings in this attempt (never reset by events; reset by a new attempt) |
+| `#hit_n` | 0.. | landed core hits in this attempt (the wrap's too): 0 at the start of every attempt, also after a checkpoint restart |
+| `#vs` | 0 / 1 / 2 | the look applied (0 none yet, 1 burning, 2 shielded): for tests |
+| `#drops`, `#ptcd`, `#fl`, `#vp`, `#inreach` | | test counters / timers (barrier-down cues so far, core-point cooldown, flinch out, pulse phase, reach test) |
+
+`#ch` still means "core hits left" but its start value is `core_hp` (42 in `video`, 60 in `full`) and the checkpoint is `crack_at` (22 / 30): a story that compares `#ch` with 60 / 58..59 / ..57
+(s07's guide) must use `#hit_n` instead (0 = none landed yet, 1..2, 3 and more) and `#ck` 1 for a checkpoint restart.  The core's centre is 3.0 above the core box's foot in `video` (2.25 in `full`).
+
 ### How long it takes
 
-`python estimate.py` accounts for the phases from CFG (it is arithmetic, not a simulation; the assumptions are in the file):
-50 landed hits before the wrap, 6 back-offs (after hits 8, 16, 24, 32, 40, 48), the 10-hit wrap.
+`python estimate.py [--pace full|video]` accounts for the phases from CFG (it is arithmetic, not a simulation; the assumptions are in the file, one player model per preset).
+`video`: 32 landed hits before the wrap, 3 back-offs (after hits 9, 18, 27), the 10-hit wrap.  `full` (below): 50 landed hits, 6 back-offs (after hits 8, 16, 24, 32, 40, 48), the wrap.
+
+`video`: the scripted attacker (a, a click every 0.95 s, nothing swallowed) **76 s**; the first-time player (b, a landed hit every 1.3 s, 2.5 s lost to each arm thrust, 22 s to the first hit,
+15 s per back-off, a hit every 1.5 s in the wrap) **139 s = 2:19**; a slow one (1.7 s per hit, 3 s per thrust) 3:01, a quick one (1.0 s per hit) 1:47.  The 1.3 s is the number that decides it: with the other
+assumptions as they are, 1.2 s per hit gives 2:15, 1.5 s gives 2:28, 1.8 s gives 2:41.  Not verified with a human.
+
+`full` (the earlier preset):
 
 * (a) the scripted attacker of the earlier test (a click every 0.95 s, never dodges, runs at 13 blocks/s): the guard swallows every other
   click, so one landed hit per 1.9 s; at each back-off it can only wait for the barrier, which stays up for stagger + retreat + 50 ticks +
@@ -219,6 +303,8 @@ hit), `sfx.cross` (the pillar when it dies), `sfx.heartbeat` (the giant's health
 back or the fight ends), `sfx.footfall_giant` (the monster's steps).  Vanilla ones that remain have no library counterpart: the warden's
 roars, hurt and thrust sounds, the bell beeps of the countdown, the explosions and lightning where the beam lands.  The `playsound` volumes
 are mostly above 1 on purpose (server range = 16 x volume blocks from the player's feet; the client clamps the gain to 1 and fades by distance).
+The `video` preset adds: `sfx.barrier` at three pitches (1.0 the barrier going up, 1.4 the ring of a blocked swing, 1.8 the barrier coming down) and two vanilla sounds,
+`block.beacon.activate` (the chime of the barrier coming down) and `block.stone.hit` at pitch 0.5 (the thud of a body hit); the guard's `block.iron_trapdoor.close` clank is gone with the guard.
 
 ### Barks
 
@@ -252,6 +338,8 @@ fight: `load tick start stop stop_quiet become_giant become_human leave_giant ba
 core_blocked core_guarded body_hit wall_draw bar_pulse heartbeat heartbeat_stop ai_tick st_* begin_beam beam_fire beam_step wall_flash cross_flash pillar begin_thrust thrust_strike backoff_check backoff_start backoff_aim backoff_side st_bo_stagger st_bo_retreat bo_turn bo_go bo_end hold_tick bo_release core_crack
 bo_shove wrap_start wrap_clamp wrap_follow wrap_wait wrap_count wrap_hit wrap_hit_fx wrap_flare wrap_squeeze wrap_loosen wrap_restore wrap_beat wrap_ring(_N) wrap_beep self_destruct ck_save start_ck restart_ck restart_ck_go bark_front won_start won_tick won_final lost_start lost_tick restart hand_won test/*`.
 angel: also `pose_wrap_tight pose_wrap_hit core_crack_1..4` (the wrap's crack slivers; hidden again by `core_stage_0/1/2`).
+`full` only: `core_guarded wall_hint wall_dots wall_draw wall_flash bar_pulse`.  `video` only: `near_hit core_point core_point_at flinch flinch_back vis_state vis_tick vis_off vis_hot vis_dim hot_make
+hot_tick hot_big hot_small shield_make shield_follow shield_flare shield_flare_fx shield_calm barrier_up drop_cue test/hit_near` (`barrier_tone` exists in both, with different pitches); the monster's `sync_hit` also moves the third box (`angel.nearbox`).
 
 ## Risks only a human in a headset can check
 
@@ -262,3 +350,6 @@ angel: also `pose_wrap_tight pose_wrap_hit core_crack_1..4` (the wrap's crack sl
 * The look of the display entities at night: brightness overrides are 4 to 12; the glow and the halo glass.
 * Sound mix: the warden sounds at volume 6 to 12.
 * Beam hit height assumes the giant's chest is 18 blocks up; the aim line is not drawn through walls.
+* `video`: how the persistent octagon, the dimmed core and the pulsing red halo READ from the giant's eye at night (they were built and tested as entities, never seen in a headset); whether a 27-block
+  octagon 7 to 11 blocks in front of the eyes is comfortable; whether the flinch (0.7 blocks, 3 ticks) is visible; whether the stand-in tests' hand positions match a real swing (the Vivecraft attack
+  ray starts at the controller and follows its pointing direction; that was not run); the pacing numbers (1.3 s per landed hit is a guess about people).

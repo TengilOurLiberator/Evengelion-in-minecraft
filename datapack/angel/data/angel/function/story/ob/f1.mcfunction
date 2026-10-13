@@ -1,1 +1,1 @@
-tp @e[tag=angel.ob_target] @e[type=minecraft:interaction,tag=angel.core,limit=1]
+tp @e[tag=angel.ob_target] @e[type=minecraft:marker,tag=angel.root,limit=1]

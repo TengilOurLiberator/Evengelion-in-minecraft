@@ -4,6 +4,11 @@ scoreboard players set #phase angel.fight 0
 scoreboard players set #bar angel.fight 0
 scoreboard players set #hold angel.fight 0
 scoreboard players set #hb angel.fight 0
+scoreboard players set #vs angel.fight 0
+scoreboard players set #vuln angel.fight 0
+scoreboard players set #fl angel.fight 0
+schedule clear angel:fight/flinch_back
+schedule clear angel:fight/shield_calm
 stopsound @a * angel:sfx.heartbeat
 stopsound @a * angel:sfx.beam_charge
 schedule clear angel:fight/fx_fade

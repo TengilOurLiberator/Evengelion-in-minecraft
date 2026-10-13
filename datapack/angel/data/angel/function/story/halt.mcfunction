@@ -113,28 +113,8 @@ schedule clear angel:story/launch/fp3
 schedule clear angel:story/launch/fp30
 schedule clear angel:story/launch/fp31
 schedule clear angel:story/launch/fp32
-schedule clear angel:story/launch/fp33
-schedule clear angel:story/launch/fp34
-schedule clear angel:story/launch/fp35
-schedule clear angel:story/launch/fp36
-schedule clear angel:story/launch/fp37
-schedule clear angel:story/launch/fp38
-schedule clear angel:story/launch/fp39
 schedule clear angel:story/launch/fp4
-schedule clear angel:story/launch/fp40
-schedule clear angel:story/launch/fp41
-schedule clear angel:story/launch/fp42
-schedule clear angel:story/launch/fp43
-schedule clear angel:story/launch/fp44
-schedule clear angel:story/launch/fp45
-schedule clear angel:story/launch/fp46
-schedule clear angel:story/launch/fp47
-schedule clear angel:story/launch/fp48
-schedule clear angel:story/launch/fp49
 schedule clear angel:story/launch/fp5
-schedule clear angel:story/launch/fp50
-schedule clear angel:story/launch/fp51
-schedule clear angel:story/launch/fp52
 schedule clear angel:story/launch/fp6
 schedule clear angel:story/launch/fp7
 schedule clear angel:story/launch/fp8
@@ -252,9 +232,6 @@ schedule clear angel:story/s3/f_a31
 schedule clear angel:story/s3/f_a32
 schedule clear angel:story/s3/f_a33
 schedule clear angel:story/s3/f_a34
-schedule clear angel:story/s3/f_a35
-schedule clear angel:story/s3/f_a36
-schedule clear angel:story/s3/f_a37
 schedule clear angel:story/s3/f_a4
 schedule clear angel:story/s3/f_a5
 schedule clear angel:story/s3/f_a6
@@ -262,6 +239,9 @@ schedule clear angel:story/s3/f_a7
 schedule clear angel:story/s3/f_a8
 schedule clear angel:story/s3/f_a9
 schedule clear angel:story/s4/f_a1
+schedule clear angel:story/s4/f_a10
+schedule clear angel:story/s4/f_a11
+schedule clear angel:story/s4/f_a12
 schedule clear angel:story/s4/f_a2
 schedule clear angel:story/s4/f_a3
 schedule clear angel:story/s4/f_a4
@@ -269,6 +249,7 @@ schedule clear angel:story/s4/f_a5
 schedule clear angel:story/s4/f_a6
 schedule clear angel:story/s4/f_a7
 schedule clear angel:story/s4/f_a8
+schedule clear angel:story/s4/f_a9
 schedule clear angel:story/s5/f_a1
 schedule clear angel:story/s5/f_a10
 schedule clear angel:story/s5/f_a11
@@ -350,6 +331,7 @@ schedule clear angel:story/s6/f_a49
 schedule clear angel:story/s6/f_a5
 schedule clear angel:story/s6/f_a50
 schedule clear angel:story/s6/f_a51
+schedule clear angel:story/s6/f_a52
 schedule clear angel:story/s6/f_a6
 schedule clear angel:story/s6/f_a7
 schedule clear angel:story/s6/f_a8
@@ -358,7 +340,6 @@ schedule clear angel:story/s7/f_a1
 schedule clear angel:story/s7/f_a2
 schedule clear angel:story/s7/f_a3
 schedule clear angel:story/s7/f_a4
-schedule clear angel:story/s7/f_a5
 kill @e[tag=angel.story]
 function angel:cast/remove {id:"misato"}
 function angel:cast/remove {id:"ritsuko"}
@@ -370,6 +351,8 @@ function angel:cast/remove {id:"medic2"}
 function angel:story/ob/end
 function angel:cast/gurney_remove
 function angel:story/snd/stop_all
+scoreboard players set #f.cq_misato angel.story 0
+kill @e[tag=angel.cp,tag=angel.cp_misato]
 function angel:story/launch/restore
 function angel:angel/remove
 forceload remove 16 112
@@ -417,15 +400,15 @@ forceload remove 1168 64
 forceload remove 1168 144
 forceload remove 1168 160
 forceload remove 1168 176
-forceload remove 2000 80
-forceload remove 2000 96
-forceload remove 2000 112
+forceload remove 2016 64
 forceload remove 2016 80
 forceload remove 2016 96
-forceload remove 2016 112
+forceload remove 2032 64
 forceload remove 2032 80
 forceload remove 2032 96
-forceload remove 2032 112
+forceload remove 2048 64
+forceload remove 2048 80
+forceload remove 2048 96
 forceload remove 2288 128
 forceload remove 2288 144
 forceload remove 2288 160
@@ -557,6 +540,7 @@ scoreboard players set #fx.smoke angel.story 0
 scoreboard players set #fx.wreck angel.story 0
 scoreboard players set #f.alarm angel.story 0
 scoreboard players set #f.cn angel.story 0
+scoreboard players set #f.cq_misato angel.story 0
 scoreboard players set #f.crash angel.story 0
 scoreboard players set #f.fight_won angel.story 0
 scoreboard players set #f.hold angel.story 0

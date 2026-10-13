@@ -1,0 +1,2 @@
+scoreboard players set #step angel.story 93
+function angel:story/s3/e93

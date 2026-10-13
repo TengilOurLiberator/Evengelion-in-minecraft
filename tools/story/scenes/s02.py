@@ -134,6 +134,10 @@ def cloud_dissipation(mine, K):
 
 
 def build(s, ctx):
+    import pace
+    from core import CFG
+    PC = pace.PACE
+    BLACK_HOLD, BLACK_FADE = PC.s2_black_hold, PC.s2_black_fade        # (shadow the module's constants: pace.py)
     A = ctx.anchor
     arrive, ridge, blast, gate = A("outskirts.car_arrive"), A("outskirts.ridge"), A("outskirts.ridge_blast"), A("outskirts.gate")
     walk4 = A("outskirts.angel_walk_4")
@@ -142,7 +146,7 @@ def build(s, ctx):
     arrive_pose = (arrive["x"], arrive["y"], arrive["z"], arrive["yaw"], 0.0)
 
     def span(lid, gap=True):
-        return (ctx.lines[lid].ticks + (T(0.4) if gap else 0)) / 20.0
+        return (ctx.lines[lid].ticks + (T(CFG.gap) if gap else 0)) / 20.0
 
     # ---------------------------------------------------------------- route 1: town to the ridge, fast and a little wild
     pts, warns = paths.grounded(probe, paths.to_ridge_xz(ctx), arrive["y"])
@@ -152,7 +156,7 @@ def build(s, ctx):
     # On the ridge she pulls up with the car swung round so that the monster is 42 degrees to the LEFT of the way the car faces: in the passenger's
     # window, inside the forward 100 degrees (the road itself arrives heading ~115 degrees, which would leave it abeam: nearly behind the boy's shoulder).
     ridge_yaw = math.degrees(math.atan2(-(walk4["x"] - ridge["x"]), walk4["z"] - ridge["z"])) + 42.0
-    to_ridge.add_leg("drive", Path(pts), vmax=9.0, a_acc=1.3, a_dec=2.0, a_lat=2.0, yaw_end=(ridge_yaw, 3.5))
+    to_ridge.add_leg("drive", Path(pts), yaw_end=(ridge_yaw, PC.s2_yaw_end), **PC.s2_to_ridge)
     ridge_pose = to_ridge.pose(to_ridge.end)
 
     # ---------------------------------------------------------------- the car on its side at ridge_blast, and route 2: down to the gate
@@ -165,13 +169,13 @@ def build(s, ctx):
     # the car leaves the lying spot pointing LIE_YAW and swings round to the road over six seconds (a smoothstep, so the yaw rate never passes ~35 deg/s)
     limp_kw = dict(a_acc=0.6, a_dec=0.9, a_lat=1.0, smooth=0.6, yaw_fn=lambda t, b: b + angdiff(LIE_YAW, base_yaw) * (1.0 - smoothstep(t / YAW_BLEND)))
     # the call (2.12-2.16) is paced so that the car limps down to the gate as it ends: pick the speed that takes that long
-    call_secs = 1.0 + sum(span(f"2.{n}") for n in range(12, 17)) - 0.4
+    call_secs = PC.s2_drive_pause3 + sum(span(f"2.{n}") for n in range(12, 17)) - CFG.gap
     lo, hi = 1.2, 3.2
     for _ in range(14):
         mid = (lo + hi) / 2.0
         secs = len(leg_frames(Path(pts2), mid, **limp_kw)[0]) / 20.0
         lo, hi = (lo, mid) if secs < call_secs else (mid, hi)
-    limp_v = max(2.3, min(3.2, round((lo + hi) / 2.0, 2)))   # never slower than 2.3 blocks/s: the last seconds of the call may be said at the gate
+    limp_v = max(PC.s2_limp_min, min(3.2, round((lo + hi) / 2.0, 2)))   # never slower than 2.3 blocks/s: the last seconds of the call may be said at the gate
     to_gate = ctx.new_route("to_gate", car)
     to_gate.add_leg("limp", Path(pts2), vmax=limp_v, **limp_kw)
     gate_pose = to_gate.pose(to_gate.end)
@@ -278,9 +282,9 @@ def build(s, ctx):
     s.beat(20)
     s.do(*carfx.door_cmds(car, arrive_pose, False, 8), *carfx.look_road(car), note="the door shuts (sfx.car_door); she looks at the road")
     s.bed("car_interior", fade=2.0, note="the car's bed replaces the town's (the siren goes on, from behind)")
-    s.sleep(0.8)
+    s.sleep(PC.s2_drive_pause1)
     s.do(*to_ridge.start_cmds(), *ctx.audio.start("music", "road"), note="she drives fast and badly, out of town and up into the hills; music.road")
-    s.sleep(1.2)
+    s.sleep(PC.s2_drive_pause2)
     carfx.say_glancing(s, car, "2.01", glance=3.6)
     s.do(*carfx.look_boy(), note="2.02: she asks, looking at him, and goes on looking while he answers")
     s.say("2.02")
@@ -290,7 +294,7 @@ def build(s, ctx):
     s.until(to_ridge.cond_done(), est=to_ridge.seconds(), timeout=120, note="the car reaches the ridge and stops")
     s.do(*ctx.audio.stop("music"), *ctx.audio.start("bed", "town_empty", fade=3.0, out="car_interior", out_fade=1.6),
          note="engine off: the music stops with it, the engine bed ramps down and the wind on the ridge comes in")
-    s.sleep(0.8)
+    s.sleep(PC.s2_ridge_pause)
 
     # ================================================================ the ridge: the planes pull back
     # The aircraft that circle the monster (scene 1; none on a jump) break off one after another, turn away from the ridge, climb and leave over the
@@ -376,8 +380,8 @@ def build(s, ctx):
     ia_push = "@e[tag=angel.ia_push,limit=1]"
     cleanup_push = [f"kill {ia_push}"]
     # touching the car, punching it or right-clicking it; Misato says it again after ten seconds
-    s.until([C.near(roof[0], by, roof[2], 2.3, est=5), C.data(ia_push, "interaction", est=5), C.data(ia_push, "attack", est=5)],
-            nag=(10.0, 14.0, [fn("say/2_09")]), timeout=50, on_done=cleanup_push, est=5.0, hint=("Walk up to the car - you push it by yourself.", []), hint_after=25,
+    s.until([C.near(roof[0], by, roof[2], 2.3, est=PC.s2_est_push), C.data(ia_push, "interaction", est=PC.s2_est_push), C.data(ia_push, "attack", est=PC.s2_est_push)],
+            nag=(10.0, 14.0, [fn("say/2_09")]), timeout=50, on_done=cleanup_push, est=PC.s2_est_push, hint=("Walk up to the car - you push it by yourself.", []), hint_after=25,
             objective=objective("Help push the car over", at=(lie_centre[0], by + 1.0, lie_centre[2]), line="Walk up to the car - you push it over by yourself", how="walk"),
             note="the boy pushes (touch, punch or right-click); Misato repeats 2.09 after 10 s")
     s.beat(22)
@@ -389,7 +393,7 @@ def build(s, ctx):
         s.after(delay / 20.0 + 0.05, *cmds)
     s.after(2.05, sfx("sfx.car_drop", at=(lie_centre[0], by + 1.0, lie_centre[2]), vol=1.5),
             *fx.dust_at(cx_, by + 0.2, cz_, 70, 3.2), "kill @e[tag=angel.new]", note="sfx.car_drop: the car lands on its wheels")
-    s.sleep(2.6)
+    s.sleep(PC.s2_roll_sleep)
     s.do(*carfx.look_boy(), note="she looks at him as she thanks him")
     s.say("2.10")
     # both get in: Misato first (the door opens), then the boy
@@ -405,19 +409,19 @@ def build(s, ctx):
          *carfx.look_road(car), note="she steps up into the driver's seat (a plain ride: the cast's own mount would hide her for 12 ticks)")
     dx, dy, dz = carfx.door_world(upright)
     ia_car = "@e[tag=angel.ia_car,limit=1]"
-    s.until([C.near(dx, dy, dz, 2.2, est=5), C.data(ia_car, "interaction", est=5), C.data(ia_car, "attack", est=5)],
-            timeout=20, on_done=[f"kill {ia_car}", *ride_passenger()], est=5.0, hint=("Walk up to the car - you get in by yourself.", []), hint_after=8,
+    s.until([C.near(dx, dy, dz, 2.2, est=PC.s2_est_in), C.data(ia_car, "interaction", est=PC.s2_est_in), C.data(ia_car, "attack", est=PC.s2_est_in)],
+            timeout=20, on_done=[f"kill {ia_car}", *ride_passenger()], est=PC.s2_est_in, hint=("Walk up to the car - you get in by yourself.", []), hint_after=8,
             objective=objective("Get back in", at="@e[tag=angel.seat_passenger,limit=1]", line="Walk up to the car - you get in by yourself", how="walk", grace=2.0),
             note="get back in (walk to the door, or touch the car)")
     s.do(*carfx.door_cmds(car, upright, False, 8), note="the door shuts (sfx.car_door)")
-    s.sleep(0.5)
+    s.sleep(PC.s2_engine_sleep)
     s.do(sfx("sfx.car_start", vol=1.2), note="sfx.car_start: the starter, the engine catching")
     s.after(2.0, *ctx.audio.start("bed", "car_interior", fade=2.0), note="the engine has caught: the car's bed comes back")
-    s.sleep(3.2, note="the engine settles")
+    s.sleep(PC.s2_engine_settle, note="the engine settles")
 
     # ================================================================ down to the gate
     s.do(*to_gate.start_cmds(), *ctx.audio.start("music", "road"), note="the drive resumes with the windscreen cracked: music.road again")
-    s.sleep(1.0)
+    s.sleep(PC.s2_drive_pause3)
     s.do(*crater_on, note="the Angel in the crater: orange outline, flame at the crater (it is regrowing)")
     s.do(*carfx.look_road(car), note="she drives on, the telephone against her shoulder, eyes on the road")
     s.say("2.12")
@@ -431,7 +435,7 @@ def build(s, ctx):
     s.do(*crater_off, *ctx.audio.stop("music"), sset("#fx.wreck", 0), "kill @e[tag=angel.wreck]", *ride_air.stop_cmds(), sset("#fx.leave", 0),
          "kill @e[tag=angel.cloud]", "kill @e[tag=angel.ia_push]", "kill @e[tag=angel.ia_car]", "kill @e[tag=angel.mwhite]", "kill @e[tag=angel.mblack]",
          note="the car stops at the gate: the music stops, the Angel is left behind; the town's wreck, the last of the cloud and every prop of the scene are removed")
-    s.sleep(0.8)
+    s.sleep(PC.s2_end_pause)
     s.next_scene(3)
 
 

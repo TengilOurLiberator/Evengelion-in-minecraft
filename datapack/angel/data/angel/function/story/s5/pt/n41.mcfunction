@@ -1,4 +1,4 @@
-execute if score #step angel.story matches 217 run function angel:story/s5/p217
-execute if score #step angel.story matches 226 run function angel:story/s5/p226
+execute if score #step angel.story matches 215 run function angel:story/s5/p215
+execute if score #step angel.story matches 224 run function angel:story/s5/p224
+execute if score #step angel.story matches 225 run function angel:story/s5/p225
 execute if score #step angel.story matches 227 run function angel:story/s5/p227
-execute if score #step angel.story matches 229 run function angel:story/s5/p229

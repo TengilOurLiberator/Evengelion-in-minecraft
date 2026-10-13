@@ -1,7 +1,5 @@
 scoreboard players set #force angel.story 0
-function angel:cast/look {id:"ritsuko",mode:"ahead"}
-scoreboard players set #f.turn_5 angel.story 16
-function angel:cast/look {id:"misato",mode:"ahead"}
-scoreboard players set #f.turn_6 angel.story 16
+execute at @a[limit=1] run playsound angel:sfx.elevator_doors master @a ~ ~ ~ 0.8 1.0 1.0
+function angel:cast/look {id:"ritsuko",mode:"player"}
 scoreboard players set #step angel.story 136
 function angel:story/s4/e136

@@ -40,5 +40,6 @@ forceload add 3120 80
 forceload add 3120 96
 forceload add 3120 112
 forceload add 3120 128
+time of angel:day set 22200
 scoreboard players set #step angel.story 16
 function angel:story/s7/e16

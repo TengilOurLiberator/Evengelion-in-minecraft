@@ -4,6 +4,7 @@ execute if score #phase angel.fight matches 4.. run return 0
 scoreboard players remove #ch angel.fight 1
 execute if score #ch angel.fight matches ..-1 run scoreboard players set #ch angel.fight 0
 scoreboard players add #whits angel.fight 1
+scoreboard players add #hit_n angel.fight 1
 execute if score #st angel.fight matches 7 run scoreboard players add #wt angel.fight 10
 execute if score #wt angel.fight matches 321.. run scoreboard players set #wt angel.fight 320
 execute as @e[type=minecraft:interaction,tag=angel.core,limit=1] at @s run function angel:fight/wrap_hit_fx

@@ -20,6 +20,7 @@ if HERE not in sys.path:
     sys.path.insert(0, HERE)
 
 import core                                    # noqa: E402
+import pace                                    # noqa: E402
 from core import CFG, Out                      # noqa: E402
 
 
@@ -84,6 +85,31 @@ def build(dry=False, out_dir=None, warn=print, quiet=False):
     return ctx, out, summary
 
 
+def pace_table():
+    """Runs `--check` three times (as subprocesses: the presets are build-time state) and prints each scene's nominal duration side by side:
+         full, estimator as recorded    the original pacing, a line said while a character walks counted on top of the walk (what --check always printed)
+         full, overlap counted          the same pacing, the estimator that counts those lines as part of the walk
+         video                          the default pacing (overlap counted)
+       and the errors / warnings of the video run."""
+    import subprocess
+    here = os.path.join(HERE, "build_story.py")
+    runs = [("full (as recorded)", ["--pace", "full", "--est-overlap", "off"]), ("full (overlap)", ["--pace", "full", "--est-overlap", "on"]), ("video", ["--pace", "video"])]
+    res = []
+    for name, extra in runs:
+        r = subprocess.run([sys.executable, here, "--check", "--quiet"] + extra, capture_output=True, text=True, cwd=HERE, encoding="utf-8", errors="replace")
+        rows = {int(m.group(1)): (float(m.group(3)), m.group(2)) for m in re.finditer(r"^SCENE (\d+): (.*?)\s+nominal duration\s+([\d.]+)s", r.stdout, re.M)}
+        tail = re.findall(r"^(\d+) errors, (\d+) warnings", r.stdout, re.M)
+        res.append((name, rows, tail[-1] if tail else ("?", "?")))
+    titles = {n: t for n, t in ((n, v[1]) for n, v in res[0][1].items())}
+    print(f"{'scene':28s}" + "".join(f"{name:>22s}" for name, _, _ in res))
+    for n in sorted(titles):
+        print(f"{n}  {titles[n]:25s}" + "".join(f"{rows.get(n, (0, ''))[0]:15.0f} s ({rows.get(n, (0, ''))[0] / 60:4.1f})" for _, rows, _ in res))
+    tot = [sum(v[0] for v in rows.values()) for _, rows, _ in res]
+    print(f"{'TOTAL':28s}" + "".join(f"{t:15.0f} s ({t / 60:4.1f})" for t in tot))
+    print("checker: " + "; ".join(f"{name}: {e} errors, {w} warnings" for name, _, (e, w) in res))
+    return 0 if all(t[0] == "0" for _, _, t in res) else 1
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dry", action="store_true", help="test variant with a mannequin as the player")
@@ -94,9 +120,20 @@ def main(argv=None):
     ap.add_argument("--scenes", help="build only these scene numbers, e.g. 1,2,3,4,5 (for testing while another scene is being written)")
     ap.add_argument("--steps", help="also write a JSON listing of every scene's steps (for test drivers and the voice bridge)")
     ap.add_argument("--steps-only", action="store_true", help="with --steps: stop after writing the listing (nothing is written to the datapack)")
-    ap.add_argument("--stuck-hint", type=float, help="seconds without progress before a generic direction line (default CFG.stuck_hint_s = 60)")
-    ap.add_argument("--stuck-skip", type=float, help="seconds without progress before a step is skipped by itself (default CFG.stuck_skip_s = 150)")
+    ap.add_argument("--stuck-hint", type=float, help="seconds without progress before a generic direction line (default: the pace preset's stuck_hint_s)")
+    ap.add_argument("--stuck-skip", type=float, help="seconds without progress before a step is skipped by itself (default: the pace preset's stuck_skip_s)")
+    ap.add_argument("--pace", default="video", choices=sorted(pace.PRESETS),
+                    help="pacing preset (tools/story/pace.py): video (default; a playthrough in about 13 minutes) or full (the original, unhurried values)")
+    ap.add_argument("--est-overlap", choices=["on", "off"],
+                    help="how --check counts a line said while a character walks: on = as part of the walk (the default of video), off = on top of it (the original estimator: full)")
+    ap.add_argument("--table", action="store_true",
+                    help="run --check for the original pacing (the recorded estimator), full and video, and print the nominal duration of every scene side by side")
     args = ap.parse_args(argv)
+    pace.use(args.pace)
+    if args.est_overlap:
+        pace.PACE.override(est_overlap=args.est_overlap == "on")
+    if args.table:
+        return pace_table()
     if args.stuck_hint is not None:
         CFG.stuck_hint_s = args.stuck_hint
     if args.stuck_skip is not None:

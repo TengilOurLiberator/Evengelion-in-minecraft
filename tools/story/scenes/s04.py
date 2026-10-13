@@ -24,10 +24,13 @@ import worldgen_sky
 N = 4
 TITLE = "Lost"
 
-SPEED = 0.15                 # blocks per tick for the walkers: 3 blocks a second
+import pace
 
 
 def build(s, ctx):
+    PC = pace.PACE
+    SPEED = PC.walk_speed                         # blocks per tick for the walkers (pace.py: 0.15 = 3 blocks a second in "full", 0.20 = 4 in "video")
+    tight = PC.tight                              # the video pacing's structural cuts (lines said while walking, the panel sequence under 4.04, a fade down the escalator ...)
     A = ctx.anchor
     start, c1, c2, c3 = A("hq.start"), A("hq.corr_1"), A("hq.corr_2"), A("hq.corr_3")
     loop_door, c4, c5, c6 = A("hq.loop_door"), A("hq.corr_4"), A("hq.corr_5"), A("hq.corr_6")
@@ -42,26 +45,29 @@ def build(s, ctx):
     NORTH, SOUTH = 155.5, 165.5
 
     # ================================================================ setup (a jump runs it; a hand-over from scene 3 comes here too)
-    s.do(blind(4.5), note="fade out")
+    s.do(blind(PC.s4_setup_fade), note="fade out")
     s.sleep(0.4)
     # the move from the geofront (2000 blocks away: unloaded chunks, the player perhaps still on the wagon seat) is the guarded one: it dismounts,
     # forceloads, teleports and WAITS until he is really at hq.start (re-issuing the teleport every second)
-    s.move_player(start["x"], start["y"], start["z"], settle=1.2, before=ctx.preload_rect(3000, 128, 3190, 176),
+    # (video pacing: he arrives 10 blocks short of corr_1 instead of 20 beyond it: the corridor is the same all the way)
+    bx0 = (c1["x"] + PC.s4_begin_ahead) if tight else start["x"]
+    s.move_player(bx0, start["y"], start["z"], settle=PC.s4_setup_settle, before=ctx.preload_rect(3000, 128, 3190, 176),
                   note="the player to hq.start (the head is not turned)")
     s.do(fn("story/hq/reset_cage"), fn("story/hq/reset_lobby"), dirty_cmd(), fn("story/hq/side_closed"), fn("story/hq/lift_closed"), *worldgen_sky.sky("hq"),
          note="the set as it should stand: cage dark and shut, the lift's door closed, the hospital door closed")
     s.do(sset("#beat", 40), sset("#present_misato", 1), sset("#present_ritsuko", 0), sset("#present_gendo", 0), sset("#present_rei", 0),
-         cast_summon("misato", start["x"] - 2.0, start["y"], start["z"], 90.0), cast_look("misato", "ahead"),
+         cast_summon("misato", bx0 - 2.0, start["y"], start["z"], 90.0), cast_look("misato", "ahead"),
          cast_summon("ritsuko", elev_in["x"], elev_in["y"], elev_in["z"], -90.0), cast_look("ritsuko", "ahead"),
          note="Misato two paces ahead; Ritsuko waits in the lift behind its closed door")
     s.do(*ctx.audio.start("bed", "hq"), note="the hum of the corridors")
-    s.sleep(1.5)
+    s.sleep(PC.s4_setup_sleep)
     s.setup_done()
 
     # ================================================================ the corridors: Misato leads
+    # (video pacing: 4.01 and 4.02 are said WHILE she walks, as soon as he is within earshot, instead of at the stops)
     L.lead(s, ctx, "misato", [
-        L.Stop(c1["x"], Y_UP, c1["z"], say_at=["4.01"], note="corr_1"),
-        L.Stop(c2["x"], Y_UP, c2["z"], say_at=["4.02"], note="corr_2 (the walkway)"),
+        L.Stop(c1["x"], Y_UP, c1["z"], **({"say_while": ["4.01"]} if tight else {"say_at": ["4.01"]}), note="corr_1"),
+        L.Stop(c2["x"], Y_UP, c2["z"], **({"say_while": ["4.02"]} if tight else {"say_at": ["4.02"]}), note="corr_2 (the walkway)"),
         L.Stop(c3["x"], Y_UP, c3["z"], note="corr_3"),
         # once round the ring: in from the east, up the east lane, west along the north lane (past the door the first time), down the
         # west lane, east along the south lane (corr_4 is its west end), up the east lane again, west to the door
@@ -71,7 +77,7 @@ def build(s, ctx):
         L.Stop(c4["x"], Y_UP, c4["z"], note="corr_4"),
         L.Stop(EAST, Y_UP, SOUTH, wait=False, note="the ring, south-east corner"),
         L.Stop(EAST, Y_UP, NORTH, wait=False, note="the ring, north-east corner again"),
-    ], speed=SPEED, start=(start["x"] - 2.0, start["z"]))
+    ], speed=SPEED, start=(bx0 - 2.0, start["z"]))
     # the second time past the door she stops dead in front of it
     L.lead(s, ctx, "misato", [L.Stop(loop_door["x"], Y_UP, loop_door["z"], wait=False, note="hq.loop_door, the second time")],
            speed=SPEED, start=(EAST, NORTH))
@@ -83,51 +89,69 @@ def build(s, ctx):
     s.do(*L.face(ctx, "misato", *door_pt), *arm_door, note="she stops dead and looks at the door (personal space armed)")
     s.until(L.near_char("misato", 6.0), timeout=120, est=0.5, hint=("Misato has stopped at a door.", []), hint_after=30, objective=follow_objective("misato"),
             on_timeout=[tp_player(loop_door["x"] + 2.5, Y_UP, loop_door["z"] - 1.0)], note="the player catches up")
-    s.sleep(0.9)
+    s.sleep(PC.s4_door_pause)
     s.say("4.03")
     s.do(L.face_player("misato"), note="she turns to him")
     s.wait_answer(speaker="misato", prompt="answer Misato")
-    s.say("4.04")
-    s.do(*L.space_off("misato"), note="personal space off: she walks to the panel")
-    # she presses a wall panel (the north wall of the ring, opposite the door)
-    panel = (loop_door["x"], Y_UP + 1.4, 151.9)
-    s.do(f'function angel:cast/walk {{id:"misato",x:{num(loop_door["x"])},y:{num(Y_UP)},z:{num(153.0)},speed:0.12}}', note="she steps to the wall")
-    s.until(L.arrived("misato", est=2.0), est=2.0, timeout=20, note="at the panel")
-    s.do(*L.face(ctx, "misato", *panel))
-    s.sleep(1.0)
-    s.do("playsound minecraft:block.stone_button.click_on master @a " + f"{num(panel[0])} {num(panel[1])} {num(panel[2])} 2.0 0.9 0.3",
-         f"particle minecraft:electric_spark {num(panel[0])} {num(panel[1])} {num(panel[2] + 0.3)} 0.15 0.15 0.15 0.05 10 force",
-         note="click")
-    s.sleep(0.9)
-    s.do(sfx("sfx.pa_chime"), note="the page: a chime")
-    s.sleep(1.4)
-    s.say("4.05")
-    s.sleep(0.6)
+    panel = (loop_door["x"], Y_UP + 1.4, 151.9)                       # the wall panel (the north wall of the ring, opposite the door)
+    click = ["playsound minecraft:block.stone_button.click_on master @a " + f"{num(panel[0])} {num(panel[1])} {num(panel[2])} 2.0 0.9 0.3",
+             f"particle minecraft:electric_spark {num(panel[0])} {num(panel[1])} {num(panel[2] + 0.3)} 0.15 0.15 0.15 0.05 10 force"]
+    to_wall = f'function angel:cast/walk {{id:"misato",x:{num(loop_door["x"])},y:{num(Y_UP)},z:{num(153.0)},speed:0.12}}'
+    if tight:
+        # she walks to the wall, presses the panel and the page chimes WHILE she says 4.04 (timers from its start: all well inside the shortest it can be)
+        s.do(*L.space_off("misato"), note="personal space off: she walks to the panel")
+        s.after(0.4, to_wall, note="she steps to the wall")
+        s.after(1.9, *L.face(ctx, "misato", *panel), note="she faces the panel")
+        s.after(2.6, *click, note="click")
+        s.after(3.4, sfx("sfx.pa_chime"), note="the page: a chime")
+        s.say("4.04")
+    else:
+        s.say("4.04")
+        s.do(*L.space_off("misato"), note="personal space off: she walks to the panel")
+        s.do(to_wall, note="she steps to the wall")
+        s.until(L.arrived("misato", est=2.0), est=2.0, timeout=20, note="at the panel")
+        s.do(*L.face(ctx, "misato", *panel))
+        s.sleep(1.0)
+        s.do(*click, note="click")
+        s.sleep(0.9)
+        s.do(sfx("sfx.pa_chime"), note="the page: a chime")
+        s.sleep(1.4)
+        s.say("4.05")
+        s.sleep(0.6)
 
-    # ================================================================ onward: the escalator, no lines
-    L.lead(s, ctx, "misato", [
-        L.Stop(WEST, Y_UP, NORTH, wait=False, note="the ring, north-west corner"),
+    # ================================================================ onward: the escalator, no lines (video: 4.05 is said on the way, a fade down the escalator)
+    onward = [
+        L.Stop(WEST, Y_UP, NORTH, wait=False, **({"say_while": ["4.05"]} if tight else {}), note="the ring, north-west corner"),
         L.Stop(WEST, Y_UP, Z, wait=False, note="the ring, west lane"),
         L.Stop(ox + 91.5, Y_UP, Z, wait=False, note="the connector"),
         L.Stop(c5["x"], Y_UP, c5["z"], note="corr_5 (the top of the escalator)"),
-        L.Stop(ox + 33.5, Y_LO + 0.5, Z, wait=False, note="down the long escalator"),
-        L.Stop(c6["x"], Y_LO, c6["z"], note="corr_6 (the bottom)"),
-        L.Stop(ox + 13.8, Y_LO, Z - 2.2, note="the lift lobby"),
-    ], speed=SPEED, start=(loop_door["x"], 153.0))
+    ]
+    if not tight:
+        onward += [L.Stop(ox + 33.5, Y_LO + 0.5, Z, wait=False, note="down the long escalator"),
+                   L.Stop(c6["x"], Y_LO, c6["z"], note="corr_6 (the bottom)"),
+                   L.Stop(ox + 13.8, Y_LO, Z - 2.2, note="the lift lobby")]
+    L.lead(s, ctx, "misato", onward, speed=SPEED, start=(loop_door["x"], 153.0))
+    if tight:
+        # the fade: from the top of the escalator to its foot (the descent is 50 blocks of walking in silence); the lobby is a short walk from there
+        # (the fade lands him in the lobby, 8 blocks from the lift, with Misato already at her place beside the doors)
+        mis_lobby = (ox + 13.8, Y_LO, Z - 2.2)
+        s.fade([f'function angel:cast/stop {{id:"misato"}}', f"tp {L.char('misato')} {num(mis_lobby[0])} {num(mis_lobby[1])} {num(mis_lobby[2])}",
+                tp_player(c6["x"] - 8.0, Y_LO, c6["z"]), cast_look("misato", "player")], black=PC.s4_fade_black, note="down the escalator and along the lower corridor (a fade)")
 
     # ================================================================ the lift lobby
-    s.until(C.near(elev["x"], Y_LO, elev["z"], 8.5, est=3), timeout=90, est=2.0, note="the player reaches the lobby",
-            objective=objective("Go to the lift", at=(elev["x"], Y_LO, elev["z"]), line="Walk on to the lift  -  Misato is waiting there", how="walk", grace=3.0),
+    # (video: the lift arrives while he is still on his way, 15 blocks out)
+    s.until(C.near(elev["x"], Y_LO, elev["z"], PC.s4_lobby_r, est=PC.s4_lobby_est), timeout=90, est=PC.s4_lobby_est, note="the player reaches the lobby",
+            objective=objective("Go to the lift", at=(elev["x"], Y_LO, elev["z"]), line="Walk on to the lift  -  Misato is waiting there", how="walk", grace=PC.s4_lobby_grace),
             on_timeout=[tp_player(elev["x"] + 5.0, Y_LO, elev["z"] + 0.0)])
-    s.sleep(0.8)
+    s.sleep(PC.s4_lobby_pause)
     s.do(sfx("sfx.elevator_arrive", at=(elev_in["x"], Y_LO + 1.5, elev_in["z"]), vol=2.0, minvol=0.6), note="the lift arrives: a tone")
-    s.sleep(1.1)
+    s.sleep(PC.s4_lift_pause1)
     s.do(fn("story/hq/lift_opened"), sfx("sfx.elevator_doors", at=(elev_in["x"] + 2, Y_LO + 1.5, elev_in["z"]), vol=2.0, minvol=0.6), note="the doors open")
-    s.sleep(0.9)
-    s.do(sset("#present_ritsuko", 1), f'function angel:cast/walk {{id:"ritsuko",x:{num(elev["x"])},y:{num(Y_LO)},z:{num(elev["z"])},speed:0.13}}',
+    s.sleep(PC.s4_lift_pause2)
+    s.do(sset("#present_ritsuko", 1), f'function angel:cast/walk {{id:"ritsuko",x:{num(elev["x"])},y:{num(Y_LO)},z:{num(elev["z"])},speed:{num(PC.walk_slow)}}}',
          note="Ritsuko steps out of the lift")
-    s.until(L.arrived("ritsuko", est=3.5), est=3.5, timeout=25, note="Ritsuko reaches hq.elevator")
-    s.sleep(0.3)
+    s.until(L.arrived("ritsuko", est=PC.s4_rit_est), est=PC.s4_rit_est, timeout=25, note="Ritsuko reaches hq.elevator")
+    s.sleep(PC.s4_rit_settle)
     # positions as they stand: Ritsuko at hq.elevator, Misato near (13.8, 158.3)
     rit_pt = (elev["x"], Y_LO + 1.6, elev["z"])
     mis_pt = (ox + 13.8, Y_LO + 1.6, Z - 2.2)
@@ -153,58 +177,67 @@ def build(s, ctx):
             s.after(t_on, fn("story/hq/strips_red"), note=f"red pulse {k + 1}")
         s.after(t_off, fn("story/hq/strips_on"), note=f"back {k + 1}")
     s.after(4.3, sfx("sfx.klaxon", vol=0.4), note="the klaxon again, under the voice")
-    s.sleep(1.4)
-    s.say("4.12")
-    s.sleep(0.5)
-
-    # ================================================================ down: all three into the lift
     car_c = (elev_in["x"], Y_LO, elev_in["z"])                     # (3005.5, 107, 160.5): the car is 3 x 3 (x 3004..3007, z 159..162), its doors on the east side
     # fixed places in the car: the two women stand at the back wall (west), in the two corners, facing the doors; the boy's place is at the doors, in the
     # middle: 1.9 blocks from each of them (a 3 x 3 car holds three people no farther apart)
     LIFT_R = (car_c[0] - 1.0, car_c[2] - 1.0)                      # Ritsuko: back wall, south-west corner (3004.5, 159.5)
     LIFT_M = (car_c[0] - 1.0, car_c[2] + 1.0)                      # Misato: back wall, north-west corner (3004.5, 161.5)
     LIFT_P = (car_c[0] + 0.6, car_c[2])                            # the boy: by the doors (3006.1, 160.5)
-    s.do(f'function angel:cast/walk {{id:"ritsuko",x:{num(LIFT_R[0])},y:{num(Y_LO)},z:{num(LIFT_R[1])},speed:0.14}}',
-         f'function angel:cast/walk {{id:"misato",x:{num(LIFT_M[0])},y:{num(Y_LO)},z:{num(LIFT_M[1])},speed:0.14}}',
-         note="Ritsuko and Misato step into the lift, to the back corners")
-    s.until([C.near(LIFT_P[0], Y_LO, LIFT_P[1], 0.9, est=6)], timeout=50, est=6.0, hint=("Step into the lift (all the way in: the doors close).", []), hint_after=14,
-            objective=objective("Step into the lift", at=(LIFT_P[0], Y_LO, LIFT_P[1]), line="Walk into the lift, all the way in to the doors", how="walk", grace=2.0),
-            on_timeout=[tp_player(LIFT_P[0], Y_LO, LIFT_P[1])], note="the player steps into the lift")
+    into_lift = objective("Step into the lift", at=(LIFT_P[0], Y_LO, LIFT_P[1]), line="Walk into the lift, all the way in to the doors", how="walk", grace=PC.s4_lift_grace)
+    women_in = [f'function angel:cast/walk {{id:"ritsuko",x:{num(LIFT_R[0])},y:{num(Y_LO)},z:{num(LIFT_R[1])},speed:{num(PC.walk_slow + 0.01)}}}',
+                f'function angel:cast/walk {{id:"misato",x:{num(LIFT_M[0])},y:{num(Y_LO)},z:{num(LIFT_M[1])},speed:{num(PC.walk_slow + 0.01)}}}']
+    if tight:
+        # 4.12 is said while they walk into the lift (the objective "Step into the lift" is up from the start of the line)
+        s.sleep(PC.s4_alert_pause)
+        s.do(*women_in, note="Ritsuko and Misato step into the lift, to the back corners (under 4.12)")
+        s.objective_on(into_lift)
+        s.say("4.12")
+    else:
+        s.sleep(PC.s4_alert_pause)
+        s.say("4.12")
+        s.sleep(PC.s4_alert_end)
+
+        # ================================================================ down: all three into the lift
+        s.do(*women_in, note="Ritsuko and Misato step into the lift, to the back corners")
+    s.until([C.near(LIFT_P[0], Y_LO, LIFT_P[1], 0.9, est=PC.s4_lift_est)], timeout=50, est=PC.s4_lift_est, hint=("Step into the lift (all the way in: the doors close).", []), hint_after=14,
+            objective=into_lift, on_timeout=[tp_player(LIFT_P[0], Y_LO, LIFT_P[1])], note="the player steps into the lift")
     s.until(Cond(["if score #arrived_ritsuko angel.cast matches 1", "if score #arrived_misato angel.cast matches 1"], 2.0, "both in the car"),
             timeout=15, est=1.0, note="both are in")
     east = (car_c[0] + 8.0, Y_LO + 1.6, car_c[2])
     s.do(*L.face(ctx, "ritsuko", *east), *L.face(ctx, "misato", *east), note="they turn to face the doors")
-    s.sleep(0.7)
+    s.sleep(PC.s4_doors_pause)
     s.do(fn("story/hq/lift_closed"), sfx("sfx.elevator_doors", at=(car_c[0] + 1.5, Y_LO + 1.5, car_c[2]), vol=2.0, minvol=0.6), note="the doors close")
-    s.sleep(1.4)
+    s.sleep(PC.s4_doors_close)
     # the ride: through black.  The motor is a vanilla stand-in (a low hum and a thump) until a recorded one exists.
     # the ride has a bed of its own: the hum of the corridors gives way to the machine pulse of amb.plug (a sealed, humming space) over 1.2 s and,
     # at the lower stop, to the lake hall's air over 1.5 s; no vanilla stand-in sounds
-    s.do(blind(7), *ctx.audio.start("bed", "plug", fade=1.2, out="hq", out_fade=1.2), note="the lift goes down: to black; amb.plug is the ride's bed")
-    s.sleep(0.6)
+    s.do(blind(PC.s4_ride_black), *ctx.audio.start("bed", "plug", fade=1.2, out="hq", out_fade=1.2), note="the lift goes down: to black; amb.plug is the ride's bed")
+    s.sleep(PC.s4_ride_dark)
     s.do(cast_remove("ritsuko"), cast_remove("misato"), tp_player(LIFT_P[0], Y_DK, LIFT_P[1]),
          cast_summon("ritsuko", LIFT_R[0], Y_DK, LIFT_R[1], -90.0), cast_summon("misato", LIFT_M[0], Y_DK, LIFT_M[1], -90.0),
          cast_look("ritsuko", "ahead"), cast_look("misato", "ahead"), note="in the dark: the lower stop (same places in the car, facing the doors)")
-    s.after(4.3, sfx("sfx.elevator_arrive", vol=0.6, pitch=0.8), note="the lift slows: a soft tone")
-    s.after(4.9, sfx("sfx.elevator_arrive", vol=1.0), *ctx.audio.start("bed", "lake", fade=1.5, out="plug", out_fade=1.5), note="a tone; the lake hall's air")
-    s.sleep(5.6, note="the dark lifts")
+    s.after(PC.s4_ride_t1, sfx("sfx.elevator_arrive", vol=0.6, pitch=0.8), note="the lift slows: a soft tone")
+    s.after(PC.s4_ride_t2, sfx("sfx.elevator_arrive", vol=1.0), *ctx.audio.start("bed", "lake", fade=1.5, out="plug", out_fade=1.5), note="a tone; the lake hall's air")
+    s.sleep(PC.s4_ride_open, note="the dark lifts")
     s.do(sfx("sfx.elevator_doors", vol=0.8), L.face_player("ritsuko"), note="the doors are open on the dock")
-    s.sleep(0.8)
+    s.sleep(PC.s4_dock_pause)
 
-    # ================================================================ the crossing: Ritsuko leads, Misato beside the boy
+    # ================================================================ the crossing: Ritsuko leads, Misato the companion who trails the boy
+    # The catwalk over the lake is 3 blocks wide (z 159..161 from x 3022 to 3096): no room for Misato beside the boy, so lead() plans her path on the built set and she
+    # walks behind him in single file there (see lead.py; this stretch is where she once walked into the railing at the neck of the catwalk and stayed there).
     xl = ox + 96.5
     L.lead(s, ctx, "ritsuko", [
-        L.Stop(dock["x"], Y_DK, dock["z"], note="hq.dock"),
+        L.Stop(dock["x"], Y_DK, dock["z"], wait=not tight, note="hq.dock"),
         L.Stop(crossing["x"], Y_DK, crossing["z"], say_while=["4.13", "4.14"], note="hq.crossing"),
         L.Stop(xl, Y_DK, Z, wait=False, say_while=["4.15", "4.16"], note="the corner of the catwalk"),
         L.Stop(xl, Y_DK, cdoor["z"] + 5.0, wait=False, say_while=["4.17"], note="up to the cage door"),
         L.Stop(xl, Y_DK, cdoor["z"] - 1.8, note="in front of the cage door", space=False),        # the door is straight ahead: she stays put
-    ], speed=SPEED, companion=("misato", 2.6, 1.3), start=LIFT_R)
+    ], speed=SPEED, companion=("misato", 2.6, 1.3), start=LIFT_R, companion_at=LIFT_M)
     s.do(L.face_player("misato"), note="Misato arrives and looks at him")
-    s.sleep(0.6)
+    s.sleep(PC.s4_end_pause1)
     # 4.18 at hq.cage_door, as the door opens onto darkness
     s.do(fn("story/hq/door_open"), sfx("sfx.door_heavy", at=(xl, Y_DK + 2.5, 140.5), vol=3.0, minvol=0.7), note="the cage door opens onto darkness")
-    s.sleep(1.2)
+    s.sleep(PC.s4_end_pause2)
     s.say("4.18")
-    s.sleep(0.5)
+    s.sleep(PC.s4_end_pause3)
     s.next_scene(5)

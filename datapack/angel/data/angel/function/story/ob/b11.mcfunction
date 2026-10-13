@@ -16,8 +16,8 @@ scoreboard players set #ob.np angel.story 0
 scoreboard players set #ob.line angel.story -1
 scoreboard players set #ob.rn angel.story 0
 scoreboard players set #ob.gf angel.story 1
-scoreboard players set #ob.rep angel.story 300
-scoreboard players set #ob.secs angel.story 100
+scoreboard players set #ob.rep angel.story 240
+scoreboard players set #ob.secs angel.story 80
 scoreboard players set #ob.stillt angel.story 99999999
 scoreboard players set #ob.sn angel.story 0
 scoreboard players set #ob.snd angel.story 1

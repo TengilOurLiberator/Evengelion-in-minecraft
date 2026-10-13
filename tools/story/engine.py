@@ -87,9 +87,12 @@ class Nudges:
         self.gentle = gentle                # the engine's default for a wait that has none of its own (no lines: a look and the prompt)
 
     @staticmethod
-    def gentle_for(speaker, first=12.0, repeat=15.0):
+    def gentle_for(speaker, first=None, repeat=None):
         """The default nudge of every wait: after `first` s of silence the asking character turns to look at the player (when she is
         there in person) and the speak prompt pulses with its chime again; repeated every `repeat` s.  No spoken lines."""
+        import pace
+        first = pace.PACE.nudge_first if first is None else first
+        repeat = pace.PACE.nudge_repeat if repeat is None else repeat
         look = f'execute if score #present_{speaker} {OBJ} matches 1 run function {NS}:cast/look {{id:"{speaker}",mode:"player"}}'
         return Nudges(first, repeat, [[look, fn("story/prompt/pulse")]], loop_from=0, gentle=True)
 
@@ -229,6 +232,12 @@ class Scene:
             est = nudges.nominal()
         if nudges is None:
             nudges = Nudges.gentle_for(spk)          # every wait reminds a silent player: a look and the prompt, no new lines
+        import pace
+        if timeout is None and mode == 1 and pace.PACE.answer_timeout:
+            timeout = pace.PACE.answer_timeout       # an ordinary answer wait goes on by itself (the consent / pilot waits keep their own rules)
+        # the speak prompt appears the moment a line ends: the gap that `say` left before a wait is trimmed to pace.wait_gap
+        if self.steps and getattr(self.steps[-1], "gap", False):
+            self.steps[-1].sec = min(self.steps[-1].sec, max(0.05, pace.PACE.wait_gap))
         return self._add(Step("wait", mode=mode, speaker=spk, prompt=prompt, variant=variant, timeout=timeout,
                               est=est if est is not None else CFG.answer_est, note=note or f"WAIT {mode} {spk}",
                               answer_ends=answer_ends, nudges=nudges, no_skip=no_skip))
@@ -473,8 +482,11 @@ class Compiler:
                           sset("#wt", T(st.timeout) if st.timeout else -1), sset("#stk", 0)]
                 if not st.timeout:
                     enter += [f"execute {sc('#timeout_s', '1..')} run function {NS}:story/wt_global"]
+                # (with an answer timeout in the pacing the countdown stands still while the bridge speaks: a reply is never cut by the clock)
+                import pace
+                wt_guard = f" unless score #bridge_speaking {OBJ} matches 1.." if pace.PACE.answer_timeout else ""
                 poll = [f"execute {sc('#wait', '0')} run function {NS}:{base}/x{i}",
-                        f"execute if score #step {OBJ} matches {i} {sc('#wait', '1..')} {sc('#wt', '0..')} run function {NS}:story/wait_tick"]
+                        f"execute if score #step {OBJ} matches {i} {sc('#wait', '1..')} {sc('#wt', '0..')}{wt_guard} run function {NS}:story/wait_tick"]
                 exit_pre = [sset("#wait", 0)]
                 bsp = f"score #bridge_speaking {OBJ} matches 1.."
                 if not st.no_skip:

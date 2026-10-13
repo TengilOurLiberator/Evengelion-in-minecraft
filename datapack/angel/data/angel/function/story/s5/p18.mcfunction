@@ -3,6 +3,6 @@ scoreboard players add #stept angel.story 1
 scoreboard players add #nagt angel.story 1
 execute if score #step angel.story matches 18 run scoreboard players add #stk angel.story 1
 execute if score #step angel.story matches 18 if score #stk angel.story >= #stk_skip angel.story run function angel:story/s5/sk18
-execute if score #step angel.story matches 18 if score #stept angel.story matches 3600 run function angel:story/s5/t18
-execute if score #step angel.story matches 18 if score #stept angel.story matches 700 run function angel:story/s5/h18
+execute if score #step angel.story matches 18 if score #stept angel.story matches 1500 run function angel:story/s5/t18
+execute if score #step angel.story matches 18 if score #stept angel.story matches 400 run function angel:story/s5/h18
 execute if score #step angel.story matches 18 if score #force angel.story matches 1 run function angel:story/s5/x18

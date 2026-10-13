@@ -3,8 +3,9 @@ summon minecraft:marker ~ ~ ~ {Tags:["angel.mon","angel.root","angel.new"]}
 summon minecraft:marker ~ ~ ~ {Tags:["angel.mon","angel.aim","angel.new"]}
 summon minecraft:marker ~ ~ ~ {Tags:["angel.mon","angel.target","angel.new"]}
 summon minecraft:marker ~ ~ ~ {Tags:["angel.mon","angel.aimpt","angel.new"]}
-summon minecraft:interaction ~ ~ ~ {Tags:["angel.mon","angel.core","angel.new"],width:22.5f,height:22.5f,response:1b}
+summon minecraft:interaction ~ ~ ~ {Tags:["angel.mon","angel.core","angel.new"],width:30f,height:30f,response:1b}
 summon minecraft:interaction ~ ~ ~ {Tags:["angel.mon","angel.body","angel.new"],width:36f,height:84f,response:1b}
+summon minecraft:interaction ~ ~ ~ {Tags:["angel.mon","angel.nearbox","angel.new"],width:52.5f,height:52.5f,response:1b}
 summon minecraft:block_display ~ ~ ~ {Tags:["angel.mon","angel.part","angel.p0","angel.new"],block_state:"minecraft:black_concrete",transformation:{translation:[-11.25f,74.405f,-6.75f],left_rotation:[0f,0f,0f,1f],scale:[22.5f,12f,13.5f],right_rotation:[0f,0f,0f,1f]},interpolation_duration:0,teleport_duration:2,view_range:8f,shadow_radius:0f,brightness:{block:5,sky:7}}
 summon minecraft:block_display ~ ~ ~ {Tags:["angel.mon","angel.part","angel.p1","angel.new"],block_state:"minecraft:warped_planks",transformation:{translation:[5.194f,38.64f,-2.105f],left_rotation:[-0.044f,-0.001f,0.013f,0.999f],scale:[9.6f,38.25f,11.4f],right_rotation:[0f,0f,0f,1f]},interpolation_duration:0,teleport_duration:2,view_range:8f,shadow_radius:0f,brightness:{block:8,sky:10}}
 summon minecraft:block_display ~ ~ ~ {Tags:["angel.mon","angel.part","angel.p2","angel.new"],block_state:"minecraft:warped_planks",transformation:{translation:[-14.791f,38.891f,-2.105f],left_rotation:[-0.044f,0.001f,-0.013f,0.999f],scale:[9.6f,38.25f,11.4f],right_rotation:[0f,0f,0f,1f]},interpolation_duration:0,teleport_duration:2,view_range:8f,shadow_radius:0f,brightness:{block:8,sky:10}}

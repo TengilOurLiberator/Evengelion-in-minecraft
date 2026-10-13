@@ -12,6 +12,7 @@ Whatever fails is dropped and the verbatim take is used.
 """
 import json
 import math
+from config import adapt_bounds
 import re
 import threading
 import time
@@ -123,7 +124,8 @@ def validate(original, new, keep=()):
     if set(m.group(0).lower() for m in BANNED.finditer(t)) - set(m.group(0).lower() for m in BANNED.finditer(original)):
         return False, "talks about something outside the world", ""            # (a word the script line itself has -- "series" in 5.03 -- is its own business)
     n0, n1 = len(words(original)), len(words(t))
-    lo, hi = math.ceil(n0 * 0.8 - 1e-9), math.floor(n0 * 1.2 + 1e-9)
+    _lo, _hi, _ = adapt_bounds()
+    lo, hi = math.ceil(n0 * _lo - 1e-9), math.floor(n0 * _hi + 1e-9)
     if not (lo <= n1 <= hi):
         return False, f"{n1} words, the script line has {n0} (allowed {lo}..{hi})", ""
     have = set(w.lower() for w in words(t))
@@ -158,7 +160,7 @@ def build_message(items, context, later):
     out.append("SCRIPT LINES TO RE-VOICE (in the order they are spoken):")
     for ln, how in items:
         n = len(ln.words)
-        out.append(f'  {ln.id}  {NAMES[ln.speaker]} ({how}), {n} words (allowed {math.ceil(n * 0.8 - 1e-9)}..{math.floor(n * 1.2 + 1e-9)}): "{ln.text}"'
+        out.append(f'  {ln.id}  {NAMES[ln.speaker]} ({how}), {n} words (allowed {math.ceil(n * adapt_bounds()[0] - 1e-9)}..{math.floor(n * adapt_bounds()[1] + 1e-9)}): "{ln.text}"'
                    + (f"   keep: {', '.join(ln.keep)}" if ln.keep else ""))
     fixed = context.get("fixed_between") or []
     if fixed:

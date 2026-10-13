@@ -3,6 +3,7 @@ execute if score #phase angel.fight matches 4.. run return 0
 scoreboard players set #phase angel.fight 5
 scoreboard players set #pt angel.fight 0
 scoreboard players set #st angel.fight 8
+function angel:fight/vis_off
 function angel:fight/heartbeat_stop
 execute unless score #lost_reason angel.fight matches 2 run scoreboard players set #lost_reason angel.fight 1
 function angel:angel/stop_walking

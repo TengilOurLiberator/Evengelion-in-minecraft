@@ -1,16 +1,46 @@
-﻿"""Estimates how long the boss fight takes for two kinds of attacker, from the numbers in gen_fight.CFG.
+"""Estimates how long the boss fight takes for two kinds of attacker, from the numbers in gen_fight's preset (CFG).
 
-    python estimate.py
+    python estimate.py                   # the default preset (video: ANGEL_PACE, else video)
+    python estimate.py --pace full       # the earlier numbers
+    python estimate.py --pace video
 
-Not a simulation of the server: an accounting of the phases, with the assumptions written out below.  Change CFG in gen_fight.py,
-run this, and adjust until the first-time player (b) comes out between 4 and 7 minutes.  The assumptions are guesses about people;
-only a human at the controls can check them.
+Not a simulation of the server: an accounting of the phases, with the assumptions written out below.  Change the preset table in gen_fight.py, run this, and
+adjust until the first-time player (b) comes out where the preset is meant to (video: 2:00 to 2:30 with the scripted attacker (a) at 75 to 90 s; full: 4 to 7 min).
+The assumptions are guesses about people; only a human at the controls can check them.
+
+Assumptions (the player models are in PLAYERS, one set per preset):
+  * (a) the scripted attacker of the live tests: one click every 0.95 s, never dodges, runs at 13 blocks/s, so the only thing it ever waits for is the barrier of
+    a back-off.  With a core guard (hit_cd > 0) every other click is swallowed (one landed hit per 1.9 s); WITHOUT it every click that connects lands (0.95 s).
+  * (b) a first-time player.  WITH the guard: a landed hit every 2.0 s.  WITHOUT it nothing swallows a swing any more, so the pace is limited by aim and the
+    swing itself: one landed hit every 1.3 s (a plausible 1.2 to 1.5 s: a roomscale swing at a 6-block target that is 9 to 12 blocks away, a re-aim between swings).
+    He loses 2.5 s to each arm thrust (steps out of the 9-block zone and back), needs 24 s from the start to the first hit (about 85 blocks at 6 blocks/s, the
+    first beam's cover; 22 s in video, where the Angel sets off 4 s after his first steps instead of 6), 4 s of cover from the beam after each retreat and the walk back after it (the retreat distance at 6 blocks/s plus 3 s of reaction), and
+    lands a hit every 1.5 s in the wrap (5.5 s to spare on its bar).
+  * "slow" and "quick" first-timers scale those numbers (slow 1.3x on the swing, 3 s per thrust; quick 0.8x, 2 s per thrust).
+  * Not modelled: the player dying (giant health 100: four thrusts or four beams, regenerating 2 per second after 8 s unhurt) and restarting; a player who
+    rushes back and gets the first beam at close range (the barrier then waits for it exactly as much).
 """
+import argparse
 import math
+import sys
 
+import gen_fight
 from gen_fight import CFG
 
 TICK = 0.05
+CLICK = 0.95            # the scripted attacker's click interval, seconds
+
+# player models, per preset: keys of the first-timer; `swing` is the seconds per landed hit while free to hit
+PLAYERS = {
+    "full": dict(
+        b=dict(hit_every=2.0, dodge=2.5, open_s=24, wrap_every=1.5, walk_bps=6.0, react=3.0, cover_s=4),
+        slow=dict(hit_every=2.6, dodge=3.0, open_s=30, wrap_every=1.8, walk_bps=5.0, react=4.0, cover_s=5),
+        quick=dict(hit_every=1.5, dodge=2.0, open_s=18, wrap_every=1.3, walk_bps=7.5, react=2.0, cover_s=3)),
+    "video": dict(
+        b=dict(hit_every=1.3, dodge=2.5, open_s=22, wrap_every=1.5, walk_bps=6.0, react=3.0, cover_s=4),
+        slow=dict(hit_every=1.7, dodge=3.0, open_s=28, wrap_every=1.8, walk_bps=5.0, react=4.0, cover_s=5),
+        quick=dict(hit_every=1.0, dodge=2.0, open_s=16, wrap_every=1.3, walk_bps=7.5, react=2.0, cover_s=3)),
+}
 
 
 def backoff_ticks():
@@ -35,13 +65,13 @@ def wrap_margin(every):
     return bar
 
 
-def estimate(name, *, hit_every, dodge, open_s, wrap_every, approach_s, cover_s, player=True):
-    """hit_every   seconds per LANDED hit while it is free to hit (the guard makes 1.2 s the floor)
+def estimate(name, *, hit_every, dodge, open_s, wrap_every, approach_s, cover_s, player=True, quiet=False):
+    """hit_every   seconds per LANDED hit while it is free to hit (with a guard 1.2 s is the floor)
     dodge       seconds lost per arm thrust (stepping out of the 9-block zone and back), 0 = never dodges
     open_s      from the start to the first hit (walking up the avenue, the first beam included)
     wrap_every  seconds per landed hit in the final wrap (no guard there: every swing that connects counts; the monster is wrapped round the giant,
                 a 14 x 30 block target)
-    approach_s  seconds to close the 30 blocks after a retreat, cover_s extra seconds for taking cover from the beam
+    approach_s  seconds to close the retreat distance after a back-off, cover_s extra seconds for taking cover from the beam
     """
     stag, walk, gate = backoff_ticks()
     hits_before_wrap = CFG["core_hp"] - CFG["wrap_at"]
@@ -61,27 +91,43 @@ def estimate(name, *, hit_every, dodge, open_s, wrap_every, approach_s, cover_s,
     wrap = CFG["wrap_at"] * wrap_every
     total = open_s + engaged + n_backoff * per_backoff + 1.5 + wrap
     margin = wrap_margin(wrap_every)
-    print(f"{name}: {total:5.0f} s = {total / 60:.1f} min   (opening {open_s:.0f} s, {CFG['core_hp'] - CFG['wrap_at']} hits in {engaged:.0f} s, "
-          f"{n_backoff} back-offs x {per_backoff:.1f} s = {n_backoff * per_backoff:.0f} s, wrap {wrap:.0f} s, margin in the countdown {margin:.1f} s)")
+    if not quiet:
+        print(f"{name}: {total:5.0f} s = {int(total // 60)}:{int(round(total % 60)):02d}   (opening {open_s:.0f} s, {hits_before_wrap} hits in {engaged:.0f} s, "
+              f"{n_backoff} back-offs x {per_backoff:.1f} s = {n_backoff * per_backoff:.0f} s, wrap {wrap:.0f} s, margin in the countdown {margin:.1f} s)")
     return total
 
 
-if __name__ == "__main__":
+def main(argv=None):
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--pace", choices=sorted(gen_fight.PRESETS), help="the preset (default: ANGEL_PACE, else video)")
+    a = ap.parse_args(argv)
+    if a.pace:
+        gen_fight.set_pace(a.pace)
+    pace = gen_fight.PACE
+    pl = PLAYERS[pace]
+    print(f"pace: {pace}   core hits to win {CFG['core_hp']} (cracks at {CFG['crack_at']} left, wraps at {CFG['wrap_at']}), back-off every {CFG['backoff_hits']} landed hits, "
+          f"retreat {CFG['backoff_dist']} blocks, core guard {CFG['hit_cd'] * TICK:.1f} s" if CFG["hit_cd"] else
+          f"pace: {pace}   core hits to win {CFG['core_hp']} (cracks at {CFG['crack_at']} left, wraps at {CFG['wrap_at']}), back-off every {CFG['backoff_hits']} landed hits, "
+          f"retreat {CFG['backoff_dist']} blocks, no core guard")
     stag, walk, gate = backoff_ticks()
     print(f"back-off: stagger {stag} + retreat {walk} ticks, barrier up {gate} ticks = {gate * TICK:.1f} s until the first attack is over")
     print(f"wrap: {CFG['wrap_at']} hits in {CFG['wrap_ticks'] * TICK:.0f} s + {CFG['wrap_bonus'] * TICK:.1f} s per hit, no guard: spare time at the last hit "
           f"{wrap_margin(1.5):.1f} s for a hit every 1.5 s, {wrap_margin(1.0):.1f} s at 1.0 s, {wrap_margin(0.95):.1f} s at 0.95 s (the scripted clicker), "
           f"{wrap_margin(2.0):.1f} s at 2.0 s; a 1.5 s hitter who also stops for 6 s in all: {wrap_margin(1.5) - 6:.1f} s (lost)")
     guard = CFG["hit_cd"] * TICK
-    click = 0.95
-    scripted_every = math.ceil(guard / click) * click          # a click every 0.95 s, the guard swallows every other one
-    # (a) the scripted attacker of the earlier test: one click per 0.95 s, never dodges, runs at 13 blocks/s, so the barrier's gate is all it waits
-    estimate("(a) scripted, never dodges", hit_every=scripted_every, dodge=0.0, open_s=9, wrap_every=click, approach_s=0, cover_s=0, player=False)
-    # (b) a first-time player: a landed hit every 2.0 s (swing, aim at a 4.5-block target, the guard), loses 2.5 s to every arm thrust,
-    # walks to the monster at 6 blocks/s and takes cover once from the first beam (4 s), 8 s to close the 30 blocks after a retreat plus
-    # 4 s of cover from its beam, a landed hit every 1.5 s in the wrap (close, big target, no dodging to do)
-    estimate("(b) first-time player", hit_every=2.0, dodge=2.5, open_s=24, wrap_every=1.5, approach_s=8, cover_s=4, player=True)
-    # sensitivity: slower and faster first-timers
-    estimate("    slow player (2.6 s per hit, 3 s per thrust)", hit_every=2.6, dodge=3.0, open_s=30, wrap_every=1.8, approach_s=10, cover_s=5, player=True)
-    estimate("    quick player (1.5 s per hit, 2 s per thrust)", hit_every=1.5, dodge=2.0, open_s=18, wrap_every=1.3, approach_s=6, cover_s=3, player=True)
+    scripted_every = math.ceil(guard / CLICK) * CLICK if guard else CLICK          # with a guard a click every 0.95 s loses every other one
+    # (a) the scripted attacker: one click per 0.95 s, never dodges, runs at 13 blocks/s, so the barrier's gate is all it waits for
+    res = {}
+    res["a"] = estimate("(a) scripted, never dodges", hit_every=scripted_every, dodge=0.0, open_s=9, wrap_every=CLICK, approach_s=0, cover_s=0, player=False)
+    for key, label in (("b", "(b) first-time player"),
+                       ("slow", "    slow player (%.1f s per hit, %.0f s per thrust)"),
+                       ("quick", "    quick player (%.1f s per hit, %.0f s per thrust)")):
+        p = pl[key]
+        approach = CFG["backoff_dist"] / p["walk_bps"] + p["react"]
+        name = label if key == "b" else label % (p["hit_every"], p["dodge"])
+        res[key] = estimate(name, hit_every=p["hit_every"], dodge=p["dodge"], open_s=p["open_s"], wrap_every=p["wrap_every"], approach_s=approach, cover_s=p["cover_s"])
+    return res
 
+
+if __name__ == "__main__":
+    main()

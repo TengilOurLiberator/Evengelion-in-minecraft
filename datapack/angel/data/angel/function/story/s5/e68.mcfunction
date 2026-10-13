@@ -1,4 +1,4 @@
 scoreboard players set #force angel.story 0
-schedule function angel:story/s5/f_a2 7t
+function angel:story/snd/music_father/start
 scoreboard players set #step angel.story 69
 function angel:story/s5/e69

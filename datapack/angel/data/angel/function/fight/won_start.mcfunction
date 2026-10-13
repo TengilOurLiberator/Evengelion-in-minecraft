@@ -4,6 +4,7 @@ scoreboard players set #st angel.fight 8
 scoreboard players set #pt angel.fight 0
 scoreboard players set #bar angel.fight 0
 scoreboard players set #hold angel.fight 0
+function angel:fight/vis_off
 function angel:fight/heartbeat_stop
 function angel:angel/stop_walking
 bossbar set angel:fight/wrap visible false

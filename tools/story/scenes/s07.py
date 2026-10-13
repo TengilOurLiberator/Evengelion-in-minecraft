@@ -61,7 +61,7 @@ CAGE_DARK = 4.5                         # seconds of black after the card for th
 # ---------------------------------------------------------------------------------------------------- the fight's directions
 # One-line objectives, shown as the direction line only (the waypoint on the core excepted), in giant scale (the panel hangs 32 blocks ahead, 16 times
 # the size: the world he sees is 16 times bigger).  They read the fight's scoreboard (objective angel.fight) and never touch the fight:
-#   #ch (core hits left: 60 at the start, 30 after a checkpoint), #st (1: the eye beam is charging), #hold (1: it holds its ground after a back-off),
+#   #hit_n (core hits landed this attempt), #ck (1 after a checkpoint restart), #st (1: the eye beam is charging), #hold (1: it holds its ground after a back-off),
 #   #phase (3 and up: the wrap, the win, the loss: nothing is shown, the fight draws its own BREAK LOOSE).
 ROOT = "@e[type=minecraft:marker,tag=angel.root,limit=1]"
 CORE = "@e[type=minecraft:interaction,tag=angel.core,limit=1]"
@@ -70,7 +70,7 @@ FG_HIT = Objective("Hit the red core", at=CORE, line="Hit the red core", how="hi
 FG_KEEP = Objective("Keep hitting the core", at=CORE, waypoint=True, lines=False, giant=16, grace=0.0, sound=False, lift=2.4)
 FG_COVER = Objective("Get behind a building", line="It is charging a beam  -  get behind a building", waypoint=False, bearing=False, giant=16, grace=0.0, secs=7.0)
 FG_CLOSE = Objective("Close the distance again", at=ROOT, line="Close in on it again", how="walk", waypoint=False, giant=16, grace=0.5, secs=8.0)
-REACH_UP, CORE_CY = 22.0, 2.25                         # the fight's own numbers (gen_fight.py: reach_up, the core box's half height)
+REACH_UP, CORE_CY = 22.0, 3.0                         # the fight's own numbers (gen_fight.py: reach_up, the core box's half height)
 
 
 def build(s, ctx):
@@ -138,48 +138,53 @@ def build(s, ctx):
         f"execute if score #phase angel.fight matches 3.. unless score {fgs} matches 9 run {g_wrap}",        # the wrap, the win, the loss: the fight speaks for itself
         "execute if score #phase angel.fight matches 3.. run return 0",
         f"execute if score {fgs} matches 9 run {g_rearm}",                                                    # a new attempt
-        f"execute if score #ch angel.fight matches ..57 unless score {fgs} matches 4 unless score #fg.c angel.story matches 1.. run {g_end}",   # (a checkpoint restart: no intro)
-        f"execute if score #ch angel.fight matches 58..59 if score {fgs} matches 0..2 run {g_b2}",           # the first hit has landed
+        f"execute if score #hit_n angel.fight matches 3.. unless score {fgs} matches 4 unless score #fg.c angel.story matches 1.. run {g_end}",
+        f"execute if score #ck angel.fight matches 1.. unless score {fgs} matches 4 unless score #fg.c angel.story matches 1.. run {g_end}",   # (a checkpoint restart: no intro)
+        f"execute if score #hit_n angel.fight matches 1..2 unless score #ck angel.fight matches 1.. if score {fgs} matches 0..2 run {g_b2}",           # the first hit has landed
         f"execute if score #fg.c angel.story matches 1.. run {ssub('#fg.c')}",
         f"execute if score #fg.c angel.story matches 0 run {g_restore}",
         "execute if score #fg.c angel.story matches 1.. run return 0",                                       # the beam warning or the 'close in' line is up
-        f"execute if score {fgs} matches 0 if score #ch angel.fight matches 60.. run {g_a}",                 # 1. walk toward it
+        f"execute if score {fgs} matches 0 if score #hit_n angel.fight matches 0 unless score #ck angel.fight matches 1.. run {g_a}",                 # 1. walk toward it
         f"execute if score {fgs} matches 1 {core_at(24)} run {g_b}",                                         # 2. close enough: hit the red core (until one lands)
         f"execute if score {fgs} matches 2 {core_at(12.5)} run {sadd('#fg.hit')}",
         f"execute if score #fg.hit angel.story matches 400.. run {g_again}",                                 #    20 s in range without a hit: the controls again
         f"execute if score #st angel.fight matches 1 if score #fg.beam angel.story matches 0 run {g_cover}",   # 3. its first beam
         f"execute unless score #hold angel.fight matches 1 run {sset('#fg.dflag', 0)}",
         f"execute if score #hold angel.fight matches 1 if score #fg.dflag angel.story matches 0 if score #fg.bo angel.story matches ..2 if score {fgs} matches 3..4 run {g_close}"])   # 4. after a back-off
-    s.until(C.flag("fight_won", est=420.0), tick=[to_81, to_70, *mus, guide], on_done=["function angel:fight/stop", *audio_.stop("music"), fn("story/ob/end")],
+    import pace
+    PC = pace.PACE
+    s.until(C.flag("fight_won", est=PC.end_fight_est), tick=[to_81, to_70, *mus, guide], on_done=["function angel:fight/stop", *audio_.stop("music"), fn("story/ob/end")],
             note="the fight (its own timeline); beat 81 during a defeat, 70 again when it restarts; music.fight / fight_final / defeat follow its phase; "
                  "ends when the fight calls fight_done won")
 
     # ================================================================ after the win: the dawn
-    s.sleep(HOLD_BEFORE_DAWN, note="the empty avenue")
+    dawn = PC.end_dawn
+    s.sleep(PC.end_hold, note="the empty avenue")
     # a short black: he is turned to the east, where the sun will rise over the mountain wall at the end of the avenue (see DAWN_FACING), and the
     # dawn starts under it; the head is turned only here, in the dark
     turn = f"execute as {P()} at @s run tp @s ~ ~ ~ {num(DAWN_FACING[0])} {num(DAWN_FACING[1])}"
-    s.do(blind(DAWN_BLACK + 1.0), note="to black for the turn to the east")
+    s.do(blind(PC.end_black + 1.0), note="to black for the turn to the east")
     s.sleep(0.5, note="dark")
-    s.do(turn, *cg.forceload_cage(), note="turned east (yaw -90): down the avenue to the mountain wall where the sun will come up")
-    s.sleep(DAWN_BLACK - 0.5, note="the black lifts")
-    s.do("time of angel:day resume", f"time of angel:day rate {num(DAWN[0][1])}", note="the dawn begins (the sky clock speeds up)")
+    s.do(turn, *cg.forceload_cage(), *([f"time of angel:day set {PC.end_start_tick}"] if PC.end_start_tick else []),
+         note="turned east (yaw -90): down the avenue to the mountain wall where the sun will come up" + (" (video: the sky clock is put to the deep twilight in the dark)" if PC.end_start_tick else ""))
+    s.sleep(PC.end_black - 0.5, note="the black lifts")
+    s.do("time of angel:day resume", f"time of angel:day rate {num(dawn[0][1])}", note="the dawn begins (the sky clock speeds up)")
     s.music("victory")
     t_ = 0.0
-    for (sec, r), (_, r_next) in zip(DAWN, list(DAWN[1:]) + [(0, DAWN_AFTER)]):
+    for (sec, r), (_, r_next) in zip(dawn, list(dawn[1:]) + [(0, DAWN_AFTER)]):
         t_ += sec
         s.after(t_, f"time of angel:day rate {num(r_next)}", note=f"sky clock x{r_next}" + (" (the sun stands over the ridge)" if r_next == DAWN_AFTER else ""))
-    s.sleep(CARD_AT, note="dawn over the empty avenue: the sun climbs over the ridge")
+    s.sleep(PC.end_card_at, note="dawn over the empty avenue: the sun climbs over the ridge")
 
     # ================================================================ the card, and the cage
     s.music(None, note="silence for the card")
     s.bed(None)
-    s.card("TO BE CONTINUED", small="an unofficial fan work")
-    s.do(blind(CAGE_DARK + 1.0), note="black a little longer: the cage must arrive")
+    s.card("TO BE CONTINUED", small="an unofficial fan work", hold=PC.end_card_hold)
+    s.do(blind(PC.end_cage_dark + 1.0), note="black a little longer: the cage must arrive")
     s.do("time of angel:day rate 1.0", *worldgen_sky.sky("hq"), note="the clock stops its run; the cage's sky")
     # city -> hq is 2000 blocks: the guarded move (forceload the cage, dismount, teleport, wait until he is really there)
     ex, ey, ez, eyaw, epitch = cg.ending_spots(ctx)["player"]
-    s.move_player(ex, ey, ez, yaw=eyaw, pitch=epitch, settle=1.2, before=cg.forceload_cage(),
+    s.move_player(ex, ey, ez, yaw=eyaw, pitch=epitch, settle=PC.end_settle, before=cg.forceload_cage(),
                   note="the player to the cage, at the south end of the bridge's last stretch, turned north (through the black: the one place his head is turned): "
                        "the curtain call is in front of him")
     s.do(cg.lights_on(), fn("story/launch/eyes_off"), *cg.cast_for_ending(ctx),
@@ -187,6 +192,6 @@ def build(s, ctx):
          note="the cage at human size, the curtain call: lights on, eyes dark, Misato and Ritsuko either side of Rei on her gurney, all turned to him, "
               "the giant behind them, Gendo above in the booth; beat 80")
     s.bed("cage")
-    s.sleep(CAGE_DARK, note="the black lifts")
+    s.sleep(PC.end_cage_dark, note="the black lifts")
     # the story is over: the boy is free in the cage at human size, everyone present; the bridge lets them talk
 

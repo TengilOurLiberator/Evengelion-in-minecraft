@@ -72,6 +72,19 @@ SETTINGS = {
     "subtitles": True,                # also tellraw every spoken sentence to the game chat
 }
 
+# --- re-voiced (adapted) scripted lines: how far they may stray from the script line, by the story's pacing (tools\story\pace.py: build_story.py --pace).
+# (words_min, words_max, take_max): the re-voiced line must have between words_min x and words_max x the script line's words, and its synthesised take may be at most
+# take_max x the length of the pre-rendered take (the lower bound of the take, 0.55, stays as it is).  "full" is the original +-20 % / 1.45; "video" keeps an
+# adapted line NO LONGER than the script line (+0 %, -25 %), because the video pacing has no air left to absorb a longer one: a live voice that runs long
+# lengthens the whole film by exactly that much.  `adapt_bounds()` is what adapter.validate / its prompt should call instead of the literals 0.8 / 1.2 / 1.45.
+ADAPT_BOUNDS = {"full": (0.8, 1.2, 1.45), "video": (0.75, 1.0, 1.0)}
+SETTINGS["adapt_pace"] = os.environ.get("ANGEL_PACE", "video")      # must be the preset the story was built with (build_story.py --pace); video is the default build
+
+
+def adapt_bounds(pace=None):
+    return ADAPT_BOUNDS.get(pace or SETTINGS.get("adapt_pace", "video"), ADAPT_BOUNDS["video"])
+
+
 # LEGACY (unused since the voices became tools\voices\tts_config.py; kept so an old config.json still loads).
 # Fallback voices, used until voices\final\<SPEAKER>\*.wav exist. All use Chatterbox's own built-in voice.
 #   pitch        >1 higher, <1 lower (resample, speed is restored afterwards)

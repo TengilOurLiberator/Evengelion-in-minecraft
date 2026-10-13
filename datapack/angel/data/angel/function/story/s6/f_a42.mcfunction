@@ -1,1 +1,1 @@
-function angel:story/launch/arm_n
+function angel:story/launch/shaft_up

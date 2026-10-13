@@ -1,8 +1,2 @@
-execute as @e[type=minecraft:mannequin,tag=angel.misato,limit=1] at @s if entity @a[limit=1,distance=..6.0] run function angel:story/s4/x20
-scoreboard players add #stept angel.story 1
-scoreboard players add #nagt angel.story 1
-execute if score #step angel.story matches 20 run scoreboard players add #stk angel.story 1
-execute if score #step angel.story matches 20 if score #stk angel.story >= #stk_skip angel.story run function angel:story/s4/sk20
-execute if score #step angel.story matches 20 if score #stept angel.story matches 3600 run function angel:story/s4/t20
-execute if score #step angel.story matches 20 if score #stept angel.story matches 700 run function angel:story/s4/h20
+execute if score #talking angel.story matches 0 run function angel:story/s4/x20
 execute if score #step angel.story matches 20 if score #force angel.story matches 1 run function angel:story/s4/x20

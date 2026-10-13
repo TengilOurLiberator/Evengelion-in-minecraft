@@ -28,7 +28,14 @@ HEIGHT = [-34.0, -12.0, 6.0, 22.0, -22.0]   # above the orbit centre (the monste
 CENTRE_UP = 55.0
 AIR_W = 1.1                             # degrees per tick the orbit turns: a lap in 327 ticks (16 s)
 BANK = 18.0                             # the aircraft lean into the turn
-HIT_TICK, FALL_TICK, FALL_FRAMES = 190, 215, 85
+HIT_TICK, FALL_TICK, FALL_FRAMES = 190, 215, 85         # (the "full" pacing; `timeline()` scales them by pace.s1_air_scale: the video pacing has the crash come sooner)
+
+
+def timeline():
+    """(hit tick, fall tick, fall frames) of the aircraft that is hit, for the current pacing"""
+    import pace
+    k = pace.PACE.s1_air_scale
+    return int(round(HIT_TICK * k)), int(round(FALL_TICK * k)), int(round(FALL_FRAMES * k))
 CRASH_LEAD = 26                         # ticks: sfx.crash's impact is 1.3 s into the sound
 VOLLEY = 36                             # ticks between the salvos of one aircraft; the five are staggered
 VOLLEY_AT = [4, 11, 18, 25, 32]
@@ -106,13 +113,13 @@ class Orbit:
 def fall_path(orbit, crash_xyz):
     """Frames (x, y, z, yaw, pitch) of the hit aircraft from its orbit position at FALL_TICK to the wreck site: it keeps its heading, sinks, banks
     round and comes in low from the east over the street at the right of the boy's view."""
-    p0, yaw0 = orbit.state(FALL_TICK, HIT)
+    p0, yaw0 = orbit.state(timeline()[1], HIT)
     d0 = np.array([-math.sin(math.radians(yaw0)), 0.0, math.cos(math.radians(yaw0))])
     p0 = np.array(p0)
     c = np.array(crash_xyz, float)
     p1 = p0 + d0 * 42 + np.array([0.0, -14.0, 0.0])
     p2 = c + np.array([34.0, 24.0, 9.0])
-    n = FALL_FRAMES
+    n = timeline()[2]
     pts = []
     for k in range(n):
         u = (k + 1) / n
@@ -193,14 +200,14 @@ def setup(ctx, spawn, walk_pts, speed, crash_xyz, crash_y_extra=0.0):
         f"scoreboard players add @e[tag=angel.flash] {OBJ} 1",
         f"kill @e[tag=angel.flash,scores={{{OBJ}=7..}}]"])
     # ---------------- the hit: a blast on the aircraft, then smoke and fire; later it leaves the orbit and falls
-    tick.append(f"execute {sc('#fx.t', str(HIT_TICK))} run function {NS}:story/fx/ac3_hit")
+    tick.append(f"execute {sc('#fx.t', str(timeline()[0]))} run function {NS}:story/fx/ac3_hit")
     reg(ctx, "story/fx/ac3_hit", [
         sset("#fx.smoke", 1),
         "execute at @e[tag=angel.rig_ac3,tag=angel.pt_fuselage,limit=1] run particle minecraft:explosion_emitter ~ ~ ~ 0 0 0 0 1 force",
         "execute at @e[tag=angel.rig_ac3,tag=angel.pt_fuselage,limit=1] run particle minecraft:flash{color:[1.0,0.8,0.4,1.0]} ~ ~1 ~ 0 0 0 0 1 force",
         "execute at @e[tag=angel.rig_ac3,tag=angel.pt_fuselage,limit=1] run particle minecraft:lava ~ ~ ~ 3 1 3 0.1 40 force",
         play_at("angel:sfx.explosion_far", 150, 100, 128, 1.5, 1.1, 0.0)])
-    tick.append(f"execute {sc('#fx.t', str(FALL_TICK))} run function {NS}:story/fx/ac3_fall")
+    tick.append(f"execute {sc('#fx.t', str(timeline()[1]))} run function {NS}:story/fx/ac3_fall")
     reg(ctx, "story/fx/ac3_fall", ["tag @e[tag=angel.rig_ac3] add angel.rig_ac3d", "tag @e[tag=angel.rig_ac3d] remove angel.rig_ac3",
                                    sset("#fx.c", 0), sset("#fx.fall", 1)])
     reg(ctx, "story/fx/smoke_tick", [

@@ -134,6 +134,9 @@ def jolt_street(ctx, ground_y):
 
 
 def build(s, ctx):
+    import pace
+    PC = pace.PACE
+    GIRL_MAX, GIRL_AWAY_TICKS = PC.s1_girl_max, PC.s1_girl_away_ticks          # (shadow the module's constants: pace.py)
     A = ctx.anchor
     start, phone, use, street = A("outskirts.start"), A("outskirts.phone"), A("outskirts.phone_use"), A("outskirts.street")
     crash, arrive = A("outskirts.crash"), A("outskirts.car_arrive")
@@ -171,11 +174,11 @@ def build(s, ctx):
     # the touch box covers the telephone, the booth's floor and its doorway: a right-click from the pavement outside reaches it too
     s.do(f'summon minecraft:interaction {num(phone["x"])} {num(phone["y"] - 1.0)} {num(phone["z"] + 1.5)} '
          f'{{Tags:["angel.story","angel.ia_phone"],width:3.0f,height:2.4f,response:1b}}', note="the payphone can be touched (from the booth or from just outside it)")
-    s.sleep(1.5)
+    s.sleep(PC.s1_setup_sleep)
     s.setup_done()
 
     # ---------------------------------------------------------------- the card, over black, the cicadas starting underneath
-    s.card("A.D. 2015", hold=3.2, under=[(0.9, ctx.audio.start("bed", "cicadas+town_empty", fade=3.2))])
+    s.card("A.D. 2015", hold=PC.s1_card_hold, under=[(0.9, ctx.audio.start("bed", "cicadas+town_empty", fade=3.2))])
 
     # ---------------------------------------------------------------- the tutorial, then the photograph's note (read once, in the world)
     # The tutorial comes just after he wakes, not before the card: the card is the film's first image and stays alone, and "look", "move" and "a light
@@ -184,9 +187,9 @@ def build(s, ctx):
     # The note on the back of the photograph is the story's own instruction, but the props are kept out of his hand (system.py), so he never read it:
     # it is shown once, as a pale panel with dark handwriting-style text, signed, hanging in front of him for six seconds.
     s.do(note_panel(["If I'm late,", "ring me from the phone", "outside the station."], "- M.K."), note="the note on the back of the photograph, in the world")
-    s.sleep(6.0, note="he reads it")
+    s.sleep(PC.s1_note_hold, note="he reads it")
     s.do("kill @e[tag=angel.ob_note]", note="the note goes")
-    s.until(C.near(53.5, 65.0, 128.5, 5.0, est=12), timeout=120, on_timeout=[tp_player(53.5, 65.0, 128.5)],
+    s.until(C.near(53.5, 65.0, 128.5, 5.0, est=PC.s1_est_leave), timeout=120, on_timeout=[tp_player(53.5, 65.0, 128.5)],
             objective=objective("Leave the station", at=(53.5, 65.0, 128.5), line="Walk out of the station, through the bright doorway", how="walk", grace=6.0, lift=0.4),
             note="walk out of the station hall (the objective shows only if he has not moved for 6 s)")
 
@@ -194,22 +197,22 @@ def build(s, ctx):
     # The telephone is on the booth's back wall (z 113); the old trigger stood him 2 blocks from it with the green slab filling his eyes.  Now being
     # anywhere in front of the open booth (up to 2.6 blocks beyond its doorway), at the telephone itself, or touching it is enough.
     ia_phone = "@e[tag=angel.ia_phone,limit=1]"
-    s.until([C.near(*PHONE_FRONT, 2.6, est=15), C.near(use["x"], use["y"], use["z"], 1.8, est=15), C.data(ia_phone, "interaction", est=15)],
+    s.until([C.near(*PHONE_FRONT, 2.6, est=PC.s1_est_phone), C.near(use["x"], use["y"], use["z"], 1.8, est=PC.s1_est_phone), C.data(ia_phone, "interaction", est=PC.s1_est_phone)],
             objective=objective("Pick up the phone", at=phone_at, line="Walk up to the phone - it picks up by itself", how="walk"),
             hint=("Walk up to the phone - it picks up by itself.",
                   [f"particle minecraft:end_rod {num(phone['x'])} {num(phone['y'] + 0.8)} {num(phone['z'] + 1.0)} 0.2 0.8 0.2 0.01 24 force"]),
             hint_after=20, timeout=150, on_timeout=[tp_player(PHONE_FRONT[0], PHONE_FRONT[1], PHONE_FRONT[2])], note="walk to the payphone (to the booth's front is enough)")
     s.do(f"kill {ia_phone}", sfx("sfx.phone_pickup", at=phone_at, vol=1.2), note="he lifts the handset")
-    s.sleep(0.9)
+    s.sleep(PC.s1_phone_after_pick)
     s.say("1.01")
     s.say("1.02")
     s.do(sfx("sfx.phone_hangup", at=phone_at, vol=1.2), note="the hang-up click")
-    s.sleep(0.35)
+    s.sleep(PC.s1_phone_hangup)
     s.do(*ctx.audio.stop("bed"), note="the cicadas stop (and the town with them): silence")
-    s.sleep(0.8)
+    s.sleep(PC.s1_phone_silence)
 
     # ---------------------------------------------------------------- the street: the girl (in silence), the birds
-    s.until(C.near(street["x"], street["y"], street["z"], 3.0, est=14),
+    s.until(C.near(street["x"], street["y"], street["z"], 3.0, est=PC.s1_est_street),
             objective=objective("Walk out into the street", at=(street["x"], street["y"], street["z"]), line="Walk out into the street - it runs east", how="walk", grace=3.0),
             hint=("The street runs east.", [f"particle minecraft:end_rod {num(street['x'])} {num(street['y'] + 1)} {num(street['z'])} 0.2 1.2 0.2 0.01 30 force"]),
             hint_after=45, timeout=150, on_timeout=[tp_player(street["x"], street["y"], street["z"])], note="walk out into the street (no sound at all)")
@@ -225,7 +228,7 @@ def build(s, ctx):
         f"execute as {P()} at @s anchored eyes positioned ^ ^ ^1 run tp @e[tag=angel.gaze,limit=1] ~ ~ ~",
         f"execute as {P()} at @s anchored eyes facing entity @e[tag=angel.look_target,limit=1] eyes positioned ^ ^ ^1 "
         f"if entity @e[tag=angel.gaze,distance=..{GIRL_SEEN_WITHIN}] run " + sset("#looking", 1)])
-    s.until(Cond(["if score #looking angel.story matches 1"], 3.0, "he looks down the street"), tick=[look40], timeout=45,
+    s.until(Cond(["if score #looking angel.story matches 1"], 3.0, "he looks down the street"), tick=[look40], timeout=PC.s1_girl_look_timeout,
             hint=("The street runs east.", [f"particle minecraft:end_rod {num(girl[0])} {num(girl[1] + 1.0)} {num(girl[2])} 0.2 1.2 0.2 0.01 30 force"]),
             objective=objective("Look down the street", at=(vision["x"], vision["y"] + 1.5, vision["z"]), line="Look down the street, to the east - just turn your head", how="look", grace=3.0),
             hint_after=12, est=3.0, note="he looks down the street (within 40 degrees of where she will stand); after 45 s she comes anyway")
@@ -244,12 +247,12 @@ def build(s, ctx):
                   "execute if score #f.seen angel.story matches 1 if score #looking angel.story matches 0 run scoreboard players add #v.away angel.story 1"],
             on_done=vanish, est=4.0,
             note="she is gone when he has looked away for 0.7 s (or six seconds after she appeared): the birds go up at that instant (sfx.birds_up)")
-    s.sleep(1.4)
+    s.sleep(PC.s1_after_girl)
 
     # ---------------------------------------------------------------- the ground jumps; car alarms far off
     s.do(*jolt_street(ctx, street["y"]), sfx("sfx.car_alarms_far", at=ALARMS_AT, vol=2.0),
          note="the ground jumps: a deep jolt and a giant's step, dust and plaster off the wires and shop fronts all along the street, the parked cars' alarm lamps flashing, a flock off the wires; car alarms")
-    s.sleep(1.6)
+    s.sleep(PC.s1_after_jolt)
 
     # ---------------------------------------------------------------- ANGEL ATTACK: the monster steps out behind the card
     air_start, frames, orbit = ride_air.setup(ctx, spawn, walks, WALK_SPEED, (crash["x"], crash["y"], crash["z"]))
@@ -293,26 +296,27 @@ def build(s, ctx):
         t_acc += int(round(((w["x"] - prev[0]) ** 2 + (w["z"] - prev[1]) ** 2) ** 0.5 / WALK_SPEED))
         prev = (w["x"], w["z"])
     # two seconds on the card, then a quick return to the same view, which is down the street: the monster is dead ahead at 135 blocks
-    s.card("ANGEL ATTACK", hold=2.0, back=2, back_wait=0.2, under=under)
+    s.card("ANGEL ATTACK", hold=PC.s1_angel_card_hold, back=2, back_wait=0.2, under=under)
 
     # ---------------------------------------------------------------- back on the street: the dread, the siren, the aircraft
     # times below are from here (about 2.2 s after the card's hit); the aircraft began 0.05 s after the hit and the hit one crashes in 15 s
     cmark = "execute at @e[tag=angel.cmark,limit=1] run playsound"
-    s.after(0.8, *ctx.audio.start("music", "dread"), *ctx.audio.start("loop", "siren", at=SIREN_AT, vol=SIREN_VOL),
+    k = PC.s1_air_scale                       # (the aircraft's whole timeline is scaled by it: the video pacing has the crash come at 11 s instead of 15)
+    s.after(0.8 * k, *ctx.audio.start("music", "dread"), *ctx.audio.start("loop", "siren", at=SIREN_AT, vol=SIREN_VOL),
             *ctx.audio.start("bed", "town_empty", fade=4.0), note="the picture is back: music.dread, the siren from the old town, the town's air creeping in")
-    s.after(1.4, sfx("sfx.jet_pass", at=(128.0, 112.0, 120.0), vol=4.0, pitch=1.0, minvol=0.3), note="a jet goes over the street (from the sky ahead)")
-    s.after(2.3, f"{cmark} angel:sfx.gunfire_far master {PA()} ~ ~ ~ 2.5 1.0 0.0", note="aircraft guns, far off")
-    s.after(4.3, f"{cmark} angel:sfx.explosion_far master {PA()} ~ ~ ~ 2.0 1.0 0.0", note="a hit on the monster, far off")
-    s.after(5.4, sfx("sfx.jet_pass", at=(112.0, 104.0, 138.0), vol=4.0, pitch=0.95, minvol=0.3), note="a jet banks across the sky")
-    s.after(6.8, f"{cmark} angel:sfx.gunfire_far master {PA()} ~ ~ ~ 2.5 0.95 0.0", note="more guns")
-    s.after(7.8, sfx("sfx.jet_pass", at=(120.0, 120.0, 112.0), vol=4.0, pitch=0.93, minvol=0.3), note="a second jet")
-    s.after(8.3, f"{cmark} angel:sfx.explosion_far master {PA()} ~ ~ ~ 2.0 0.9 0.0", note="another hit")
-    s.after(11.3, f"{cmark} angel:sfx.gunfire_far master {PA()} ~ ~ ~ 2.5 1.05 0.0", note="guns again, before the crash")
-    s.sleep(2.8, note="the aircraft circle and fire")
+    s.after(1.4 * k, sfx("sfx.jet_pass", at=(128.0, 112.0, 120.0), vol=4.0, pitch=1.0, minvol=0.3), note="a jet goes over the street (from the sky ahead)")
+    s.after(2.3 * k, f"{cmark} angel:sfx.gunfire_far master {PA()} ~ ~ ~ 2.5 1.0 0.0", note="aircraft guns, far off")
+    s.after(4.3 * k, f"{cmark} angel:sfx.explosion_far master {PA()} ~ ~ ~ 2.0 1.0 0.0", note="a hit on the monster, far off")
+    s.after(5.4 * k, sfx("sfx.jet_pass", at=(112.0, 104.0, 138.0), vol=4.0, pitch=0.95, minvol=0.3), note="a jet banks across the sky")
+    s.after(6.8 * k, f"{cmark} angel:sfx.gunfire_far master {PA()} ~ ~ ~ 2.5 0.95 0.0", note="more guns")
+    s.after(7.8 * k, sfx("sfx.jet_pass", at=(120.0, 120.0, 112.0), vol=4.0, pitch=0.93, minvol=0.3), note="a second jet")
+    s.after(8.3 * k, f"{cmark} angel:sfx.explosion_far master {PA()} ~ ~ ~ 2.0 0.9 0.0", note="another hit")
+    s.after(11.3 * k, f"{cmark} angel:sfx.gunfire_far master {PA()} ~ ~ ~ 2.5 1.05 0.0", note="guns again, before the crash")
+    s.sleep(PC.s1_before_103, note="the aircraft circle and fire")
     s.say("1.03")
-    s.until(C.flag("crash", est=5), timeout=40, est=4.0, note="one of the aircraft comes down burning, across the sky to the right of his view (sfx.crash, sfx.explosion_near)")
+    s.until(C.flag("crash", est=5), timeout=40, est=PC.s1_est_crash, note="one of the aircraft comes down burning, across the sky to the right of his view (sfx.crash, sfx.explosion_near)")
     s.do(*ctx.audio.stop("music"), note="the dread is cut under the blast")
-    s.sleep(1.4)
+    s.sleep(PC.s1_after_crash)
 
     # ---------------------------------------------------------------- the blue car
     s.do(*ctx.rig_spawn(car, "closed", f0),
@@ -323,7 +327,7 @@ def build(s, ctx):
     s.do(*carfx.door_cmds(car, pose_end, True, 10), sset("#beat", 11), sset("#present_misato", 1), *carfx.look_boy(),
          f"summon minecraft:interaction {num(pose_end[0])} {num(pose_end[1])} {num(pose_end[2])} "
          f'{{Tags:["angel.story","angel.ia_car"],width:6f,height:2.6f,response:1b}}', note="the door opens (the passenger door, on his side: the car's left flank is to the street)")
-    s.sleep(0.5)
+    s.sleep(PC.s1_after_car)
     s.say("1.04")
     s.say("1.05")
 
@@ -331,10 +335,10 @@ def build(s, ctx):
     dx, dy, dz = carfx.door_world(pose_end)
     ia_car = "@e[tag=angel.ia_car,limit=1]"
     board = [f"kill {ia_car}", *carfx.board_player_cmds()]
-    s.until([C.near(dx, dy, dz, 2.2, est=6), C.data(ia_car, "interaction", est=6), C.data(ia_car, "attack", est=6)],
-            nag=(8.0, 25.0, [fn("say/1_06")]), timeout=70, on_done=board, est=6.0,
+    s.until([C.near(dx, dy, dz, 2.2, est=PC.s1_est_board), C.data(ia_car, "interaction", est=PC.s1_est_board), C.data(ia_car, "attack", est=PC.s1_est_board)],
+            nag=(8.0, 25.0, [fn("say/1_06")]), timeout=70, on_done=board, est=PC.s1_est_board,
             objective=objective("Get in the car", at="@e[tag=angel.seat_passenger,limit=1]", line="Walk up to the car - you get in by yourself", how="walk", grace=3.0),
             hint=("The blue car is waiting for you.", []), hint_after=30, note="get in (door, or touch the car); Misato nags at 8 s")
-    s.sleep(0.6)
+    s.sleep(PC.s1_after_board)
     s.do("kill @e[tag=angel.gaze]", "kill @e[tag=angel.look_target]", "kill @e[tag=angel.girl_mark]", note="the look-check marker's use ended with the girl: nothing of it goes on into scene 2")
     s.next_scene(2)

@@ -1,1 +1,1 @@
-function angel:story/launch/arm_s
+function angel:story/launch/arm_n

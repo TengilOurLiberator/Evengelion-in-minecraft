@@ -1,1 +1,1 @@
-summon minecraft:marker 133.5 65.5 128.5 {Tags:["angel.story","angel.objective","angel.ob_target"]}
+execute at @e[tag=angel.seat_passenger,limit=1] run summon minecraft:marker ~ ~ ~ {Tags:["angel.story","angel.objective","angel.ob_target"]}

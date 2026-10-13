@@ -1,5 +1,5 @@
 scoreboard players set #force angel.story 0
-function angel:cast/look {id:"misato",mode:"ahead"}
-scoreboard players set #f.turn_4 angel.story 16
+execute at @a[limit=1] run playsound angel:sfx.klaxon master @a ~ ~ ~ 1.0 1.0 1.0
+function angel:story/hq/strips_red
 scoreboard players set #step angel.story 112
 function angel:story/s4/e112

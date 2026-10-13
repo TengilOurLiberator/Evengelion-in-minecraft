@@ -1,2 +1,4 @@
-execute if score #mv.n angel.story matches 280..419 run function angel:story/m/geofront_ride/t/n11
-execute if score #mv.n angel.story matches 420..559 run function angel:story/m/geofront_ride/t/n14
+execute if score #mv.n angel.story matches 420..439 run function angel:story/m/geofront_ride/b21
+execute if score #mv.n angel.story matches 440..459 run function angel:story/m/geofront_ride/b22
+execute if score #mv.n angel.story matches 460..479 run function angel:story/m/geofront_ride/b23
+execute if score #mv.n angel.story matches 480..499 run function angel:story/m/geofront_ride/b24

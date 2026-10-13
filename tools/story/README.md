@@ -41,6 +41,54 @@ with its text in chat. Everything the story summons carries the tag `angel.story
 `start`) kills it, so a `/reload` or restart mid-scene leaves no ghosts (`load` sweeps the tag when no story is running, and a running
 story simply carries on because all of its state is in the scoreboard).
 
+## Pacing: `pace.py` (two presets, one table)
+
+Every number that decides how long the film takes is in `pace.py` and nowhere else: the engine (`core.CFG`), `lead.py`, `objective.py`, the routes and the scenes read the
+current preset (`pace.PACE.gap`, `PACE.s4_ride_black` ...).  Two presets: **`video`** (the default: a whole playthrough in about 14 to 16 minutes nominal) and **`full`**
+(the original values; `--pace full` reproduces the earlier durations exactly: 139 / 132 / 151 / 292 / 371 / 121 / 468 s).
+
+```
+python build_story.py --pace video|full [--check] [--out DIR]     # the preset of a build (and of --check)
+python build_story.py --table                                      # --check three times: the recorded estimator, full, video; every scene's nominal duration side by side
+python build_story.py --check --est-overlap on|off                 # how a line said WHILE a character walks is counted (video: as part of the walk)
+```
+
+What the video preset cuts is AIR, never words: every scripted line is still said, in order, once.  The levers: the gap after a line (0.4 s to 0.1 s; none before the speak prompt), the
+objectives' grace (2 s to 1 s) and repeat, the safety net (hint 30 s, skip 75 s), an ordinary answer wait goes on by itself after 20 s (`answer_timeout`: the countdown stands
+still while the bridge speaks, so a reply is never cut) with the gentle nudge at 8 s and 16 s, the opening tutorial in two lines under 12 s (each ends the moment he does the thing), leaders
+walk at 4 blocks a second (0.20 a tick, brisk but slower than a walking player), lines are said while a character walks (4.01, 4.02, 4.05, 4.13 to 4.17, 4.12 under the walk into the
+lift), the panel and the page under 4.04, a fade from the top of the escalator to the lobby, the lift ride 4 s of black, the car rolls onto the wagon at 5 blocks a second, the
+wagon's creep starts 22 blocks down the tunnel and after 3.10 a fade skips the quiet stretch to the last 8 s of the ride, the aircraft come down at 11 s instead of 15, the mine's
+black is 0.7 s (its two seconds of digital silence are untouched), scene 5's lights come on in 3 s (the beat of nothing before them is 2.5 s, the hold on the father after the yes still
+2 s), the fluid rises in 5 s, the pad's pause is 1.2 s, the dawn is 11 s (the sky clock is set to the deep twilight in the black), the cards are held a little less.
+Rides keep their comfort limits: yaw rate under 45 deg/s (`pace.limit_yaw`; "full" 60), jerk 40.
+
+What it cannot cut: the recorded lines and the waits for his answers.  `--check` prints, per scene, how much of the nominal duration is speech and answers (answers assumed 6 s) and how
+much is air; with every line at its recorded length that floor is about 10.5 minutes, the fight and the ending (about 160 s) come on top.
+
+Live voices: nothing in the tightened timing assumes a line's exact length.  The gaps are sleeps after a line's reported end; what a scene schedules against a line's length is
+limited to the verbatim lines (`sim.check_timing_bound`); `characters_bridge/config.py` `adapt_bounds()` keeps an adapted line no longer than the script line in the video preset.
+
+## The companion guarantee (`lead.py`)
+
+`lead(..., companion=("misato", back, side))` sends a second character along with the leader (scene 4's crossing: Ritsuko leads, Misato trails the player; scene 5's
+walk through the cage door).  **What went wrong:** her place at each stop was a point 2 blocks to the side of the leader's line and 3 behind, and she was sent there in a straight
+line from her last place.  The catwalk over the lake is 3 blocks wide (z 159..161 from x 3022 to 3096): the point was in the railing and the line from the wide dock to it crossed the
+railing at the neck of the catwalk, at about (3023.1, 54, 158.6).  She walked into it (arrival score 0), the leader's monitor then paused her because the player was more than
+9 blocks from her (`cast/stop`), and nothing ever resumed her: she stayed there until she was teleported by hand.  **Now:**
+
+* her path is planned on the built set (`lead.Nav`: a cell is standable with floor under it and under a 0.4-radius body and two blocks of headroom all round; an A* over half-block
+  cells, string-pulled into straight walkable segments).  Her place is the standable cell nearest to the wish (beside the leader, else nearer her line, else farther back in single
+  file, +2.5 blocks so she walks behind the player, not on him) that she can walk to from where she stood.  A door the story has opened counts as air (`nav_open=`).
+* she follows the path as a queue (storage `angel:story cq.<who>`, one waypoint after another, walked by `story/lead/cq_<who>` while `#f.cq_<who>` is 1), and she never pauses to
+  wait for the player (only a leader does).
+* the keeper (every second, `story/lead/ck_<who>`): not moved for 3 s, her walk unfinished, farther than 6 blocks from the player: she is put (no sound, no particle) on the nearest of
+  the reachable cells of her path (markers `angel.cp_<who>`, every 2 blocks) that lies 3.5 to 6.5 blocks from him and out of his view (not within 9 of the point 8 blocks straight ahead of
+  him; failing that, any such cell 3.5 to 10 blocks away), and walks on from the next waypoint of her path.  At the end of a lead she must have reached her place within 10 s or is put near him the same way.
+* `--check` (`sim.check_companions`) proves every leg again at 0.2-block steps, her place standable and 1.8 to 8 blocks from the leader, every rescue cell standable, the keeper
+  functions present.  `livetest_companion.py` runs the real compiled crossing of scene 4 on a scratch server (25605 / 25615) with a stand-in boy walking the route at 4.2 blocks a
+  second and reads her position every second; `--jam` holds her in place from 8 s to prove the keeper.
+
 ## The contract with the character bridge
 
 Fake players on `angel.story`, exactly as `characters_bridge/rcon_commands.py` expects:
@@ -421,7 +469,9 @@ back-off (`#hold` 1, up to 3 times) "Close the distance again".  Nothing in the 
 |---|---|
 | `objective.py` | the objective system: waypoints, direction lines, the tutorial, the note panel |
 | `audio.py`, `cards.py`, `cardfont.py`, `lead.py`, `hq_cage.py` | beds / music / sfx, title cards and their typeface, characters that lead, the cage's block lists |
-| `build_story.py` | entry point |
+| `pace.py` | the pacing table: presets `video` (default) and `full`; everything that decides the film's length |
+| `livetest_companion.py` | live test of the companion guarantee on a scratch server (scene 4's crossing; `--jam`) |
+| `build_story.py` | entry point (`--pace`, `--table`) |
 | `core.py` | constants, writer + manifest, selectors, tree dispatch, quaternion helpers |
 | `lines.py` | script.md + durations.json + sounds.json -> `angel:say/<key>`, `say/file/<key>` and the bridge handshake (`say/cue`, `claim`, `fallback`, `fb/*`) |
 | `engine.py` | `Scene` (the step API), `Cond`/`C`, the compiler |

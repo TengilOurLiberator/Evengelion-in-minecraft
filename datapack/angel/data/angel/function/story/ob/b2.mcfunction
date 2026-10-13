@@ -16,12 +16,12 @@ scoreboard players set #ob.np angel.story 0
 scoreboard players set #ob.line angel.story -1
 scoreboard players set #ob.rn angel.story 0
 scoreboard players set #ob.gf angel.story 16
-scoreboard players set #ob.rep angel.story 300
-scoreboard players set #ob.secs angel.story 100
+scoreboard players set #ob.rep angel.story 400
+scoreboard players set #ob.secs angel.story 180
 scoreboard players set #ob.stillt angel.story 99999999
 scoreboard players set #ob.sn angel.story 0
-scoreboard players set #ob.snd angel.story 0
-scoreboard players set #ob.nl angel.story 0
+scoreboard players set #ob.snd angel.story 1
+scoreboard players set #ob.nl angel.story 1
 scoreboard players set #ob.dir angel.story -1
 scoreboard players set #stk angel.story 0
 scoreboard players set #stkh angel.story 0

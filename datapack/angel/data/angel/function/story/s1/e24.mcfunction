@@ -1,5 +1,4 @@
 scoreboard players set #force angel.story 0
-scoreboard players set #stept angel.story 0
-scoreboard players set #nagt angel.story 0
-scoreboard players set #hinted angel.story 0
-function angel:story/ob/b7
+execute as @a[limit=1] at @s anchored eyes positioned ^ ^-0.2 ^1.7 run summon minecraft:text_display ~ ~ ~ {Tags:["angel.story","angel.objective","angel.ob_note"],billboard:"center",background:-420354096,brightness:{sky:15,block:15},line_width:150,shadow:0b,see_through:0b,view_range:0.6f,alignment:"center",text:[{"text": "If I'm late,\n", "color": "#2a2630", "italic": true}, {"text": "ring me from the phone\n", "color": "#2a2630", "italic": true}, {"text": "outside the station.\n", "color": "#2a2630", "italic": true}, {"text": "- M.K.", "color": "#5a4638", "italic": true}],transformation:{translation:[0f,0f,0f],left_rotation:[0f,0f,0f,1f],scale:[0.5f,0.5f,0.5f],right_rotation:[0f,0f,0f,1f]}}
+scoreboard players set #step angel.story 25
+function angel:story/s1/e25

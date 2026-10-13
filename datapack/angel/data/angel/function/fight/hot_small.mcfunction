@@ -1,0 +1,2 @@
+execute as @e[type=minecraft:block_display,tag=angel.hota] run data merge entity @s {start_interpolation:0,interpolation_duration:10,transformation:{translation:[-1.800f,-1.800f,-1.800f],scale:[3.600f,3.600f,3.600f]}}
+execute as @e[type=minecraft:block_display,tag=angel.hotb] run data merge entity @s {start_interpolation:0,interpolation_duration:10,transformation:{translation:[-2.546f,-1.800f,0.000f],scale:[3.600f,3.600f,3.600f]}}

@@ -1,2 +1,4 @@
 scoreboard players set #force angel.story 0
-function angel:say/5_43
+scoreboard players set #hush angel.story 1
+scoreboard players set #step angel.story 210
+function angel:story/s5/e210

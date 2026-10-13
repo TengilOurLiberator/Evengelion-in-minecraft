@@ -1,7 +1,6 @@
 scoreboard players set #force angel.story 0
-function angel:story/snd/stop_music
-function angel:story/snd/stop_loop
-function angel:story/snd/stop_bed
-execute if score #f.alarm angel.story matches 1 run execute at @a[limit=1] run playsound angel:sfx.alarm_cut master @a ~ ~ ~ 1.0 1.0 1.0
+function angel:story/snd/music_resolve/start
+function angel:cast/look {id:"misato",mode:"player"}
+function angel:cast/look {id:"ritsuko",mode:"player"}
 scoreboard players set #step angel.story 205
 function angel:story/s5/e205

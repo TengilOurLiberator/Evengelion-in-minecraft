@@ -1,4 +1,4 @@
-execute if score #mv.route angel.story matches 2 if score #mv.n angel.story matches 584.. run function angel:story/s2/x29
+execute if score #mv.route angel.story matches 2 if score #mv.n angel.story matches 586.. run function angel:story/s2/x29
 scoreboard players add #stept angel.story 1
 scoreboard players add #nagt angel.story 1
 execute if score #step angel.story matches 29 if score #stept angel.story matches 2400 run function angel:story/s2/t29

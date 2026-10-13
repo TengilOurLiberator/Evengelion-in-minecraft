@@ -46,6 +46,10 @@ TURN_AT_ARRIVAL = True       # face the avenue (north) when arriving at the surf
 
 
 def build(s, ctx):
+    import pace
+    PC = pace.PACE
+    tight = PC.tight
+    FLUID_TICKS = PC.s6_fluid_ticks                 # (shadows the module constant: the amber surface climbs this fast)
     launch_hooks.register(ctx, geo)
     cg.register(ctx)
     plug.register(ctx)
@@ -89,7 +93,7 @@ def build(s, ctx):
     ctx.extra_functions["story/launch/flash_down"] = sh.box_shell("angel.lflash", "white_concrete", None, CITY_FLASH, bright=15)
 
     # ================================================================ setup (a jump runs it; the hand-over from scene 5 is a jump)
-    s.do(blind(4.5), note="fade out")
+    s.do(blind(PC.s6_setup_fade), note="fade out")
     s.sleep(0.4)
     s.do(*ctx.preload(pad["x"], pad["z"]), fn("cast/remove_all"), "function angel:cast/gurney_remove", *audio.stop("bed"),
          note="preload the shaft; nobody is in the capsule")
@@ -98,18 +102,18 @@ def build(s, ctx):
     s.do(*worldgen_sky.sky("hq"), *cg.sit_at(plug_feet), f"gamemode adventure {PA()}",
          sset("#present_misato", 0), sset("#present_ritsuko", 0), sset("#present_gendo", 0), sset("#present_rei", 0), sset("#beat", 54),
          note="the boy to the seat in the plug, in the dark; the capsule is white and lit (the lamps are part of the set)")
-    s.sleep(1.2)
+    s.sleep(PC.s6_setup_sleep)
     s.setup_done()
 
     # ================================================================ sealed
     s.do(au.sfx("hatch_close"), note="the hatch closes (sfx.hatch_close, 4.5 s); the white capsule is still lit for a moment")
-    s.sleep(1.2)
+    s.sleep(PC.s6_hatch)
     s.do(*dark("black_concrete"), fn("story/launch/plug_dim"), note="DARK: opaque black round the head; the real capsule's lamps out (plug_dim)")
     s.bed("plug", note="the sealed bed amb.plug")
-    s.sleep(1.2, note="own breathing in the dark")
+    s.sleep(PC.s6_breath, note="own breathing in the dark")
     s.present(misato=2, ritsuko=2, gendo=2, rei=0)
     s.say("6.01")                                                   # public address, through the hull
-    s.sleep(0.8, note="machinery")
+    s.sleep(PC.s6_machinery, note="machinery")
     # 6.02, the BASE: the instruments wake.  The black shell is replaced by the cockpit: dark gunmetal panels with ring seams, the forward screen,
     # rows of indicator lights coming on one row after another, a status strip that reads PLUG LOCKED
     liner, rows = plug.liner()
@@ -118,7 +122,7 @@ def build(s, ctx):
     for k, row in enumerate(rows):
         s.after(0.1 + 0.3 * k, plug.light_row_on(row), note=f"indicator row {row} comes on" if k == 0 else "")
     s.say("6.02")
-    s.sleep(0.8)
+    s.sleep(PC.s6_after_6_02)
     s.beat(60)
     s.say("6.03")
 
@@ -137,7 +141,7 @@ def build(s, ctx):
     s.say("6.04")
     s.say("6.05")
     s.say("6.06")
-    s.wait_answer(speaker="misato", prompt="answer Misato", timeout=6, note="optional: goes on by itself after 6 s")
+    s.wait_answer(speaker="misato", prompt="answer Misato", timeout=PC.s6_answer_timeout, note=f"optional: goes on by itself after {PC.s6_answer_timeout:g} s")
 
     # ================================================================ contact: the walls go clear
     t = CONTACT_MOVE
@@ -181,7 +185,7 @@ def build(s, ctx):
     s.say("6.13")
     s.do(plug.status_set("SAFETIES OFF", "BATTERIES FULL", "green"), note="the HUD reads SAFETIES OFF")
     s.say("6.14")
-    s.do(blind(3.0), note="through black to the launch pad")
+    s.do(blind(PC.s6_pad_black), note="through black to the launch pad")
     s.sleep(0.4, note="dark")
     s.do(*cg.leave_seat(), sh.kill("angel.lcock"), sh.kill("angel.lhud"), fn("story/launch/eyes_off"), fn("cast/remove_all"), "function angel:cast/gurney_remove",
          fn("story/launch/plug_lit"),
@@ -193,14 +197,20 @@ def build(s, ctx):
     # the shaft is dark when he arrives: its rings are put out, the warning beacons turn in the corners, the four restraint arms hold his shoulders
     s.do(fn("story/launch/shaft_dark"), fn("story/launch/beacons_spawn"), fn("story/launch/arms_spawn"), fn("story/launch/beacons_on"),
          note="the shaft dark (every ring light out), the warning beacons turning in the corners, the four restraint arms at his shoulders")
-    s.sleep(1.3, note="the black lifts on a dark shaft with red beacons turning")
-    s.music("launch", note="music.launch: its 20 s build ends at the kick; the drive begins there")
+    s.sleep(PC.s6_pad_pause, note="the black lifts on a dark shaft with red beacons turning")
+    if not tight:
+        s.music("launch", note="music.launch: its 20 s build ends at the kick; the drive begins there")
     s.beat(61)
     # ---- the pad's preparation, in step with the words (times from the start of 6.15):
     #   0.5  the arms at west and east let go (6.15: route clear)     1.4  the ring lights climb the shaft from the bottom, 3 ticks a ring
     #   6.16 + 1.2  the north arm      6.17 + 1.6  the south arm      6.18 + 0.1  every ring turns green in a wave, the beacons green
     #   6.18 + 1.35  the charge whine, white light running up the rings three times, ends on "launch!"
     s15, s16, s17 = span("6.15"), span("6.16"), span("6.17")
+    kick_in = span("6.15") + span("6.16") + PC.s6_word_pause + span("6.17") + span("6.18") + span("6.19", False)
+    if tight:
+        # the pad is shorter now (lines 6.15 .. 6.19, the pause between 6.16 and 6.17): music.launch, a 20 s build, starts so that its build ends at the kick
+        # (what is read here are the lengths of the verbatim lines 6.16 to 6.19 and the BASE line 6.15: live voices change nothing of it)
+        s.after(max(0.05, kick_in - 20.0), *audio.start("music", "launch"), note="music.launch: its 20 s build ends at the kick")
     s.after(0.5, fn("story/launch/arms_we"), note="6.15: the arms at west and east let go (sfx.bolt, sparks)")
     s.after(1.4, fn("story/launch/shaft_up"), note="the rings come on from the bottom, one after another")
     s.after(s15 + 1.2, fn("story/launch/arm_n"), note="the north arm lets go (after 6.16 begins)")
@@ -211,10 +221,10 @@ def build(s, ctx):
     # ================================================================ the word
     s.do(*ctx.preload(top["x"], top["z"]), *ctx.preload(angel_start["x"], angel_start["z"]), note="hold the city chunks")
     s.say("6.16")
-    s.sleep(2.5, note="a long pause")
+    s.sleep(PC.s6_word_pause, note="a long pause")
     s.say("6.17")
-    kick_in = span("6.15") + span("6.16") + 2.5 + span("6.17") + span("6.18") + span("6.19", False)
-    ctx.warn(f"scene 6: the kick comes {kick_in:.1f} s after the pad appears; music.launch (20 s build) starts with the pad")
+    ctx.warn(f"scene 6: the kick comes {kick_in:.1f} s after the pad appears; music.launch (20 s build) starts "
+             + (f"{max(0.0, kick_in - 20.0):.1f} s after it, so that the build ends at the kick" if tight else "with the pad"))
     # the whine climbs for 3 s and ends on 'launch!' (about 1.6 s into 6.19); white light runs up the green rings with it
     s.after(max(0.05, span("6.18") + 1.6 - 3.0), au.sfx("launch_charge"), fn("story/launch/shaft_chase"), note="sfx.launch_charge: peaks on 'launch!'; the light climbs the shaft walls")
     s.say("6.18")
@@ -231,7 +241,7 @@ def build(s, ctx):
     at_eyes = f"execute at {P()} anchored eyes positioned ^ ^ ^ run "
     s.until(C.score("#l.y", f"{int(geo.CUT_FEET_Y)}..", est=4.8), timeout=ASCENT_TIMEOUT, tick=[read_y],
             on_done=[at_eyes + fn("story/launch/flash_up")], note="up the shaft until the feet pass y 108, then the white-out")
-    s.sleep(0.2, note="white")
+    s.sleep(PC.s6_after_flash, note="white")
     # ---- the cut: to the city, standing on the lift platform, at giant scale, no upward motion (a teleport zeroes the velocity)
     face = " 180 0" if TURN_AT_ARRIVAL else ""
     tp_top = f"tp {P()} {num(top['x'])} {num(top['y'])} {num(top['z'])}{face}"
@@ -249,9 +259,9 @@ def build(s, ctx):
     s.after(1.2, sh.kill("angel.lflash"), note="night")
 
     # ================================================================ the surface
-    s.sleep(1.4, note="the lift locks, wind")
+    s.sleep(PC.s6_surface_pause, note="the lift locks, wind")
     s.say("6.20")
-    s.sleep(2.0, note="quiet")
+    s.sleep(PC.s6_quiet, note="quiet")
     s.say("6.21")
     s.beat(70)
     s.next_scene(7)

@@ -4,6 +4,7 @@
     python build_fight.py --check     build into a temporary folder and only run the checks
     python build_fight.py --out DIR   write the pack files under DIR (default D:\\angel-attack\\datapack\\angel)
     python build_fight.py --previews  also render the previews (tools\\fight\\preview\\)
+    python build_fight.py --pace full|video   the preset (default video; or set ANGEL_PACE): see gen_fight.py FULL / VIDEO and README.md
 
 Use the Python of the D:\\voice-assistant environment (numpy, pillow).
 
@@ -153,8 +154,13 @@ def main():
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--out")
     ap.add_argument("--previews", action="store_true")
+    ap.add_argument("--pace", choices=sorted(gen_fight.PRESETS),
+                    help="the fight's preset: video (default; env ANGEL_PACE=full|video when this is not given) = the paced fight with the visible rules; full = the earlier numbers and behaviour")
     a = ap.parse_args()
+    if a.pace:
+        gen_fight.set_pace(a.pace)
     model.build()
+    say(f"pace: {gen_fight.PACE}")
     say(f"model: {len(model.PARTS)} parts, heights {gen_angel.HEIGHTS}, poses {len(gen_angel.POSE_FILES)}")
     pack = os.path.abspath(a.out) if a.out else PACK
     files, ang, fgt, story_hand = collect(pack)

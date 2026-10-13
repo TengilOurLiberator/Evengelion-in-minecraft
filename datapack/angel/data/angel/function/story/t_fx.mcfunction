@@ -14,6 +14,7 @@ execute if score #f.turn_4 angel.story matches 1.. run function angel:story/turn
 execute if score #f.turn_5 angel.story matches 1.. run function angel:story/turn/t5
 execute if score #f.turn_6 angel.story matches 1.. run function angel:story/turn/t6
 execute if score #f.lead_ritsuko angel.story matches 1 run function angel:story/lead/mon_ritsuko
+execute if score #f.cq_misato angel.story matches 1 run function angel:story/lead/cq_misato
 execute if score #f.sp_ritsuko angel.story matches 1..2 run function angel:story/lead/sp_ritsuko
 execute if score #f.turn_7 angel.story matches 1.. run function angel:story/turn/t7
 execute if score #f.turn_8 angel.story matches 1.. run function angel:story/turn/t8

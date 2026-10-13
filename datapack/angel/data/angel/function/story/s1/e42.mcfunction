@@ -1,5 +1,9 @@
 scoreboard players set #force angel.story 0
-scoreboard players set #stept angel.story 0
-scoreboard players set #nagt angel.story 0
-scoreboard players set #hinted angel.story 0
-function angel:story/ob/b11
+execute as @a[limit=1] at @s positioned ~12.0 64.0 128.5 rotated 90 0 run function angel:cast/summon {id:"rei_uniform"}
+function angel:cast/look {id:"rei_uniform",mode:"player"}
+kill @e[tag=angel.girl_mark]
+tag @e[tag=angel.rei_uniform,tag=angel.char,limit=1] add angel.look_target
+scoreboard players set #f.seen angel.story 0
+scoreboard players set #v.away angel.story 0
+scoreboard players set #step angel.story 43
+function angel:story/s1/e43

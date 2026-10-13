@@ -5,11 +5,11 @@ execute store result score #rz angel.fight run data get entity @e[type=minecraft
 execute store result score #gz angel.fight run data get entity @e[tag=angel.giant,limit=1] Pos[2] 10
 scoreboard players operation #tx angel.fight = #rx angel.fight
 scoreboard players operation #tz angel.fight = #rz angel.fight
-execute if score #gz angel.fight >= #rz angel.fight run scoreboard players remove #tz angel.fight 300
+execute if score #gz angel.fight >= #rz angel.fight run scoreboard players remove #tz angel.fight 200
 execute if score #gz angel.fight >= #rz angel.fight run scoreboard players operation #room angel.fight = #rz angel.fight
 execute if score #gz angel.fight >= #rz angel.fight run scoreboard players remove #room angel.fight 500
 execute if score #gz angel.fight >= #rz angel.fight if score #tz angel.fight matches ..500 run scoreboard players set #tz angel.fight 500
-execute if score #gz angel.fight < #rz angel.fight run scoreboard players add #tz angel.fight 300
+execute if score #gz angel.fight < #rz angel.fight run scoreboard players add #tz angel.fight 200
 execute if score #gz angel.fight < #rz angel.fight run scoreboard players set #room angel.fight 1400
 execute if score #gz angel.fight < #rz angel.fight run scoreboard players operation #room angel.fight -= #rz angel.fight
 execute if score #gz angel.fight < #rz angel.fight if score #tz angel.fight matches 1400.. run scoreboard players set #tz angel.fight 1400

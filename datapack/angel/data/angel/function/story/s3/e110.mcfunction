@@ -1,2 +1,4 @@
 scoreboard players set #force angel.story 0
-function angel:story/scene {n:4}
+execute positioned 2305.705 18.0 154.751 rotated 87.72 0 run function angel:cast/summon {id:"misato"}
+scoreboard players set #step angel.story 111
+function angel:story/s3/e111

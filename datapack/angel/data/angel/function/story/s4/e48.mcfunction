@@ -1,7 +1,5 @@
 scoreboard players set #force angel.story 0
-function angel:cast/look {id:"misato",mode:"ahead"}
-scoreboard players set #f.turn_1 angel.story 16
-data modify storage angel:story space.misato set value {id:"misato",x:"3106.9",y:"131.0",z:"154.5",speed:"0.12"}
-scoreboard players set #f.sp_misato angel.story 1
-scoreboard players set #step angel.story 49
-function angel:story/s4/e49
+scoreboard players set #stept angel.story 0
+scoreboard players set #nagt angel.story 0
+scoreboard players set #hinted angel.story 0
+function angel:story/ob/b15

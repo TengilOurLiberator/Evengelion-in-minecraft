@@ -15,5 +15,5 @@ execute if score #fx.m angel.story matches 25 if entity @e[tag=angel.rig_ac4,tag
 execute if score #fx.m angel.story matches 32 if entity @e[tag=angel.rig_ac5,tag=angel.pt_fuselage,limit=1] run function angel:story/fx/fire5
 function angel:story/fx/tr_tick
 function angel:story/fx/flash_tick
-execute if score #fx.t angel.story matches 190 run function angel:story/fx/ac3_hit
-execute if score #fx.t angel.story matches 215 run function angel:story/fx/ac3_fall
+execute if score #fx.t angel.story matches 142 run function angel:story/fx/ac3_hit
+execute if score #fx.t angel.story matches 161 run function angel:story/fx/ac3_fall

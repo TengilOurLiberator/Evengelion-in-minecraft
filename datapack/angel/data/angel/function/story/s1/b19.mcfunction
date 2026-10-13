@@ -1,2 +1,2 @@
-scoreboard players set #step angel.story 27
-function angel:story/s1/e27
+scoreboard players set #step angel.story 24
+function angel:story/s1/e24

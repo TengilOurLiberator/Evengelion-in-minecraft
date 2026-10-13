@@ -1,2 +1,2 @@
-particle minecraft:dust{color:[1.0,0.82,0.35],scale:0.7} 3030.5 11.29 10.5 1.3 0.03 3.8 0 5 force
+particle minecraft:dust{color:[1.0,0.82,0.35],scale:0.7} 3030.5 11.99 10.5 1.3 0.03 3.8 0 5 force
 schedule function angel:story/launch/fp14 3t

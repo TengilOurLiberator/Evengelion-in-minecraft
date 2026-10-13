@@ -14,6 +14,10 @@ function angel:angel/pose_stagger
 stopsound @a * angel:sfx.beam_charge
 function angel:fight/backoff_aim
 execute at @e[type=minecraft:marker,tag=angel.root,limit=1] run playsound minecraft:entity.warden.hurt hostile @a ~ ~ ~ 8 0.6
-# the barrier goes up: the octagon flares at the core (and keeps pulsing until the hold ends)
-execute as @e[type=minecraft:interaction,tag=angel.core,limit=1] at @s positioned ~ ~2.25 ~ facing entity @e[tag=angel.giant,limit=1] eyes positioned ^ ^ ^6 run function angel:fight/wall_flash
+# the barrier goes up: the persistent octagon is built and flares, with the rising tone (it stays until the hold ends)
+scoreboard players set #blk_n angel.fight 0
+scoreboard players set #blk_why angel.fight 0
+function angel:fight/vis_state
+function angel:fight/shield_flare
+execute as @e[type=minecraft:interaction,tag=angel.core,limit=1] at @s run function angel:fight/barrier_up
 bossbar set angel:fight/angel name {"text":"ANGEL  -  barrier up, it is falling back","color":"red"}

@@ -1,2 +1,4 @@
 scoreboard players set #force angel.story 0
-function angel:say/3_01
+function angel:story/snd/bed_none/ramp_in0_out_car_interior15/start
+scoreboard players set #step angel.story 46
+function angel:story/s3/e46

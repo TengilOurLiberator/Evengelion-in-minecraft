@@ -1,5 +1,8 @@
 scoreboard players set #force angel.story 0
-scoreboard players set #stept angel.story 0
-scoreboard players set #nagt angel.story 0
-scoreboard players set #hinted angel.story 0
-function angel:story/ob/b19
+data modify storage angel:story lead.ritsuko set value {id:"ritsuko",x:"3096.5",y:"54.0",z:"100.0",speed:"0.2"}
+scoreboard players set #f.lead_ritsuko angel.story 1
+scoreboard players set #f.lp_ritsuko angel.story 0
+function angel:cast/look {id:"ritsuko",mode:"ahead"}
+function angel:cast/walk {id:"ritsuko",x:3096.5,y:54.0,z:100.0,speed:0.2}
+scoreboard players set #step angel.story 27
+function angel:story/s5/e27

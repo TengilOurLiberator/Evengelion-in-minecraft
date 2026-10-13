@@ -1,1 +1,1 @@
-execute at @e[type=minecraft:mannequin,tag=angel.misato,limit=1] run summon minecraft:marker ~ ~ ~ {Tags:["angel.story","angel.objective","angel.ob_target"]}
+summon minecraft:marker 3009.5 107.0 160.5 {Tags:["angel.story","angel.objective","angel.ob_target"]}

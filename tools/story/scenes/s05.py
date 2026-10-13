@@ -35,7 +35,8 @@ import worldgen_sky
 N = 5
 TITLE = "The cage"
 
-SPEED = 0.15
+import pace
+
 GURNEY_SETTLE = 0.7        # seconds the cast's gurney takes to turn to its goal and settle (the arrival score comes a few ticks after it stops)
 
 
@@ -44,6 +45,9 @@ def walk(who, x, y, z, speed=0.13):
 
 
 def build(s, ctx):
+    PC = pace.PACE
+    SPEED = PC.walk_speed
+    tight = PC.tight
     A = ctx.anchor
     cdoor, bstart, face = A("hq.cage_door"), A("hq.bridge_start"), A("hq.face")
     cap, sci, gin, gmark = A("hq.captain_mark"), A("hq.scientist_mark"), A("hq.gurney_in"), A("hq.gurney_mark")
@@ -69,9 +73,9 @@ def build(s, ctx):
         return (p[0], p[1] + EYE, p[2])
 
     # ================================================================ setup (a jump runs it; a hand-over from scene 4 skips it)
-    s.do(blind(4.5), note="fade out")
+    s.do(blind(PC.s5_setup_fade), note="fade out")
     s.sleep(0.4)
-    s.move_player(cdoor["x"], cdoor["y"], cdoor["z"], settle=1.4, before=ctx.preload_rect(3040, 16, 3135, 176),
+    s.move_player(cdoor["x"], cdoor["y"], cdoor["z"], settle=PC.s5_setup_settle, before=ctx.preload_rect(3040, 16, 3135, 176),
                   note="the player to hq.cage_door (the head is not turned), the whole cage and the lake hall forceloaded")
     s.do(fn("story/hq/reset_cage"), fn("story/hq/reset_lobby"), dirty_cmd(), fn("story/hq/door_opened"), fn("story/hq/side_closed"), *worldgen_sky.sky("hq"),
          note="the set as scene 4 leaves it: cage dark, the cage door open, the hospital door closed, hand lowered, eyes dark")
@@ -79,38 +83,40 @@ def build(s, ctx):
          cast_summon("ritsuko", XC, Y, cdoor["z"] - 1.8, 180.0), cast_summon("misato", XC - 1.1, Y, cdoor["z"] + 1.8, 180.0),
          note="Ritsuko in front of the door, Misato beside the boy")
     s.do(*ctx.audio.start("bed", "lake"), note="the lake hall's air")
-    s.sleep(1.5)
+    s.sleep(PC.s5_setup_sleep)
     s.setup_done()
 
     # ================================================================ dark: onto the bridge behind Ritsuko
     s.do(dirty_cmd(), fn("story/hq/side_closed"), sset("#consent", 0), sset("#f.hold", 0), sset("#f.rei_here", 0))
+    door_cells = [(x, y, z) for (x, y, z) in cg.door]                      # the cage door is open when she walks: its cells count as air for the companion's path
     L.lead(s, ctx, "ritsuko", [
         L.Stop(XC, Y, 139.0, wait=False, note="through the cage door"),
         L.Stop(bstart["x"], Y, bstart["z"], wait=False, note="hq.bridge_start"),
         L.Stop(XC, Y, 128.0, note="out on the bridge"),
-    ], speed=SPEED, companion=("misato", 3.2, 1.2), start=(XC, cdoor["z"] - 1.8), follow_text="Go through the door")
+    ], speed=SPEED, companion=("misato", 3.2, 1.2), start=(XC, cdoor["z"] - 1.8), follow_text="Go through the door",
+        companion_at=(XC - 1.1, cdoor["z"] + 1.8), nav_open=door_cells)
     # the door shuts behind them with a boom; then silence
     s.do(fn("story/hq/door_close"), sfx("sfx.door_heavy", at=(XC, Y + 3.0, 140.5), vol=3.0, minvol=0.8), *ctx.audio.stop("bed"),
          note="the cage door shuts behind them")
     s.after(0.4, sfx("sfx.door_boom", at=(XC, Y + 3.0, 140.5), vol=4.0, pitch=0.8, minvol=0.9), note="the boom")
-    s.sleep(1.5)
+    s.sleep(PC.s5_door_pause)
     # they go to their marks in the dark; the boy walks to the end of the bridge
-    s.do(walk("misato", *MIS_MARK, speed=0.13), note="Misato to captain_mark")
+    s.do(walk("misato", *MIS_MARK, speed=PC.walk_misc + 0.01), note="Misato to captain_mark")
     L.lead(s, ctx, "ritsuko", [
-        L.Stop(XC, Y, 100.0, note="the middle of the bridge"),
+        L.Stop(XC, Y, 100.0, wait=not tight, note="the middle of the bridge"),
         L.Stop(*RIT_MARK, note="Ritsuko to scientist_mark"),
     ], speed=SPEED, start=(XC, 128.0))
     s.do(sset("#f.hold", 0), note="count how long he stands near the end")
     fx, fy, fz = face["x"], face["y"], face["z"]
-    s.until([C.near(fx, fy, fz, 1.5, est=10), C.score("#f.hold", "60..", est=10)], timeout=150, est=10.0,
+    s.until([C.near(fx, fy, fz, 1.5, est=PC.s5_est_face), C.score("#f.hold", "60..", est=PC.s5_est_face)], timeout=150, est=PC.s5_est_face,
             tick=[f"execute positioned {num(fx)} {num(fy)} {num(fz)} if entity {P('distance=..4')} run scoreboard players add #f.hold angel.story 1",
                   f"execute positioned {num(fx)} {num(fy)} {num(fz)} unless entity {P('distance=..4')} run scoreboard players set #f.hold angel.story 0"],
             hint=("Walk to the end of the bridge.", []), hint_after=40,
-            objective=objective("Walk out onto the bridge", at=(fx, fy, fz), line="Walk out to the end of the bridge, toward the giant", how="walk", grace=3.0),
+            objective=objective("Walk out onto the bridge", at=(fx, fy, fz), line="Walk out to the end of the bridge, toward the giant", how="walk", grace=PC.s5_face_grace),
             on_timeout=[tp_player(fx, fy, fz)], note="the player reaches hq.face (or stops within 4 blocks of it for 3 s)")
-    s.sleep(0.5)
+    s.sleep(PC.s5_face_pause)
     s.say("5.01")
-    s.sleep(3.0, note="three seconds of nothing")
+    s.sleep(PC.s5_nothing, note="the beat of nothing before the lights")
 
     # ================================================================ lights: eight banks, farthest first, the face last
     s.beat(50)
@@ -120,8 +126,8 @@ def build(s, ctx):
         if k == 0:
             cmds += ctx.audio.start("bed", "cage") + ctx.audio.start("music", "cage")
         s.do(*cmds, note=f"bank {k} on ({cg.banks[k]['on'].__len__()} lights)" + (" -- the face" if k == N_BANKS - 1 else ""))
-        s.sleep(0.5)
-    s.sleep(2.5, note="let it stand: three seconds in all before anyone speaks")
+        s.sleep(PC.s5_bank_step)
+    s.sleep(PC.s5_lights_stand, note="let it stand before anyone speaks")
     s.say("5.02")
     s.say("5.03")
     s.wait_answer(speaker="ritsuko", prompt="answer Ritsuko")
@@ -142,7 +148,7 @@ def build(s, ctx):
          sfx("sfx.booth_light", at=(booth["x"], booth["y"] + 2.5, booth["z"]), vol=4.0, minvol=1.0),
          note="ONE hard light snaps on him, sfx.booth_light from the booth, a flare at his face: Gendo stands at the front edge, looking down")
     s.after(0.35, *L.face(ctx, "misato", *BOOTH_EYE), *L.face(ctx, "ritsuko", *BOOTH_EYE), note="Misato and Ritsuko both turn and look up at him")
-    s.sleep(2.0, note="TWO FULL SECONDS of him lit and still, the women staring up at him, before he speaks")
+    s.sleep(PC.s5_father_hold, note="a beat of him lit and still, the women staring up at him, before he speaks (two full seconds in the full pacing)")
     s.do(*ctx.audio.start("music", "father"), note="music: the father")
     s.say("5.04")
     s.say("5.05")
@@ -177,10 +183,10 @@ def build(s, ctx):
     s.beat(52)
 
     # ================================================================ the first impact
-    s.sleep(0.8, note="a held breath")
+    s.sleep(PC.s5_impact_pause, note="a held breath")
     fl1 = cg.flicker("hit1", [1, 3, 5], [(0, "off"), (3, "on"), (6, "off"), (8, "on"), (13, "off"), (15, "on")])
     s.do(fn("story/hq/impact1"), fl1, note="a deep blow from above: a third of the banks flicker, dust in the beams, the coolant rings")
-    s.sleep(1.5)
+    s.sleep(PC.s5_impact_after)
     s.say("5.21")
     s.say("5.22")
     s.say("5.23")
@@ -189,9 +195,9 @@ def build(s, ctx):
     # a consent-capable wait: the bridge classifies the answer; a yes goes straight to the yes, any other answer is voiced by the character
     # and the wait ends without consent (answer_ends); 45 s of silence also go on
     s.do(sset("#consent", 0))
-    s.wait_consent(speaker="misato", prompt="answer Misato", answer_ends=True, timeout=45, est=6.0, note="WAIT (a yes here goes straight to the yes)")
+    s.wait_consent(speaker="misato", prompt="answer Misato", answer_ends=True, timeout=PC.s5_consent_timeout, est=6.0, note="WAIT (a yes here goes straight to the yes)")
     s.branch(C.score("#consent", "1"), "yes_early")
-    s.sleep(0.6)
+    s.sleep(PC.s5_early_pause)
 
     # ================================================================ Rei
     s.say("5.25")
@@ -204,7 +210,10 @@ def build(s, ctx):
     gx, gy, gz = GURNEY_START
     span = lambda lid: (ctx.lines[lid].ticks + T(CFG.gap)) / 20.0
     travel = abs(gmark["x"] - gx)
-    arrive_in = span("5.28") + span("5.29") + span("5.30") - 0.4 - GURNEY_SETTLE      # seconds from this step to the end of 5.30's own recording
+    if tight:
+        arrive_in = span("5.28") + span("5.29") + PC.s5_gurney_into_530 - GURNEY_SETTLE            # it arrives a couple of seconds into 5.30 (BASE: its exact length is known)
+    else:
+        arrive_in = span("5.28") + span("5.29") + span("5.30") - 0.4 - GURNEY_SETTLE      # seconds from this step to the end of 5.30's own recording
     g_speed = round(travel / (arrive_in * 20.0), 4)
     vblink = cg.flicker("vest_blink", [], [(0, "off"), (4, "on"), (8, "off"), (12, "on"), (20, "off"), (24, "on")], extra_off=["vest"])
     s.do(f"execute positioned {num(gx)} {num(gy)} {num(gz)} rotated -90 0 run function angel:cast/gurney",
@@ -225,10 +234,10 @@ def build(s, ctx):
     s.say("5.30")
     s.until(Cond(["if score #arrived_gurney angel.cast matches 1"], 3.0, "the gurney is at the mark"), timeout=30, est=3.0,
             note="the gurney reaches hq.gurney_mark")
-    s.sleep(0.5)
+    s.sleep(PC.s5_rei_pause)
     s.do(sset("#present_rei", 1), sset("#f.rei_here", 1), note="Rei is here (tries to sit up)")
     s.say("5.31")
-    s.sleep(0.8)
+    s.sleep(PC.s5_rei_after)
 
     # ================================================================ the second impact (t = 0 here): the order of the shot, in ticks
     #   0  impact; every light out; dust, rings.                                          (the player is told it is dark by every sense)
@@ -245,7 +254,7 @@ def build(s, ctx):
     # after 5.35: the hand settles back down and the eyes go dark
     FACE_EYE = (XC, Y + 8.6, 58.2)                     # the giant's eyes (the slits are at y 61..64, z 57 behind the plate at z 59)
     RIG_UP = (XC, Y + 22.0, 77.5)                      # where the rig hangs, for everyone's eyes (they only look up as far as 30 degrees)
-    TL = dict(place=10, back=20, tear=36, stare=40, wash=40, hand=64, eyes_snd=104, eyes=118, looks=121, medics=128, say=130, alarm=134, throw=150)
+    TL = dict(place=10, back=20, tear=36, stare=40, wash=40, hand=64, eyes_snd=104, eyes=118, looks=121, medics=128, say=PC.s5_say_tick, alarm=134, throw=150)
     sec = lambda tk: tk / 20.0
     s.do(sfx("sfx.impact_above_hard", at=(XC, 100.0, 72.5), vol=5.0, pitch=0.8, minvol=1.0), sfx("sfx.dust_fall", vol=0.9), fn("story/hq/all_off"), fn("story/hq/dust_heavy"),
          fn("story/hq/rings"), *ctx.audio.start("music", "decision"), sfx("sfx.jolt", vol=2.0, pitch=0.8),
@@ -298,20 +307,20 @@ def build(s, ctx):
          f"particle minecraft:splash {num(XC - 8)} 38 76 6 0.5 6 0.4 60 force", note="the hand sinks back; the eyes go dark")
 
     # ================================================================ the girl
-    s.until(C.near(REI_MID[0], Y, REI_MID[2], 2.0, est=8), timeout=120, est=8.0, hint=("Go to the girl on the floor.", []), hint_after=25,
-            objective=objective("Go to her", at=(REI_MID[0], Y + 0.5, REI_MID[2]), line="Walk to Rei, on the floor ahead  -  go right up to her", how="walk", grace=10.0),
+    s.until(C.near(REI_MID[0], Y, REI_MID[2], 2.0, est=PC.s5_est_girl), timeout=120, est=PC.s5_est_girl, hint=("Go to the girl on the floor.", []), hint_after=25,
+            objective=objective("Go to her", at=(REI_MID[0], Y + 0.5, REI_MID[2]), line="Walk to Rei, on the floor ahead  -  go right up to her", how="walk", grace=PC.s5_girl_grace),
             note="the player comes within 2 blocks of Rei")
     s.do(cast_pose("rei", "standing"), cast_pose("rei", "sitting"),
          f"execute at {P()} run particle minecraft:dust{{color:[0.62,0.04,0.04],scale:1.3}} ~ ~1.0 ~ 0.22 0.15 0.22 0 14 force",
          "execute at " + P() + " run playsound minecraft:item.armor.equip_leather master @a ~ ~ ~ 0.6 0.9 0.5",
          note="he lifts her: she sits up in his arms; his hand comes away red")
-    s.sleep(0.6)
+    s.sleep(PC.s5_girl_pause)
     s.say("5.36")
     s.say("5.37")
     s.say("5.38")
     s.do(sset("#consent", 0))
     wait_ticks = lambda lid, extra: T(ctx.lines[lid].seconds + 0.4 + extra)
-    nud = Nudges(first=9.0, repeat=11.0, loop_from=1, lines=["5.39", "5.40", "5.41"], cmds=[
+    nud = Nudges(first=PC.s5_nudge_first, repeat=PC.s5_nudge_repeat, loop_from=1, lines=["5.39", "5.40", "5.41"], cmds=[
         [fn("say/5_39")],
         [fn("say/5_40"), cg.sched("impact_far", wait_ticks("5.40", 1.2))],
         [fn("say/5_41"), cg.sched("impact_far", wait_ticks("5.41", 1.4))]])
@@ -327,7 +336,7 @@ def build(s, ctx):
     s.beat(54)
     s.do(*ctx.audio.stop("music"), *ctx.audio.stop("loop"), *ctx.audio.stop("bed"), f"execute if score #f.alarm {OBJ} matches 1 run " + sfx("sfx.alarm_cut"),
          note="EVERYTHING STOPS: the music, the alarm cuts (if it was sounding)")
-    s.sleep(1.2, note="silence")
+    s.sleep(PC.s5_yes_silence, note="silence")
     s.do(*ctx.audio.start("music", "resolve"), L.face_player("misato"), L.face_player("ritsuko"), note="music: the resolve, under 5.42 and 5.43 only")
     s.say("5.42")
     s.say("5.43", gap=0)
@@ -337,27 +346,27 @@ def build(s, ctx):
     # footsteps would be the one sound in the hold); Misato stays by Rei (late path, no footsteps)
     s.do(f"execute if score #f.rei_here {OBJ} matches 1 run " + walk("misato", REI_MID[0] - 1.0, Y, REI_MID[2] - 0.2, speed=0.12),
          note="Misato stays by Rei")
-    s.sleep(2.0, note="hold on Gendo: he has not moved, he says nothing; SILENCE")
+    s.sleep(PC.s5_yes_hold, note="hold on Gendo: he has not moved, he says nothing; SILENCE")
     s.do(fn("story/hq/booth_off"), *L.walk_cmds("ritsuko", XC, Y, 125.0, SPEED), note="the booth lights go out (no sound); Ritsuko walks toward the door")
     # as the boy follows her, 5.44 from behind: still silence under it
     rx, rz = REI_MID[0], REI_MID[2]
     s.until(Cond([f"positioned {num(rx)} {num(Y)} {num(rz)} unless entity {P('distance=..6.5')}"], 6.0, "the boy is 6.5 blocks from Rei"),
-            timeout=60, est=6.0, hint=("Follow Ritsuko.", []), hint_after=20, note="he follows Ritsuko", objective=follow_objective("ritsuko"))
+            timeout=60, est=PC.s5_follow_est, hint=("Follow Ritsuko.", []), hint_after=20, note="he follows Ritsuko", objective=follow_objective("ritsuko"))
     s.say("5.44")
     s.unhush()
     # now the cage goes dark behind them, bank by bank, each with its breaker
     s.do(sfx("sfx.breaker_1", at=cg.bank_pos[N_BANKS - 1], vol=2.0, pitch=0.8, minvol=0.5), fn(f"story/hq/bank_off_{N_BANKS - 1}"), note="the cage goes dark behind them")
     for j, k in enumerate(range(N_BANKS - 2, 0, -1)):
-        s.after(1.0 + 1.1 * j, fn(f"story/hq/bank_off_{k}"), sfx(f"sfx.breaker_{k % 3 + 1}", at=cg.bank_pos[k], vol=1.5, pitch=0.85, minvol=0.4),
+        s.after(PC.s5_bank_off0 + PC.s5_bank_off_step * j, fn(f"story/hq/bank_off_{k}"), sfx(f"sfx.breaker_{k % 3 + 1}", at=cg.bank_pos[k], vol=1.5, pitch=0.85, minvol=0.4),
                 note=f"bank {k} off")
-    s.until(L.arrived("ritsuko", est=10), timeout=60, est=10.0, note="Ritsuko reaches the middle of the bridge", objective=follow_objective("ritsuko"), watch=False)
+    s.until(L.arrived("ritsuko", est=PC.s5_est_mid), timeout=60, est=PC.s5_est_mid, note="Ritsuko reaches the middle of the bridge", objective=follow_objective("ritsuko"), watch=False)
     s.until(L.near_char("ritsuko", 6.0), timeout=60, est=0.5, on_timeout=[tp_player(XC, Y, 119.5)], note="the boy is with her", objective=follow_objective("ritsuko"))
     s.do(*L.lead_off("ritsuko"), fn("story/hq/bank_off_0"), fn("story/hq/vest_off"), sfx("sfx.breaker_2", at=cg.bank_pos[0], vol=1.5, pitch=0.8, minvol=0.4), note="the last light")
-    s.sleep(1.6, note="dark")
+    s.sleep(PC.s5_dark_pause, note="dark")
     s.do(*ctx.audio.stop("music"), *ctx.audio.stop("bed"))
-    s.sleep(0.4)
+    s.sleep(PC.s5_dark_pause2)
 
     # ================================================================ the card
-    s.card("EVANGELION  UNIT 01")
+    s.card("EVANGELION  UNIT 01", hold=PC.card_hold)
     s.sim_path("early_yes", take=["yes_early"], skip=("5.25", "5.41"))
     s.next_scene(6, jump=True)

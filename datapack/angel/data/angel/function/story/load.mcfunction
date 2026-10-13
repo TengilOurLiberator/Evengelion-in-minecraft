@@ -58,8 +58,8 @@ scoreboard players set #c5 angel.story 5
 scoreboard players set #c20 angel.story 20
 scoreboard players set #c3600 angel.story 3600
 scoreboard players set #c1000 angel.story 1000
-scoreboard players set #stk_hint angel.story 1200
-scoreboard players set #stk_skip angel.story 3000
+scoreboard players set #stk_hint angel.story 600
+scoreboard players set #stk_skip angel.story 1500
 kill @e[tag=angel.objective]
 scoreboard players set #ob.shown angel.story 0
 scoreboard players set #ob.bl angel.story -1

@@ -119,6 +119,12 @@ def gate_leaves(ctx, probe, gate):
 
 
 def build(s, ctx):
+    import pace
+    PC = pace.PACE
+    # the pacing's numbers shadow the module's (pace.py: s3_*)
+    GATE_TRIGGER = PC.s3_gate_trigger
+    START_DIST = PC.s3_start_dist
+    MAX_QUIET = PC.s3_max_quiet
     A = ctx.anchor
     gate, cart = A("outskirts.gate"), A("outskirts.cartrain")
     gstart, wall, reveal, term = A("geofront.start"), A("geofront.wall_opens"), A("geofront.reveal"), A("geofront.terminal")
@@ -147,7 +153,7 @@ def build(s, ctx):
     for w in warns:
         ctx.warn("scene 3 gate_to_cartrain: " + w)
     route_a = ctx.new_route("gate_to_wagon", car)
-    route_a.add_leg("roll", Path(pts), vmax=3.2, a_acc=0.8, a_dec=1.0, a_lat=1.2)
+    route_a.add_leg("roll", Path(pts), **PC.s3_roll)
     # the car climbs the ramp onto the wagon's deck, one block above the passage floor: the checker is told (sim.check_routes reads deck_lift)
     route_a.deck_lift = [max(0.0, float(f[1]) - gate["y"]) for f in route_a.frames]
     gate_pose = (gate["x"], gate["y"], gate["z"], gate["yaw"], 0.0)
@@ -171,7 +177,7 @@ def build(s, ctx):
     ptsB = [(xs[i], ys[i], zs[i]) for i in range(iS, it + 1)]
     ctrain_b = ctx.register_rig(cartrain_rig("cartrain_b", reversed_car=True, ramp=False, bright=(0, 8), low_side="R"))
     ride = ctx.new_route("geofront_ride", ctrain_b)
-    ride.add_leg("tunnel", Path(ptsA), vmax=1.15, a_acc=0.35, a_dec=0.4, a_lat=1.0, station="tunnel", smooth=0.8)
+    ride.add_leg("tunnel", Path(ptsA), a_lat=1.0, station="tunnel", smooth=0.8, **PC.s3_tunnel)
     pB = Path(ptsB)
     dB0 = float(dist[iS])
     ride.add_leg("descent", pB, vmax=5.6, a_acc=0.8, a_dec=0.8, a_lat=1.4, smooth=0.8,
@@ -244,21 +250,21 @@ def build(s, ctx):
          cast_summon("misato", cart["x"], top, cart["z"], 180.0), cast_mount("misato", "driver"), *ctrain_a.ahead_cmds(), *ride_passenger(),
          note="the car and the wagon become one rig (same picture, same place)")
     # the gate has shut by GATE_TRIGGER + 5.35 s after the roll began; the bolts run to 6.3 s: let them finish before the fade
-    s.sleep(max(0.4, GATE_TRIGGER + 6.5 - route_a.seconds() - 0.5), note="the gate's boom and bolts finish")
+    s.sleep(max(0.4, GATE_TRIGGER + PC.s3_gate_tail - route_a.seconds() - 0.5), note="the gate's boom and bolts finish")
 
     # ================================================================ fade, and down
-    s.do(blind(4.6), sfx("sfx.train_start", vol=1.0), note="to the Geofront: sfx.train_start (6.5 s) in the dark")
-    s.sleep(0.5)
+    s.do(blind(PC.s3_fade), sfx("sfx.train_start", vol=1.0), note="to the Geofront: sfx.train_start (6.5 s) in the dark")
+    s.sleep(PC.s3_fade_pause)
     s.do(sset("#ride", 0), "kill @e[tag=angel.rig_cartrain_a]", "kill @e[tag=angel.gate]", cast_remove("misato"), note="the car train and the gate are taken away")
-    s.move_player(start_pose[0], start_pose[1], start_pose[2], before=worldgen_sky.sky("geofront"), settle=1.4, note="in the dark: to geofront.start")
-    s.sleep(0.6, note="the chunks settle")
+    s.move_player(start_pose[0], start_pose[1], start_pose[2], before=worldgen_sky.sky("geofront"), settle=PC.s3_settle, note="in the dark: to geofront.start")
+    s.sleep(PC.s3_settle2, note="the chunks settle")
     s.do(*ctx.rig_spawn(ctrain_b, "ride", start_pose),
          cast_summon("misato", start_pose[0], start_pose[1], start_pose[2], start_pose[3] + 180.0), cast_mount("misato", "driver"),
          *ctrain_b.ahead_cmds(), *ride_passenger(), sset("#present_misato", 1), note="the wagon at the mouth of the tunnel (the car turned about: the boy's window faces the cavern)")
-    s.sleep(1.6)
+    s.sleep(PC.s3_ride_pause)
     s.do(*ride.start_cmds(limit="tunnel"), *ctx.audio.start("bed", "tunnel", fade=3.0),
          note="the wagon creeps into the dark; amb.tunnel comes in under the end of sfx.train_start")
-    s.sleep(1.5)
+    s.sleep(PC.s3_ride_pause2)
     s.do(*carfx.look_boy(), note="3.02: she asks, looking at him")
     s.say("3.02")
     s.wait_answer(speaker="misato", prompt="answer Misato")
@@ -292,17 +298,19 @@ def build(s, ctx):
     s.say("3.09")
     s.say("3.10")
     if rem > MAX_QUIET:
-        skip_to = max(ride.marks["reveal"], ride.end - T(24))
-        s.fade(ride.jump_cmds(skip_to), black=1.2, note="skip the long quiet stretch")
+        if PC.s3_look:
+            s.sleep(PC.s3_look, note="a moment to look at the cavern")
+        skip_to = max(ride.marks["reveal"], ride.end - T(PC.s3_skip_keep))
+        s.fade(ride.jump_cmds(skip_to), black=PC.s3_skip_black, note="skip the long quiet stretch")
     s.until(ride.cond_at(max(0, ride.end - STOP_LEAD)), est=(ride.end - STOP_LEAD) / 20.0, timeout=240, note="the ride goes on in quiet: the brakes begin")
     s.do(sfx("sfx.train_stop", vol=1.0), note="sfx.train_stop (6.5 s): brakes, the clacks slowing, the final shunt as it stops")
     s.until(ride.cond_done(), est=ride.seconds(), timeout=240, note="the wagon stops at the terminal")
 
     # ================================================================ the terminal
-    s.sleep(1.2)
+    s.sleep(PC.s3_end_pause)
     s.do(sset("#ride", 0), cast_remove("misato"), note="both get out")
     s.move_player(out_spot[0], oy1, out_spot[2], r=2.5, settle=0.2, note="the boy steps onto the platform")
     s.do(cast_summon("misato", out_spot2[0], oy2, out_spot2[2], end_pose[3] + 90.0), note="Misato beside him")
-    s.sleep(3.0)
+    s.sleep(PC.s3_end_pause2)
     s.next_scene(4, jump=True)
 

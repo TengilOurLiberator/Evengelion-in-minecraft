@@ -1,1 +1,1 @@
-tp @e[tag=angel.ob_target] @e[tag=angel.seat_passenger,limit=1]
+tp @e[tag=angel.ob_target] @e[type=minecraft:mannequin,tag=angel.misato,limit=1]

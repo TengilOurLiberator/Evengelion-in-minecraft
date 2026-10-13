@@ -64,6 +64,7 @@ def walk_scene(ctx, scene, report, take=()):
     events = []
     said = []
     timers = []
+    speech = [0.0]
     guard = 0
     while 0 <= i < len(steps):
         guard += 1
@@ -122,8 +123,10 @@ def walk_scene(ctx, scene, report, take=()):
             events.append((t, f"{ln.id} {ln.speaker.upper():8s} {ln.seconds:5.2f}s  {ln.text[:60]}"))
             said.append(ln.id)
             t += ln.ticks / TPS
+            speech[0] += ln.ticks / TPS
             i += 1
         elif k == "wait":
+            t_wait0 = t
             nud = getattr(st, "nudges", None)
             extra = " [+ consent-capable: ends on a non-yes answer]" if getattr(st, "answer_ends", False) else ""
             events.append((t, f"WAIT{st.mode} for {st.speaker}: prompt \"Your turn - {st.prompt}\" (assumed {st.est:.1f}s){extra}"))
@@ -138,6 +141,7 @@ def walk_scene(ctx, scene, report, take=()):
                 t = max(t0 + st.est, t0 + nud.first + (len(nud.lines) - 1) * nud.repeat + ctx.lines[nud.lines[-1]].seconds + 2.0)
             else:
                 t += st.est
+            speech[0] += t - t_wait0                                     # (a wait for his answer, and the reply, is speech: nothing the story can shorten)
             i += 1
         elif k == "until":
             # a route condition: reachable?  other conditions: their estimate
@@ -178,6 +182,7 @@ def walk_scene(ctx, scene, report, take=()):
         else:
             i += 1
     events.sort(key=lambda e: e[0])
+    scene.speech = speech[0]                                             # seconds of recorded lines and of waiting for his answers on this path
     return events, t, said, timers
 
 
@@ -1106,10 +1111,11 @@ def check_routes(ctx, report, step=2):
         c = comfort(r)
         lines.append(f"route {r.name:15s} {c['seconds']:6.1f}s  vmax {c['vmax']:5.2f} b/s  accel {c['amax']:5.2f}  jerk {c['jmax']:6.2f}  "
                      f"yaw rate {c['yaw_rate']:6.1f} deg/s  pitch {c['pitch']:4.1f} deg (rate {c['pitch_rate']:5.1f})  stations {dict(r.stations)} marks {dict(r.marks)}")
-        if c["jmax"] > 40 and r.name != "slide_in":
+        if c["jmax"] > __import__("pace").PACE.limit_jerk and r.name != "slide_in":
             report.warn(f"route {r.name}: jerk up to {c['jmax']:.0f} b/s^3 (a rider will feel the start or stop)")
-        if c["yaw_rate"] > 60 and r.name != "slide_in":
-            report.warn(f"route {r.name}: turns up to {c['yaw_rate']:.0f} deg/s")
+        import pace
+        if c["yaw_rate"] > pace.PACE.limit_yaw and r.name != "slide_in":
+            report.warn(f"route {r.name}: turns up to {c['yaw_rate']:.0f} deg/s (the {pace.PACE.name} pacing allows {pace.PACE.limit_yaw:g})")
         # ground / headroom
         rig = ctx.rigs[r.rig]
         is_train = rig.name.startswith("cartrain")
@@ -1151,6 +1157,47 @@ def check_routes(ctx, report, step=2):
             report.warn(f"route {r.name}: solid blocks inside the car's box: {dict(sorted(hits_total.items(), key=lambda kv: -kv[1])[:6])}; "
                         f"first at (frame, x, y, z) {dict(list(first_hit.items())[:6])}")
     return lines
+
+
+def check_companions(ctx, report):
+    """The companion guarantee, offline: every leg a companion walks (lead.py `companion=`) was planned on the built set as straight segments of standable
+    cells (a 0.4-radius body with floor and two blocks of headroom all round); here each leg is proved again with a finer step and a bigger body, her place
+    is within 8 blocks of the leader's and not inside her, every rescue cell is standable, and the runtime keeper (3 s still, 6 blocks from the player ->
+    put on a reachable cell near him, out of view) exists for every companion.  (What went wrong: she was sent in a straight line from her place in the
+    wide dock to a place beside the leader on the 3-wide catwalk; the line crossed the railing at the neck of the catwalk.)"""
+    legs = ctx.companion_legs
+    if not legs:
+        report.note("companions: none")
+        return
+    names = sorted({leg["who"] for leg in legs})
+    for who in names:
+        for fnname in (f"story/lead/cq_{who}", f"story/lead/ck_{who}", f"story/lead/rescue_{who}", f"story/lead/cpd_{who}"):
+            if fnname not in ctx.extra_functions:
+                report.error(f"companion {who}: the keeper function {fnname} does not exist")
+    rows = []
+    for leg in legs:
+        stop = leg.get("stop")
+        if not leg.get("ok") or leg.get("goal") is None:
+            report.error(f"companion {leg['who']} at {stop}: no reachable standable cell near the leader")
+            continue
+        nav, path, goal = leg["nav"], leg["path"], leg["goal"]
+        bad = [(a, b) for a, b in zip(path, path[1:]) if not nav.seg(a, b, step=0.2)]
+        if bad:
+            report.error(f"companion {leg['who']} at {stop}: a walk of her path is blocked: {bad[0]}")
+        lx, lz = leg["leader"]
+        d = math.hypot(goal[0] - lx, goal[1] - lz)
+        if not (1.8 <= d <= 8.0):
+            report.error(f"companion {leg['who']} at {stop}: her place is {d:.1f} blocks from the leader (wanted 1.8 to 8)")
+        if not nav.ok(*goal):
+            report.error(f"companion {leg['who']} at {stop}: her place {goal} is not standable")
+        off = [c for c in leg["cells"] if not nav.ok(*c)]
+        if off:
+            report.error(f"companion {leg['who']} at {stop}: {len(off)} of her rescue cells are not standable, e.g. {off[0]}")
+        rows.append(f"{leg['who']} at {stop}: {len(path) - 1} straight walk(s), her place ({goal[0]:.1f}, {goal[1]:.1f}) {d:.1f} blocks from the leader, {len(leg['cells'])} rescue cells")
+    for r_ in rows:
+        print("   companion " + r_)
+    report.note(f"companions: {len(rows)} legs of {', '.join(names)} planned on the built set (every straight walk proved clear with a 0.4-radius body at 0.2-block steps, "
+                f"her place standable and 1.8 to 8 blocks from the leader); the keeper (3 s still, 6 blocks from the player -> put on a reachable cell near him, out of view) is in place")
 
 
 def check_objectives(ctx, report):
@@ -1210,8 +1257,10 @@ def main_check(ctx, out):
     scenes_said = {}
     print("=" * 100)
     total = 0.0
+    total_speech = 0.0
     for scene in ctx.scenes:
         events, secs, said, timers = walk_scene(ctx, scene, report)
+        speech_main = scene.speech
         scenes_said[scene.n] = said
         total += secs
         alt_report = []
@@ -1227,6 +1276,8 @@ def main_check(ctx, out):
                             else f"scene {scene.n} path {name!r}: {len(said2)} lines ({secs2:.0f}s)")
             alt_report.append((name, secs2, ev2))
         print(f"SCENE {scene.n}: {scene.title}   nominal duration {secs:5.1f}s ({secs / 60:.1f} min)  [{len(scene.steps)} steps, {len(said)} lines]")
+        print(f"   of which the recorded lines and the waits for his answers: {speech_main:5.1f}s; everything else (the AIR): {secs - speech_main:5.1f}s")
+        total_speech += speech_main
         for te, text in events:
             print(f"   {te:6.1f}s  {text}")
         for name, secs2, ev2 in alt_report:
@@ -1235,6 +1286,7 @@ def main_check(ctx, out):
             print("   timed effects beside the story: " + "; ".join(f"{tt:.1f}s {n[:40]}" for tt, n in sorted(timers)[:14]) + (" ..." if len(timers) > 14 else ""))
         print()
     print(f"all scenes: {total:.0f}s ({total / 60:.1f} min) of story with answers assumed {CFG.answer_est:.0f}s")
+    print(f"   recorded lines and answer waits {total_speech:.0f}s ({total_speech / 60:.1f} min) + the scripted fight and everything else (air) {total - total_speech:.0f}s")
     check_lines(ctx, scenes_said, report)
     check_functions(out, ctx, report)
     check_sounds(out, report)
@@ -1252,6 +1304,7 @@ def main_check(ctx, out):
     check_relocations(ctx, out, report)
     check_presence(ctx, out, report)
     check_leftovers(ctx, out, report)
+    check_companions(ctx, report)
     check_commands(out, report)
     for l in check_routes(ctx, report):
         print(l)

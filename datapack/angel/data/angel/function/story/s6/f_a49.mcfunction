@@ -1,1 +1,1 @@
-effect give @a minecraft:levitation 12 29 true
+effect give @a minecraft:levitation 12 24 true

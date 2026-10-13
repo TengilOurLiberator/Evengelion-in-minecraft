@@ -1,7 +1,8 @@
 """Generates the fight's functions (namespace angel, folder fight/).  See README.md for the design.
 
-Everything about the boss fight is numbers in CFG (below) so the lead can tune it and rebuild.
+Everything about the boss fight is numbers in the preset tables FULL and VIDEO (below; CFG is the chosen one) so the lead can tune it and rebuild.
 """
+import math
 import os
 import re
 import sys
@@ -9,11 +10,19 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import model  # noqa: E402
+import gen_angel  # noqa: E402  (BODY_H; gen_angel reads this module's CFG lazily)
 
 FH = 30                                    # monster height in the fight
 K = FH / 100.0
 
-CFG = dict(
+# ====================================================================================================================== presets
+# Every number of the fight lives in one of the two tables below; CFG (the dict the generator, estimate.py and selftest.py read) is filled from one of them.
+#   "video"  (the default)  the paced fight for the film: a first-time player finishes in about 2:15, and the rules a player can SEE: no hidden guard on the
+#                           core, one visible state (vulnerable / shielded), a feedback for every kind of swing, a generous target.
+#   "full"                  EXACTLY the numbers and the behaviour of the earlier build (about 5 minutes for a first-time player, the 1.2 s core guard, the faint
+#                           dotted barrier): a `full` build reproduces the earlier functions byte for byte.
+# Choose with `build_fight.py --pace full|video` (estimate.py takes the same switch) or the environment variable ANGEL_PACE; --pace wins.
+FULL = dict(
     giant_hp=100,           # the giant's health (points)
     core_hp=60,             # hits on the core to win (was 40: a scripted player who never dodged won in 63 s; 60 with the 1.2 s core guard below)
     crack_at=30,            # core hits left when the core cracks (phase B)
@@ -31,7 +40,8 @@ CFG = dict(
     beam_recover=24,
     thrust_windup=26, thrust_recover=44,
     cd_beam=150, cd_beam_b=105, cd_thrust=100, cd_thrust_b=70,       # cooldown after an attack
-    hit_cd=24,              # ticks between two counted core hits: the core's guard, 1.2 s after each LANDED hit (a hit inside it sparks and does nothing; blocked and body hits do not arm it)
+    hit_cd=24,              # ticks between two counted core hits: the core's guard, 1.2 s after each LANDED hit (a hit inside it sparks and does nothing; blocked and body hits do not arm it).
+                            # 0 = no guard at all: the guard code is not even generated
     backoff_hits=8,         # the monster disengages after this many landed core hits (not in the wrap phase)
     backoff_dist=30,        # blocks it retreats along the avenue (never beyond the avenue's far end, ARENA angel z; if it cannot, it sidesteps to the other side)
     backoff_min=10,         # less room than this to retreat: it sidesteps instead
@@ -48,7 +58,57 @@ CFG = dict(
     intro_ticks=500, intro_after_step=120,
     scale=16, step_height=2.6, move_speed=0.30, jump=1.0, gravity=0.12, safe_fall=48, reach_entity=18,
     reach_block=20, atk_dmg=20, atk_kb=2, kb_res=0.6,
+    # ---- the features of the video preset, all OFF here (these keys change nothing in a `full` build)
+    core_box=0.15,          # the core's interaction box edge as a fraction of the monster's height (4.5 blocks at height 30)
+    near_box=0.0,           # > 0: a second, larger "near miss counts" interaction box around the core (edge as a fraction of the height); a click on it is a core hit
+    visible=False,          # True: the two states made visible - a persistent bright octagon + dimmed core while shielded, a pulsing red core + halo while vulnerable -
+                            #       and a feedback for every swing (flinch on a landed hit, ringing flare + counters on a blocked one, thud + core flash on a body hit);
+                            #       the barrier coming down is marked (sound + flash).  Adds the scores #vuln #blk_n #blk_why #blk_tot #hit_n (README)
+    beam_first=False,       # True: the first attack after a back-off is always the eye beam (while the giant is within beam_range)
 )
+
+VIDEO = dict(
+    FULL,
+    core_hp=42,             # hits to win (60 in `full`).  NOTE: the story's guide (s07) reads #ch against 60 / 58..59 / ..57 - see README "Scores for the story": use #hit_n instead
+    crack_at=22,            # the core cracks with 22 hits left (20 hits into the fight)
+    backoff_hits=9,         # a back-off every 9 landed hits (8 in `full`): after hits 9, 18, 27
+    backoff_dist=20,        # it retreats 20 blocks (30): a 4-second walk back for the player
+    backoff_cd=30,          # 1.5 s between its arrival and the first attack (50)
+    backoff_speed=0.5,      # blocks per tick while retreating (0.45)
+    cd_thrust=120, cd_thrust_b=90,      # arm thrust cooldown, phase A / B (100 / 70): the dodging costs a first-time player less
+    intro_after_step=80,    # the Angel starts 4 s after the first steps (6 s): the walk-up is shorter
+    hit_cd=0,               # NO guard on the core: every swing that connects while the giant is in reach and the barrier is down counts
+    core_box=0.20,          # 6 blocks (4.5): a swing aimed at the core registers from farther off
+    near_box=0.35,          # 10.5 blocks: a swing aimed at the chest registers as a core hit
+    visible=True,
+    beam_first=True,
+    # --- the look of the two states and of the feedback (video only)
+    shield_dist=6.0,        # blocks in front of the core, toward the giant's eyes, where the octagon stands
+    shield_bar=0.9,         # thickness of the octagon's bars, blocks
+    halo_small=3.6, halo_big=5.2, halo_period=20,   # the pulsing halo cubes round the vulnerable core: edge (blocks) at the dim and the bright half of the pulse, ticks per pulse
+    dim_light=4,            # display brightness (0..15) of the dimmed core
+    flinch_back=0.7, flinch_ticks=3,                # a landed hit throws the monster back this many blocks for this many ticks
+    drop_pitch=1.8,         # the barrier-down cue: sfx.barrier played this high (the rising tone is at 1.0, a blocked swing's ring at 1.0)
+    block_pitch=1.4,        # the ring of a swing blocked by the barrier
+    crack_marks=(0.4, 0.8),     # crack progress: slivers of light 1 and 2 open at this fraction of the way to the crack (phase 1) and to the wrap (phase 2)
+)
+
+PRESETS = {"full": FULL, "video": VIDEO}
+CFG = {}                    # filled by set_pace(); modules keep a reference to this dict, so it is updated in place
+PACE = ""
+
+
+def set_pace(name):
+    """Selects the preset: fills CFG (in place) from PRESETS[name]."""
+    global PACE
+    if name not in PRESETS:
+        raise SystemExit(f"unknown pace {name!r}: choose one of {', '.join(PRESETS)}")
+    CFG.clear()
+    CFG.update(PRESETS[name])
+    PACE = name
+
+
+set_pace(os.environ.get("ANGEL_PACE", "").strip().lower() or "video")
 
 ARENA = dict(origin=(1160.0, 64.0, 160.0), angel=(1160.0, 64.0, 50.0), xmin=1152.0, xmax=1168.0, zmax=140.0)
 
@@ -81,6 +141,11 @@ def tjson(s):
 def gen(F, pack_function_dir, story_hand_exists):
     """F: dict path -> lines, relative to function/fight/."""
     C = CFG
+    G = C["hit_cd"] > 0              # the core guard exists (full); without it (video) none of its code is generated
+    V = bool(C["visible"])           # video: the two visible states (persistent octagon + dimmed core / pulsing core + halo), a feedback for every kind of swing, the barrier-down cue
+    FB = V
+    NB = C["near_box"] > 0           # the second, larger "near miss counts" box (video)
+    cbx = C["core_box"]              # the core's interaction box, fraction of the height
 
     def put(path, lines):
         F.setdefault(path, []).extend(lines if isinstance(lines, list) else lines.strip("\n").split("\n"))
@@ -165,6 +230,13 @@ def gen(F, pack_function_dir, story_hand_exists):
         sc("bo", 0), sc("bar", 0), sc("barp", 0), sc("hold", 0), sc("hold_t", 0), sc("hb", 0), sc("blockcd", 0), sc("sparkcd", 0), sc("barsnd", 0), sc("wallt", 0),
         sc("wgo", 0), sc("wwait", 0), sc("wstage", 0), sc("shud", 0), sc("hbt", 0), sc("whits", 0),
     ]
+    if not G:                                   # (full keeps #hitcd in the list; without a guard the score does not exist)
+        init_scores.remove(sc("hitcd", 0))
+    if V:
+        # the scores of the video preset: vs (look applied: 0 none, 1 vulnerable, 2 shielded), vuln (1: a swing at the core counts), vp (pulse phase), ptcd (core-point
+        # cooldown), fl (a flinch is out), blk_n / blk_why / blk_tot (blocked swings, see README), hit_n (landed core hits this attempt)
+        init_scores += [sc("vs", 0), sc("vuln", 0), sc("vp", 0), sc("ptcd", 0), sc("fl", 0), sc("blk_n", 0), sc("blk_why", 0), sc("blk_tot", 0), sc("hit_n", 0),
+                        sc("inreach", 0)]
     boss_init = [
         "bossbar set angel:fight/giant players @e[tag=angel.giant,type=minecraft:player]",
         "bossbar set angel:fight/angel players @e[tag=angel.giant,type=minecraft:player]",
@@ -244,6 +316,7 @@ def gen(F, pack_function_dir, story_hand_exists):
     put("stop_quiet", [
         "# cleans up everything of the fight except the player's scale",
         sc("run", 0), sc("phase", 0), sc("bar", 0), sc("hold", 0), sc("hb", 0),
+    ] + ([sc("vs", 0), sc("vuln", 0), sc("fl", 0), "schedule clear angel:fight/flinch_back", "schedule clear angel:fight/shield_calm"] if V else []) + [
         "stopsound @a * angel:sfx.heartbeat", "stopsound @a * angel:sfx.beam_charge",
         "schedule clear angel:fight/fx_fade", "schedule clear angel:fight/fx_clear", "schedule clear angel:fight/restart_go", "schedule clear angel:fight/restart_ck_go",
         "stopsound @a * minecraft:entity.warden.heartbeat",
@@ -327,24 +400,30 @@ def gen(F, pack_function_dir, story_hand_exists):
     # ============================================================ the giant each tick
     put("giant_tick", [
         "execute if score #ginv angel.fight matches 1.. run scoreboard players remove #ginv angel.fight 1",
-        "execute if score #hitcd angel.fight matches 1.. run scoreboard players remove #hitcd angel.fight 1",
+    ] + (["execute if score #hitcd angel.fight matches 1.. run scoreboard players remove #hitcd angel.fight 1"] if G else []) + [
         "execute if score #cd09 angel.fight matches 1.. run scoreboard players remove #cd09 angel.fight 1",
         "execute if score #blockcd angel.fight matches 1.. run scoreboard players remove #blockcd angel.fight 1",
         "execute if score #sparkcd angel.fight matches 1.. run scoreboard players remove #sparkcd angel.fight 1",
         "execute if score #barsnd angel.fight matches 1.. run scoreboard players remove #barsnd angel.fight 1",
+    ] + (["execute if score #ptcd angel.fight matches 1.. run scoreboard players remove #ptcd angel.fight 1"] if FB else []) + ([] if V else [
         "# the raised barrier (after a back-off) pulses as a wall of light",
         "execute if score #bar angel.fight matches 1 run scoreboard players add #barp angel.fight 1",
         "execute if score #barp angel.fight matches 24.. run function angel:fight/bar_pulse",
+    ]) + [
         "scoreboard players add #gcalm angel.fight 1",
         "scoreboard players add #t20 angel.fight 1",
         "execute if score #t20 angel.fight matches 20.. run function angel:fight/second",
         "execute store result bossbar angel:fight/giant value run scoreboard players get #gh angel.fight",
         "execute store result bossbar angel:fight/angel value run scoreboard players get #ch angel.fight",
         "execute if score #steps angel.fight matches 0 at @e[type=minecraft:marker,tag=angel.origin,limit=1] unless entity @e[tag=angel.giant,distance=..8] run function angel:fight/first_steps",
+    ] + ([
+        "# the two states, drawn: the octagon of light and the dimmed core while shielded, the burning core and its halo while vulnerable (and #vuln)",
+        "function angel:fight/vis_tick",
+    ] if V else [
         "# the barrier, drawn in light while the giant is too far to cancel it",
         "execute if score #wallt angel.fight matches 1.. run scoreboard players remove #wallt angel.fight 1",
         "execute unless score #wallt angel.fight matches 1.. run function angel:fight/wall_hint",
-    ])
+    ]))
     put("second", [
         sc("t20", 0),
         f"execute if score #gcalm angel.fight matches {C['regen_wait']}.. if score #gh angel.fight matches ..{C['giant_hp'] - 1} run scoreboard players add #gh angel.fight {C['regen_amt']}",
@@ -385,63 +464,149 @@ def gen(F, pack_function_dir, story_hand_exists):
     put("hit_tick", [
         "execute as @e[type=minecraft:interaction,tag=angel.core] if data entity @s attack at @s run function angel:fight/core_hit",
         "execute as @e[type=minecraft:interaction,tag=angel.body] if data entity @s attack at @s run function angel:fight/body_hit",
-    ])
-    cy = FH * 0.15 / 2          # the core's centre above the foot of its hit box
-    put("core_hit", [
-        "# one click on the core box.  Three outcomes: landed (in reach, core not guarded), guarded (in reach, 1.2 s after a landed hit: sparks, a dull clank,",
-        "# nothing else) and blocked (beyond arm's length, or the barrier is up after a back-off: the octagon of light).",
-        "# Only a LANDED hit arms the guard (#hitcd); blocked, guarded and body hits never do.",
-        "data remove entity @s attack",
-        "execute if score #phase angel.fight matches 4.. run return 0",
-        "# the wrap (phase 3): no guard, no reach, no barrier - every click that connects counts",
-        "execute if score #phase angel.fight matches 3 run return run function angel:fight/wrap_hit",
-        "execute if score #bar angel.fight matches 1 run return run function angel:fight/core_blocked",
-        f"# the giant's reach point is {C['reach_up']} up; the box's foot is half its height below the core centre",
-        f"execute store success score #inreach angel.fight positioned ~ ~-{C['reach_up'] - cy:.2f} ~ if entity @e[tag=angel.giant,distance=..{C['near']}]",
-        "execute if score #inreach angel.fight matches 1 if score #hitcd angel.fight matches 1.. run return run function angel:fight/core_guarded",
-        "execute if score #inreach angel.fight matches 1 run return run function angel:fight/core_land",
-        "function angel:fight/core_blocked",
-    ])
-    put("core_blocked", [
-        "# beyond arm's length (or the barrier is raised): the hit stops on the wall of light.  Rate-limited so that flailing is not a wall of noise",
-        "execute if score #blockcd angel.fight matches 1.. run return 0",
-        sc("blockcd", 6),
-        "execute if score #blocked1 angel.fight matches 0 run function angel:fight/first_blocked",
-        sc("wallt", 30),
-        f"execute positioned ~ {cy:.2f} ~ facing entity @e[tag=angel.giant,limit=1] eyes positioned ^ ^ ^6 run function angel:fight/wall_flash",
-    ])
-    put("core_guarded", [
-        "# a hit on the core inside its guard: a few sparks and a dull clank.  No damage, no counter, does not re-arm the guard",
-        "scoreboard players add #guarded angel.fight 1",
-        "execute if score #sparkcd angel.fight matches 1.. run return 0",
-        sc("sparkcd", 4),
-        f"particle minecraft:electric_spark ~ ~{cy:.2f} ~ 1 1 1 0.3 14 force",
-        f"particle minecraft:smoke ~ ~{cy:.2f} ~ 0.6 0.6 0.6 0.01 5 force",
-        # a dull metal clank (a vanilla stand-in: angel:sfx.barrier is a 3.6 s tone, which would turn a click into a note).  Volume 2.2: the
-        # server only sends a playsound to players within 16 x volume blocks of the origin, measured from the player's FEET (core ~ 22 away)
-        f"playsound minecraft:block.iron_trapdoor.close hostile @a ~ ~{cy:.2f} ~ 2.2 0.5",
-    ])
+    ] + (["execute as @e[type=minecraft:interaction,tag=angel.nearbox] if data entity @s attack run function angel:fight/near_hit"] if NB else []))
+    if NB:
+        put("near_hit", [
+            "# a swing that hit the larger 'near miss' box round the core is a swing at the core (the core box lies inside it, so this box is hit first)",
+            "data remove entity @s attack",
+            "execute as @e[type=minecraft:interaction,tag=angel.core,limit=1] at @s run function angel:fight/core_hit",
+        ])
+    cy = FH * cbx / 2           # the core's centre above the foot of its hit box
+    if not V:
+        put("core_hit", [
+            "# one click on the core box.  Three outcomes: landed (in reach, core not guarded), guarded (in reach, 1.2 s after a landed hit: sparks, a dull clank,",
+            "# nothing else) and blocked (beyond arm's length, or the barrier is up after a back-off: the octagon of light).",
+            "# Only a LANDED hit arms the guard (#hitcd); blocked, guarded and body hits never do.",
+            "data remove entity @s attack",
+            "execute if score #phase angel.fight matches 4.. run return 0",
+            "# the wrap (phase 3): no guard, no reach, no barrier - every click that connects counts",
+            "execute if score #phase angel.fight matches 3 run return run function angel:fight/wrap_hit",
+            "execute if score #bar angel.fight matches 1 run return run function angel:fight/core_blocked",
+            f"# the giant's reach point is {C['reach_up']} up; the box's foot is half its height below the core centre",
+            f"execute store success score #inreach angel.fight positioned ~ ~-{C['reach_up'] - cy:.2f} ~ if entity @e[tag=angel.giant,distance=..{C['near']}]",
+            "execute if score #inreach angel.fight matches 1 if score #hitcd angel.fight matches 1.. run return run function angel:fight/core_guarded",
+            "execute if score #inreach angel.fight matches 1 run return run function angel:fight/core_land",
+            "function angel:fight/core_blocked",
+        ])
+        put("core_blocked", [
+            "# beyond arm's length (or the barrier is raised): the hit stops on the wall of light.  Rate-limited so that flailing is not a wall of noise",
+            "execute if score #blockcd angel.fight matches 1.. run return 0",
+            sc("blockcd", 6),
+            "execute if score #blocked1 angel.fight matches 0 run function angel:fight/first_blocked",
+            sc("wallt", 30),
+            f"execute positioned ~ {cy:.2f} ~ facing entity @e[tag=angel.giant,limit=1] eyes positioned ^ ^ ^6 run function angel:fight/wall_flash",
+        ])
+        put("core_guarded", [
+            "# a hit on the core inside its guard: a few sparks and a dull clank.  No damage, no counter, does not re-arm the guard",
+            "scoreboard players add #guarded angel.fight 1",
+            "execute if score #sparkcd angel.fight matches 1.. run return 0",
+            sc("sparkcd", 4),
+            f"particle minecraft:electric_spark ~ ~{cy:.2f} ~ 1 1 1 0.3 14 force",
+            f"particle minecraft:smoke ~ ~{cy:.2f} ~ 0.6 0.6 0.6 0.01 5 force",
+            # a dull metal clank (a vanilla stand-in: angel:sfx.barrier is a 3.6 s tone, which would turn a click into a note).  Volume 2.2: the
+            # server only sends a playsound to players within 16 x volume blocks of the origin, measured from the player's FEET (core ~ 22 away)
+            f"playsound minecraft:block.iron_trapdoor.close hostile @a ~ ~{cy:.2f} ~ 2.2 0.5",
+        ])
+    else:
+        # ---- the video rules.  One swing that hit the core box (or the box round it) has exactly two outcomes, decided by ONE test, #vuln (kept by vis_state):
+        # the barrier is down AND the giant is within arm's length -> LANDED, and nothing else can swallow it (there is no guard); otherwise BLOCKED.
+        put("core_hit", [
+            "# one swing that hit the core (the core box, or the larger box round it).  Two outcomes, judged by ONE test (#vuln, see vis_state): the barrier is down and the",
+            "# giant is within arm's length -> LANDED (it always counts: there is no guard); otherwise BLOCKED (the octagon flares, a ringing tone, #blk_n / #blk_why).",
+            "# The wrap (phase 3) is separate: every swing that connects counts.",
+            "data remove entity @s attack",
+            "execute if score #phase angel.fight matches 4.. run return 0",
+            "execute if score #phase angel.fight matches 3 run return run function angel:fight/wrap_hit",
+            "function angel:fight/vis_state",
+            "execute if score #vuln angel.fight matches 1 run return run function angel:fight/core_land",
+            "function angel:fight/core_blocked",
+        ])
+        put("core_blocked", [
+            "# a swing the barrier stopped: the giant is too far (#blk_why 1) or the back-off barrier is up (#blk_why 2).  Every one is counted (#blk_n since the last landed hit /",
+            "# barrier change, #blk_tot in all); the effects are rate-limited so that flailing is not a wall of noise",
+            "scoreboard players add #blk_n angel.fight 1",
+            "scoreboard players add #blk_tot angel.fight 1",
+            "execute if score #bar angel.fight matches 1 run scoreboard players set #blk_why angel.fight 2",
+            "execute unless score #bar angel.fight matches 1 run scoreboard players set #blk_why angel.fight 1",
+            "execute if score #blockcd angel.fight matches 1.. run return 0",
+            sc("blockcd", 6),
+            "execute if score #blocked1 angel.fight matches 0 run function angel:fight/first_blocked",
+            "# the octagon flares white and rings (at the core box's foot, the tone is a 3.6 s sound: at most one per 2 s)",
+            "function angel:fight/shield_flare",
+            "execute unless score #barsnd angel.fight matches 1.. run function angel:fight/barrier_tone",
+        ])
     put("first_blocked", [sc("blocked1", 1), 'function angel:fight/bark {id:"7_06"}', 'function angel:fight/bark {id:"7_07"}',
                           'function angel:fight/bark {id:"7_08"}'])
-    put("core_land", [
-        "# within arm's length the fields cancel and the hit lands on the core.  This (and only this) arms the core's guard",
-        sc("hitcd", C["hit_cd"]),
-        "scoreboard players remove #ch angel.fight 1",
-        "execute if score #ch angel.fight matches ..-1 run scoreboard players set #ch angel.fight 0",
-        f"particle minecraft:flash{{color:[1.0,0.55,0.45,1.0]}} ~ ~{FH * 0.15 / 2:.2f} ~ 0 0 0 0 1 force",
-        f"particle minecraft:crit ~ ~{FH * 0.15 / 2:.2f} ~ 1.2 1.2 1.2 0.4 30 force",
-        f"particle minecraft:dust{{color:[1.0,0.1,0.1],scale:2.5}} ~ ~{FH * 0.15 / 2:.2f} ~ 1.4 1.4 1.4 0 24 force",
-        "playsound angel:sfx.giant_punch hostile @a ~ ~ ~ 3 1",
-        'function angel:fight/bark {id:"7_08"}',
-        "# back-off: every backoff_hits landed hits (the wrap phase excluded) the monster disengages",
-        "execute if score #phase angel.fight matches 1..2 run scoreboard players add #bo angel.fight 1",
-        "execute if score #st angel.fight matches 3 run function angel:fight/begin_stagger",
-        f"execute if score #phase angel.fight matches 1 if score #ch angel.fight matches ..{C['crack_at']} run function angel:fight/core_crack",
-        f"execute if score #phase angel.fight matches 1..2 if score #ch angel.fight matches ..{C['wrap_at']} run function angel:fight/wrap_start",
-        f"execute if score #phase angel.fight matches 1..2 if score #bo angel.fight matches {C['backoff_hits']}.. if score #ch angel.fight matches 1.. run function angel:fight/backoff_check",
-    ])
+    if not V:
+        put("core_land", [
+            "# within arm's length the fields cancel and the hit lands on the core.  This (and only this) arms the core's guard",
+        ] + ([sc("hitcd", C["hit_cd"])] if G else []) + [
+            "scoreboard players remove #ch angel.fight 1",
+            "execute if score #ch angel.fight matches ..-1 run scoreboard players set #ch angel.fight 0",
+            f"particle minecraft:flash{{color:[1.0,0.55,0.45,1.0]}} ~ ~{cy:.2f} ~ 0 0 0 0 1 force",
+            f"particle minecraft:crit ~ ~{cy:.2f} ~ 1.2 1.2 1.2 0.4 30 force",
+            f"particle minecraft:dust{{color:[1.0,0.1,0.1],scale:2.5}} ~ ~{cy:.2f} ~ 1.4 1.4 1.4 0 24 force",
+            "playsound angel:sfx.giant_punch hostile @a ~ ~ ~ 3 1",
+            'function angel:fight/bark {id:"7_08"}',
+            "# back-off: every backoff_hits landed hits (the wrap phase excluded) the monster disengages",
+            "execute if score #phase angel.fight matches 1..2 run scoreboard players add #bo angel.fight 1",
+            "execute if score #st angel.fight matches 3 run function angel:fight/begin_stagger",
+            f"execute if score #phase angel.fight matches 1 if score #ch angel.fight matches ..{C['crack_at']} run function angel:fight/core_crack",
+            f"execute if score #phase angel.fight matches 1..2 if score #ch angel.fight matches ..{C['wrap_at']} run function angel:fight/wrap_start",
+            f"execute if score #phase angel.fight matches 1..2 if score #bo angel.fight matches {C['backoff_hits']}.. if score #ch angel.fight matches 1.. run function angel:fight/backoff_check",
+        ])
+    else:
+        # crack progress: in phase 1 the slivers of light 1 and 2 open at crack_marks of the way to the crack, in phase 2 at the same fractions of the way to the wrap
+        # (the crack and core_stage_1 close them again); the wrap's own cracks open 1 to 4 at wrap_crack_hits hits left
+        span1, span2 = C["core_hp"] - C["crack_at"], C["crack_at"] - C["wrap_at"]
+        m1, m2 = C["crack_marks"]
+        t1, t2 = C["core_hp"] - math.ceil(m1 * span1), C["core_hp"] - math.ceil(m2 * span1)
+        u1, u2 = C["crack_at"] - math.ceil(m1 * span2), C["crack_at"] - math.ceil(m2 * span2)
+        put("core_land", [
+            "# a swing that connects while the barrier is down and the giant is within arm's length.  It ALWAYS counts: there is no guard, nothing else gates it",
+            "scoreboard players remove #ch angel.fight 1",
+            "execute if score #ch angel.fight matches ..-1 run scoreboard players set #ch angel.fight 0",
+            "scoreboard players add #hit_n angel.fight 1",
+            sc("blk_n", 0), sc("blk_why", 0),
+            f"particle minecraft:flash{{color:[1.0,0.55,0.45,1.0]}} ~ ~{cy:.2f} ~ 0 0 0 0 1 force",
+            f"particle minecraft:crit ~ ~{cy:.2f} ~ 1.2 1.2 1.2 0.4 30 force",
+            f"particle minecraft:dust{{color:[1.0,0.1,0.1],scale:2.5}} ~ ~{cy:.2f} ~ 1.4 1.4 1.4 0 24 force",
+            "playsound angel:sfx.giant_punch hostile @a ~ ~ ~ 3 1",
+            'function angel:fight/bark {id:"7_08"}',
+            "# crack progress (slivers of light across the core)",
+            f"execute if score #phase angel.fight matches 1 if score #ch angel.fight matches ..{t1} run function angel:angel/core_crack_1",
+            f"execute if score #phase angel.fight matches 1 if score #ch angel.fight matches ..{t2} run function angel:angel/core_crack_2",
+            f"execute if score #phase angel.fight matches 2 if score #ch angel.fight matches ..{u1} run function angel:angel/core_crack_1",
+            f"execute if score #phase angel.fight matches 2 if score #ch angel.fight matches ..{u2} run function angel:angel/core_crack_2",
+            "# back-off: every backoff_hits landed hits (the wrap phase excluded) the monster disengages",
+            "execute if score #phase angel.fight matches 1..2 run scoreboard players add #bo angel.fight 1",
+            "execute if score #st angel.fight matches 3 run function angel:fight/begin_stagger",
+            f"execute if score #phase angel.fight matches 1 if score #ch angel.fight matches ..{C['crack_at']} run function angel:fight/core_crack",
+            f"execute if score #phase angel.fight matches 1..2 if score #ch angel.fight matches ..{C['wrap_at']} run function angel:fight/wrap_start",
+            f"execute if score #phase angel.fight matches 1..2 if score #bo angel.fight matches {C['backoff_hits']}.. if score #ch angel.fight matches 1.. run function angel:fight/backoff_check",
+            "# the monster flinches (not when it is staggering, thrown back, retreating or wrapped: its own motion says it)",
+            "execute if score #st angel.fight matches 0..4 run function angel:fight/flinch",
+        ])
+        put("flinch", [
+            "# a landed hit throws the monster back flinch_back blocks for flinch_ticks ticks (the parts glide: teleport_duration 2).  Not twice at once, not while it is wrapped",
+            "execute if score #fl angel.fight matches 1 run return 0",
+            "execute if score #phase angel.fight matches 3.. run return 0",
+            sc("fl", 1),
+            f"execute as @e[type=minecraft:marker,tag=angel.root,limit=1] at @s run tp @s ^ ^ ^-{C['flinch_back']}",
+            "function angel:angel/sync",
+            f"schedule function angel:fight/flinch_back {C['flinch_ticks']}t",
+        ])
+        put("flinch_back", [
+            sc("fl", 0),
+            "execute unless entity @e[type=minecraft:marker,tag=angel.root] run return 0",
+            "execute if score #phase angel.fight matches 3.. run return 0",
+            "# (a back-off that began meanwhile moves it by itself)",
+            "execute if score #st angel.fight matches 9..10 run return 0",
+            f"execute as @e[type=minecraft:marker,tag=angel.root,limit=1] at @s run tp @s ^ ^ ^{C['flinch_back']}",
+            "function angel:angel/sync",
+        ])
     # ---- the wrap's hit: the same for the core box and the (big) body box
-    cyw = FH * 0.15 / 2
+    cyw = FH * cbx / 2
     put("wrap_hit", [
         "# a landed hit while the monster is wrapped round the giant (phase 3).  No guard, no reach: it always counts.  Feedback: the core flashes and cracks further",
         "# (crack 1..4 as the hits left fall), the wrap shudders (pose wrap_hit), sfx.giant_punch, the countdown bar jumps back (wrap_bonus), the hits left on the action bar",
@@ -449,6 +614,7 @@ def gen(F, pack_function_dir, story_hand_exists):
         "scoreboard players remove #ch angel.fight 1",
         "execute if score #ch angel.fight matches ..-1 run scoreboard players set #ch angel.fight 0",
         "scoreboard players add #whits angel.fight 1",
+        ] + (["scoreboard players add #hit_n angel.fight 1"] if V else []) + [
         f"execute if score #st angel.fight matches 7 run scoreboard players add #wt angel.fight {C['wrap_bonus']}",
         f"execute if score #wt angel.fight matches {C['wrap_ticks'] + 1}.. run scoreboard players set #wt angel.fight {C['wrap_ticks']}",
         "execute as @e[type=minecraft:interaction,tag=angel.core,limit=1] at @s run function angel:fight/wrap_hit_fx",
@@ -467,17 +633,44 @@ def gen(F, pack_function_dir, story_hand_exists):
         f"particle minecraft:end_rod ~ ~{cyw:.2f} ~ 1.2 1.2 1.2 0.35 14 force",
         "playsound angel:sfx.giant_punch hostile @a ~ ~ ~ 3 1",
     ])
-    put("body_hit", [
-        "# the body box only sparks: no damage, and it does not arm the core's guard.  (While the monster is wrapped round the giant it is the big box and counts as a core hit)",
-        "data remove entity @s attack",
-        "execute if score #phase angel.fight matches 3 run return run function angel:fight/wrap_hit",
-        "execute if score #sparkcd angel.fight matches 1.. run return 0",
-        sc("sparkcd", 4),
-        "particle minecraft:crit ~ ~ ~ 1 1 1 0.2 6 force",
-        "particle minecraft:electric_spark ~ ~ ~ 1.5 1.5 1.5 0.2 8 force",
-        "playsound minecraft:block.anvil.hit hostile @a ~ ~ ~ 2 1.8",
-        'function angel:fight/bark {id:"7_08"}',
-    ])
+    if not V:
+        put("body_hit", [
+            "# the body box only sparks: no damage, and it does not arm the core's guard.  (While the monster is wrapped round the giant it is the big box and counts as a core hit)",
+            "data remove entity @s attack",
+            "execute if score #phase angel.fight matches 3 run return run function angel:fight/wrap_hit",
+            "execute if score #sparkcd angel.fight matches 1.. run return 0",
+            sc("sparkcd", 4),
+            "particle minecraft:crit ~ ~ ~ 1 1 1 0.2 6 force",
+            "particle minecraft:electric_spark ~ ~ ~ 1.5 1.5 1.5 0.2 8 force",
+            "playsound minecraft:block.anvil.hit hostile @a ~ ~ ~ 2 1.8",
+            'function angel:fight/bark {id:"7_08"}',
+        ])
+    else:
+        bc = gen_angel.BODY_H * FH / 2           # the body box's centre above its foot
+        put("body_hit", [
+            "# the body box: no damage.  Small sparks and a dull thud say 'you hit it, but not there', and the core flashes once to point at the place to hit.",
+            "# (While the monster is wrapped round the giant it is the big box and counts as a core hit)",
+            "data remove entity @s attack",
+            "execute if score #phase angel.fight matches 3 run return run function angel:fight/wrap_hit",
+            "execute if score #sparkcd angel.fight matches 1.. run return 0",
+            sc("sparkcd", 4),
+            f"particle minecraft:crit ~ ~{bc:.2f} ~ 0.8 0.8 0.8 0.2 5 force",
+            f"particle minecraft:electric_spark ~ ~{bc:.2f} ~ 1.0 1.0 1.0 0.15 6 force",
+            # a dull thud, low (a vanilla sound; volume 2.5 so that it reaches a player whose feet are ~20 blocks from the body box)
+            f"playsound minecraft:block.stone.hit hostile @a ~ ~{bc:.2f} ~ 2.5 0.5",
+            'function angel:fight/bark {id:"7_08"}',
+            "execute if score #ptcd angel.fight matches 0 run function angel:fight/core_point",
+        ])
+        put("core_point", [
+            "# the core flashes once (at most one per 0.7 s) so that a swing at the body points him at the place to hit",
+            sc("ptcd", 14),
+            "execute as @e[type=minecraft:interaction,tag=angel.core,limit=1] at @s positioned ~ ~%.2f ~ run function angel:fight/core_point_at" % cy,
+        ])
+        put("core_point_at", [
+            "particle minecraft:flash{color:[1.0,0.35,0.25,1.0]} ~ ~ ~ 0 0 0 0 1 force",
+            "particle minecraft:end_rod ~ ~ ~ 1.4 1.4 1.4 0.12 14 force",
+            "particle minecraft:dust{color:[1.0,0.1,0.1],scale:3.0} ~ ~ ~ 1.6 1.6 1.6 0 14 force",
+        ])
 
     # ============================================================ barrier drawing
     R = 0.45 * FH
@@ -488,10 +681,9 @@ def gen(F, pack_function_dir, story_hand_exists):
                  sc("wallt", 10),
                  "# (with the barrier raised after a back-off it is drawn at any distance)",
                  "execute unless score #bar angel.fight matches 1 as @e[type=minecraft:interaction,tag=angel.core,limit=1] at @s positioned ~ ~2.25 ~ unless entity @e[tag=angel.giant,distance=..60] run return 0",
-                 f"execute unless score #bar angel.fight matches 1 as @e[type=minecraft:interaction,tag=angel.core,limit=1] at @s positioned ~ ~{FH * 0.075:.2f} ~ positioned ~ ~-{C['reach_up']} ~ if entity @e[tag=angel.giant,distance=..{C['near']}] run return 0",
-                 f"execute as @e[type=minecraft:interaction,tag=angel.core,limit=1] at @s positioned ~ ~{FH * 0.075:.2f} ~ facing entity @e[tag=angel.giant,limit=1] eyes positioned ^ ^ ^6 run function angel:fight/wall_dots"]
+                 f"execute unless score #bar angel.fight matches 1 as @e[type=minecraft:interaction,tag=angel.core,limit=1] at @s positioned ~ ~{cy:.2f} ~ positioned ~ ~-{C['reach_up']} ~ if entity @e[tag=angel.giant,distance=..{C['near']}] run return 0",
+                 f"execute as @e[type=minecraft:interaction,tag=angel.core,limit=1] at @s positioned ~ ~{cy:.2f} ~ facing entity @e[tag=angel.giant,limit=1] eyes positioned ^ ^ ^6 run function angel:fight/wall_dots"]
     put("wall_hint", wall_hint)
-    import math
     dots = []
     for i in range(8):
         a = math.radians(22.5 + 45 * i)
@@ -547,6 +739,155 @@ def gen(F, pack_function_dir, story_hand_exists):
                       f"execute as @e[type=minecraft:interaction,tag=angel.core,limit=1] at @s positioned ~ ~{cy:.2f} ~ facing entity @e[tag=angel.giant,limit=1] eyes positioned ^ ^ ^6 run function angel:fight/wall_draw"])
     put("fx_fade", ["execute as @e[type=minecraft:block_display,tag=angel.flash] run data merge entity @s {start_interpolation:0,interpolation_duration:9,transformation:{scale:[0f,0f,0f]}}"])
     put("fx_clear", ["kill @e[type=minecraft:block_display,tag=angel.flash]"])
+
+    # ============================================================ the two visible states (video)
+    # VULNERABLE (#vuln 1): the barrier is down and the giant is within arm's length (or the wrap): the core burns bright red, pulsing, in a soft halo, nothing in front of it.
+    # SHIELDED  (#vuln 0): the back-off barrier is up, or the giant is too far: the core is dimmed and a bright octagon of light stands in front of the monster.
+    # No third state.  vis_state computes #vuln (the same test core_hit judges a swing by) and switches the look when it changes; vis_tick (every tick) also keeps
+    # the octagon / the halo on the core and pulses the halo.
+    if V:
+        for k in ("wall_hint", "wall_dots", "wall_draw", "barrier_tone", "wall_flash", "bar_pulse"):
+            F.pop(k, None)             # the faint dotted octagon and its once-per-hit flash are replaced by the persistent one below
+        D6 = C["shield_dist"]
+        RS = 0.45 * FH                 # radius of the octagon (blocks)
+        core_sel = "@e[type=minecraft:interaction,tag=angel.core,limit=1]"
+        giant1 = "@e[tag=angel.giant,limit=1]"
+        at_shield = f"positioned ~ ~{cy:.2f} ~ facing entity {giant1} eyes positioned ^ ^ ^{D6:g}"          # (the octagon's centre, from the core box's foot)
+        put("vis_state", [
+            "# the one test: can a swing at the core count right now?  #vuln 1 = the barrier is down AND the giant is within arm's length of the core (or the monster is wrapped).",
+            "# On a change the look is switched (vis_hot / vis_dim).",
+            "execute unless entity @e[type=minecraft:marker,tag=angel.root] run return 0",
+            "execute if score #phase angel.fight matches 4.. run return 0",
+            sc("inreach", 0),
+            f"execute as {core_sel} at @s positioned ~ ~-{C['reach_up'] - cy:.2f} ~ store success score #inreach angel.fight if entity @e[tag=angel.giant,distance=..{C['near']}]",
+            sc("vuln", 0),
+            "execute if score #inreach angel.fight matches 1 if score #bar angel.fight matches 0 run scoreboard players set #vuln angel.fight 1",
+            "execute if score #phase angel.fight matches 3 run scoreboard players set #vuln angel.fight 1",
+            "execute if score #vuln angel.fight matches 1 unless score #vs angel.fight matches 1 run function angel:fight/vis_hot",
+            "execute if score #vuln angel.fight matches 0 unless score #vs angel.fight matches 2 run function angel:fight/vis_dim",
+        ])
+        put("vis_tick", [
+            "function angel:fight/vis_state",
+            "execute if score #vs angel.fight matches 1 run function angel:fight/hot_tick",
+            "execute if score #vs angel.fight matches 2 run function angel:fight/shield_follow",
+        ])
+        put("vis_off", [
+            "# the fight is over (won or lost): nothing of either state is left standing",
+            "kill @e[type=minecraft:block_display,tag=angel.shield]", "kill @e[type=minecraft:block_display,tag=angel.hot]",
+            sc("vs", 0), sc("vuln", 0),
+        ])
+        cb = "execute as @e[type=minecraft:block_display,tag=angel.corebody] unless entity @s[tag=angel.halo] run data merge entity @s"
+        hot_b = "{block:15,sky:15}"
+        dim_b = "{block:%d,sky:%d}" % (C["dim_light"], C["dim_light"])
+        # ---- the halo: two cubes of red glass (one turned 45 degrees about the vertical) that breathe between halo_small and halo_big
+        hs, hb, per = C["halo_small"], C["halo_big"], C["halo_period"]
+
+        def hot_tr(s, turned):
+            h = s / 2
+            return (-h * math.sqrt(2), -h, 0.0) if turned else (-h, -h, -h)
+
+        def hot_summon(turned):
+            tr = hot_tr(hs, turned)
+            q = "0f,0.3827f,0f,0.9239f" if turned else "0f,0f,0f,1f"
+            return (f'summon minecraft:block_display ~ ~ ~ {{Tags:["angel.fight","angel.hot","angel.hot{"b" if turned else "a"}"],block_state:"{model.VEIL}",view_range:16f,'
+                    f'interpolation_duration:{per // 2},teleport_duration:2,brightness:{hot_b},'
+                    f'transformation:{{translation:[{tr[0]:.3f}f,{tr[1]:.3f}f,{tr[2]:.3f}f],left_rotation:[{q}],scale:[{hs:.3f}f,{hs:.3f}f,{hs:.3f}f],right_rotation:[0f,0f,0f,1f]}}}}')
+
+        def hot_merge(s, turned):
+            tr = hot_tr(s, turned)
+            return (f'execute as @e[type=minecraft:block_display,tag=angel.hot{"b" if turned else "a"}] run data merge entity @s {{start_interpolation:0,interpolation_duration:{per // 2},'
+                    f'transformation:{{translation:[{tr[0]:.3f}f,{tr[1]:.3f}f,{tr[2]:.3f}f],scale:[{s:.3f}f,{s:.3f}f,{s:.3f}f]}}}}')
+        put("vis_hot", [
+            "# VULNERABLE: the core burns (stage block: whole = red concrete, cracked = magma), full bright; its glow strips and veil are back; a halo of red glass pulses round it; no octagon",
+            sc("vs", 1), sc("vp", 0), sc("blk_n", 0), sc("blk_why", 0),
+            "kill @e[type=minecraft:block_display,tag=angel.shield]",
+            f'execute if score #phase angel.fight matches ..1 {cb[len("execute "):]} {{block_state:"{model.CORE}",brightness:{hot_b}}}',
+            f'execute if score #phase angel.fight matches 2.. {cb[len("execute "):]} {{block_state:"{model.CORE_CRACKED}",brightness:{hot_b}}}',
+            'execute as @e[type=minecraft:block_display,tag=angel.halo] run data merge entity @s {block_state:"minecraft:red_stained_glass"}',
+            f'execute as @e[type=minecraft:block_display,tag=angel.coreglow] run data merge entity @s {{block_state:"{model.GLOW}",brightness:{hot_b}}}',
+            f'execute as @e[type=minecraft:block_display,tag=angel.veil] run data merge entity @s {{block_state:"{model.VEIL}"}}',
+            "kill @e[type=minecraft:block_display,tag=angel.hot]",
+            f"execute as {core_sel} at @s positioned ~ ~{cy:.2f} ~ run function angel:fight/hot_make",
+        ])
+        put("hot_make", [hot_summon(False), hot_summon(True)])
+        put("hot_tick", [
+            "# follows the core and breathes (a pulse every halo_period ticks: the cubes grow to halo_big over half of it, shrink back over the other half)",
+            f"execute as {core_sel} at @s positioned ~ ~{cy:.2f} ~ run tp @e[type=minecraft:block_display,tag=angel.hot] ~ ~ ~",
+            "scoreboard players add #vp angel.fight 1",
+            "execute if score #vp angel.fight matches 1 run function angel:fight/hot_big",
+            f"execute if score #vp angel.fight matches {per // 2 + 1} run function angel:fight/hot_small",
+            f"execute if score #vp angel.fight matches {per}.. run scoreboard players set #vp angel.fight 0",
+        ])
+        put("hot_big", [hot_merge(hb, False), hot_merge(hb, True),
+                        f"execute as {core_sel} at @s positioned ~ ~{cy:.2f} ~ run particle minecraft:dust{{color:[1.0,0.1,0.1],scale:3.0}} ~ ~ ~ 1.8 1.8 1.8 0 8 force"])
+        put("hot_small", [hot_merge(hs, False), hot_merge(hs, True)])
+        put("vis_dim", [
+            "# SHIELDED: the core is dimmed (dull terracotta, low light), the glow strips and veil are out, the halo is gone, and the octagon of light stands in front of the monster",
+            sc("vs", 2),
+            "kill @e[type=minecraft:block_display,tag=angel.hot]",
+            f'{cb} {{block_state:"minecraft:red_terracotta",brightness:{dim_b}}}',
+            'execute as @e[type=minecraft:block_display,tag=angel.halo] run data merge entity @s {block_state:"minecraft:gray_stained_glass"}',
+            f'execute as @e[type=minecraft:block_display,tag=angel.coreglow] run data merge entity @s {{block_state:"minecraft:red_terracotta",brightness:{dim_b}}}',
+            'execute as @e[type=minecraft:block_display,tag=angel.veil] run data merge entity @s {block_state:"minecraft:air"}',
+            "kill @e[type=minecraft:block_display,tag=angel.shield]",
+            f"execute as {core_sel} at @s {at_shield} run function angel:fight/shield_make",
+        ])
+        # ---- the octagon: 8 bars + 2 translucent squares (as the old flash), but PERSISTENT (tag angel.shield) and kept on the core by shield_follow
+        def sdisp(block, tr, rot, sc3, kind):
+            return (f'summon minecraft:block_display ~ ~ ~ {{Tags:["angel.fight","angel.shield","{kind}"],block_state:"{block}",view_range:16f,interpolation_duration:0,teleport_duration:2,'
+                    f'brightness:{{block:15,sky:15}},transformation:{{translation:[{tr[0]:.3f}f,{tr[1]:.3f}f,{tr[2]:.3f}f],left_rotation:[0f,0f,{math.sin(rot / 2):.4f}f,{math.cos(rot / 2):.4f}f],'
+                    f'scale:[{sc3[0]:.3f}f,{sc3[1]:.3f}f,{sc3[2]:.3f}f],right_rotation:[0f,0f,0f,1f]}}}}')
+        apS = RS * 0.9239
+        s_edgeS = 2 * RS * math.sin(math.pi / 8)
+        thS = C["shield_bar"]
+        sh = ["# the octagon of light: 8 bars + 2 translucent squares in the plane facing the giant; persistent until the state changes"]
+        for i in range(8):
+            a_ = math.radians(45 * i)
+            c_ = (apS * math.cos(a_), apS * math.sin(a_))
+            sz = (thS, s_edgeS, thS)
+            h_ = (sz[0] / 2, sz[1] / 2, sz[2] / 2)
+            tx = c_[0] - (math.cos(a_) * h_[0] - math.sin(a_) * h_[1])
+            ty = c_[1] - (math.sin(a_) * h_[0] + math.cos(a_) * h_[1])
+            sh.append(sdisp("minecraft:orange_concrete", (tx, ty, -h_[2]), a_, sz, "angel.sbar"))
+        hhS = 0.7 * RS
+        for rot_deg in (0, 45):
+            a_ = math.radians(rot_deg)
+            sz = (2 * hhS, 2 * hhS, 0.2)
+            h_ = (hhS, hhS, 0.1)
+            tx = -(math.cos(a_) * h_[0] - math.sin(a_) * h_[1])
+            ty = -(math.sin(a_) * h_[0] + math.cos(a_) * h_[1])
+            sh.append(sdisp("minecraft:orange_stained_glass", (tx, ty, -0.1), a_, sz, "angel.sfill"))
+        sh.append("tp @e[type=minecraft:block_display,tag=angel.shield] ~ ~ ~ ~ ~")
+        put("shield_make", sh)
+        put("shield_follow", [f"execute as {core_sel} at @s {at_shield} run tp @e[type=minecraft:block_display,tag=angel.shield] ~ ~ ~ ~ ~"])
+        put("shield_flare", [
+            "# a swing hit the barrier (or it just went up / down): the octagon flares white for 3 ticks, with a burst of light",
+            "execute unless entity @e[type=minecraft:block_display,tag=angel.sbar,limit=1] run return 0",
+            'execute as @e[type=minecraft:block_display,tag=angel.sbar] run data merge entity @s {block_state:"minecraft:white_concrete"}',
+            'execute as @e[type=minecraft:block_display,tag=angel.sfill] run data merge entity @s {block_state:"minecraft:white_stained_glass"}',
+            f"execute as {core_sel} at @s {at_shield} run function angel:fight/shield_flare_fx",
+            "schedule function angel:fight/shield_calm 3t",
+        ])
+        put("shield_flare_fx", [
+            "particle minecraft:flash{color:[1.0,0.7,0.3,1.0]} ~ ~ ~ 0 0 0 0 1 force",
+            "particle minecraft:end_rod ~ ~ ~ 5 5 5 0.25 36 force",
+            "particle minecraft:electric_spark ~ ~ ~ 6 6 6 0.4 30 force",
+        ])
+        put("shield_calm", [
+            'execute as @e[type=minecraft:block_display,tag=angel.sbar] run data merge entity @s {block_state:"minecraft:orange_concrete"}',
+            'execute as @e[type=minecraft:block_display,tag=angel.sfill] run data merge entity @s {block_state:"minecraft:orange_stained_glass"}',
+        ])
+        put("barrier_tone", [sc("barsnd", 40), f"playsound angel:sfx.barrier hostile @a ~ ~ ~ 3 {C['block_pitch']:g}"])
+        put("barrier_up", [sc("barsnd", 40), "# the barrier goes up (a back-off begins): the rising tone, lower than a blocked swing's ring and far lower than the drop cue",
+                           "playsound angel:sfx.barrier hostile @a ~ ~ ~ 3 1"])
+        put("drop_cue", [
+            "# at the core box's foot: the barrier of a back-off comes down.  A high rising tone, a bright chime, a flash and a burst of light - 'you can hit it again'",
+            "scoreboard players add #drops angel.fight 1",      # (a counter for the selftest: how often the cue ran)
+            f"playsound angel:sfx.barrier hostile @a ~ ~ ~ 4 {C['drop_pitch']:g}",
+            "playsound minecraft:block.beacon.activate hostile @a ~ ~ ~ 4 1.5",
+            f"particle minecraft:flash{{color:[0.6,0.9,1.0,1.0]}} ~ ~{cy:.2f} ~ 0 0 0 0 1 force",
+            f"particle minecraft:end_rod ~ ~{cy:.2f} ~ 3 3 3 0.2 40 force",
+        ])
 
     # a cross of light (hit by the beam): vertical bar and two horizontal ones, so it reads as a cross from anywhere
     def cross(prefix, v, hbar, thick, block="minecraft:white_concrete", at_y=0.0):
@@ -634,7 +975,10 @@ def gen(F, pack_function_dir, story_hand_exists):
     put("face_giant", [
         "tp @e[type=minecraft:marker,tag=angel.target,limit=1] @e[tag=angel.giant,limit=1]",
         "function angel:angel/turn", "function angel:angel/sync"])
-    put("choose", [
+    put("choose", ([
+        "# the first attack after a back-off (it is holding its ground, barrier up) is always the eye beam, wherever the giant stands: the player must meet the beam",
+        f"execute if score #hold angel.fight matches 1 as @e[type=minecraft:marker,tag=angel.root,limit=1] at @s if entity @e[tag=angel.giant,distance=..{C['beam_range']}] run return run function angel:fight/begin_beam",
+    ] if C["beam_first"] else []) + [
         f"execute as @e[type=minecraft:marker,tag=angel.root,limit=1] at @s if entity @e[tag=angel.giant,distance=..{C['thrust_range']}] run return run function angel:fight/begin_thrust",
         f"execute as @e[type=minecraft:marker,tag=angel.root,limit=1] at @s if entity @e[tag=angel.giant,distance=..{C['beam_range']}] run return run function angel:fight/begin_beam",
     ])
@@ -827,8 +1171,16 @@ def gen(F, pack_function_dir, story_hand_exists):
         "stopsound @a * angel:sfx.beam_charge",
         "function angel:fight/backoff_aim",
         "execute at @e[type=minecraft:marker,tag=angel.root,limit=1] run playsound minecraft:entity.warden.hurt hostile @a ~ ~ ~ 8 0.6",
+        ] + ([
+        "# the barrier goes up: the persistent octagon is built and flares, with the rising tone (it stays until the hold ends)",
+        sc("blk_n", 0), sc("blk_why", 0),
+        "function angel:fight/vis_state",
+        "function angel:fight/shield_flare",
+        "execute as @e[type=minecraft:interaction,tag=angel.core,limit=1] at @s run function angel:fight/barrier_up",
+    ] if V else [
         "# the barrier goes up: the octagon flares at the core (and keeps pulsing until the hold ends)",
         f"execute as @e[type=minecraft:interaction,tag=angel.core,limit=1] at @s positioned ~ ~{cy:.2f} ~ facing entity @e[tag=angel.giant,limit=1] eyes positioned ^ ^ ^6 run function angel:fight/wall_flash",
+    ]) + [
         'bossbar set angel:fight/angel name {"text":"ANGEL  -  barrier up, it is falling back","color":"red"}',
     ])
     put("backoff_aim", [
@@ -897,9 +1249,16 @@ def gen(F, pack_function_dir, story_hand_exists):
         sc("hold", 0), sc("bar", 0), sc("barp", 0), sc("nav", 99),
         'execute if score #phase angel.fight matches 1 run bossbar set angel:fight/angel name {"text":"ANGEL","color":"red"}',
         'execute if score #phase angel.fight matches 2 run bossbar set angel:fight/angel name {"text":"ANGEL  -  core cracked","color":"red"}',
+    ] + ([
+        "# the barrier comes down: a distinct cue (high tone, chime, flash and a burst of light) and the look follows at once (burning core if he is in reach, else the octagon of range)",
+        sc("blk_n", 0), sc("blk_why", 0),
+        "function angel:fight/vis_state",
+        "execute as @e[type=minecraft:interaction,tag=angel.core,limit=1] at @s run function angel:fight/drop_cue",
+        "function angel:fight/shield_flare",
+    ] if V else [
         "execute as @e[type=minecraft:interaction,tag=angel.core,limit=1] at @s run playsound angel:sfx.barrier hostile @a ~ ~ ~ 3 0.6",
         f"execute as @e[type=minecraft:interaction,tag=angel.core,limit=1] at @s run particle minecraft:end_rod ~ ~{cy:.2f} ~ 3 3 3 0.1 30 force",
-    ])
+    ]))
     put("core_crack", [
         sc("phase", 2), sc("st", 5), sc("t", 0), sc("sl", 80),
         "# the checkpoint: a loss from here on restarts the fight at this point (start_ck), not at the launch",
@@ -909,11 +1268,11 @@ def gen(F, pack_function_dir, story_hand_exists):
         "function angel:angel/pose_regenerating",
         'execute at @e[type=minecraft:marker,tag=angel.root,limit=1] run playsound minecraft:entity.warden.roar hostile @a ~ ~ ~ 10 0.7',
         'execute at @e[type=minecraft:marker,tag=angel.root,limit=1] run playsound angel:sfx.core_crack hostile @a ~ ~ ~ 6 1',
-        f'execute as @e[type=minecraft:interaction,tag=angel.core,limit=1] at @s run particle minecraft:lava ~ ~{FH * 0.075:.2f} ~ 1 1 1 0.2 30 force',
+        f'execute as @e[type=minecraft:interaction,tag=angel.core,limit=1] at @s run particle minecraft:lava ~ ~{cy:.2f} ~ 1 1 1 0.2 30 force',
         'bossbar set angel:fight/angel name {"text":"ANGEL  -  core cracked","color":"red"}',
         'function angel:fight/bark {id:"7_12"}',
         'function angel:fight/bark {id:"7_13"}',
-    ])
+    ] + ([sc("vs", 0)] if V else []))      # (core_stage_1 repainted the core: the look is applied again at the next vis_state)
     # --- the wrap and the countdown
     # The monster runs at the giant (st 6, pose wrap_open), stops wrap_dist blocks in front of it and wraps round it (st 7, pose wrapping).  From then on:
     #   * the bark 7.14 ("Break loose!") is queued at the FRONT of the queue, the title tells the player what to do, the core flares; the countdown does NOT
@@ -958,7 +1317,7 @@ def gen(F, pack_function_dir, story_hand_exists):
     ])
     put("wrap_flare", [
         "# the core calls for the blow: a flash, a burst of light and a red ring round it",
-        f"execute as @e[type=minecraft:interaction,tag=angel.core,limit=1] at @s positioned ~ ~{FH * 0.075:.2f} ~ run function angel:fight/wrap_flare_at",
+        f"execute as @e[type=minecraft:interaction,tag=angel.core,limit=1] at @s positioned ~ ~{cy:.2f} ~ run function angel:fight/wrap_flare_at",
     ])
     put("wrap_flare_at", [
         "particle minecraft:flash{color:[1.0,0.3,0.2,1.0]} ~ ~ ~ 0 0 0 0 1 force",
@@ -980,7 +1339,7 @@ def gen(F, pack_function_dir, story_hand_exists):
         "execute store result bossbar angel:fight/wrap value run scoreboard players get #wt angel.fight",
         "function angel:fight/wrap_follow",
         "execute as @e[tag=angel.giant,type=minecraft:player] if score #wt angel.fight matches 1.. run effect give @s minecraft:slowness 2 3 true",
-        f"execute as @e[type=minecraft:interaction,tag=angel.core,limit=1] at @s run particle minecraft:dust{{color:[1.0,0.1,0.1],scale:2.5}} ~ ~{FH * 0.075:.2f} ~ 1.5 1.5 1.5 0 3 force",
+        f"execute as @e[type=minecraft:interaction,tag=angel.core,limit=1] at @s run particle minecraft:dust{{color:[1.0,0.1,0.1],scale:2.5}} ~ ~{cy:.2f} ~ 1.5 1.5 1.5 0 3 force",
         "# the shudder of a hit lasts 4 ticks, then the stage pose comes back",
         "execute if score #shud angel.fight matches 2.. run scoreboard players remove #shud angel.fight 1",
         "execute if score #shud angel.fight matches 1 run function angel:fight/wrap_restore",
@@ -1060,6 +1419,7 @@ def gen(F, pack_function_dir, story_hand_exists):
     put("won_start", [
         "# the core is broken",
         sc("phase", 4), sc("st", 8), sc("pt", 0), sc("bar", 0), sc("hold", 0),
+    ] + (["function angel:fight/vis_off"] if V else []) + [
         "function angel:fight/heartbeat_stop",
         "function angel:angel/stop_walking",
         "bossbar set angel:fight/wrap visible false",
@@ -1100,6 +1460,7 @@ def gen(F, pack_function_dir, story_hand_exists):
         "# giant health 0, or the self-destruct went off. #lost_reason: 1 health, 2 countdown",
         "execute if score #phase angel.fight matches 4.. run return 0",
         sc("phase", 5), sc("pt", 0), sc("st", 8),
+    ] + (["function angel:fight/vis_off"] if V else []) + [
         "function angel:fight/heartbeat_stop",
         "execute unless score #lost_reason angel.fight matches 2 run scoreboard players set #lost_reason angel.fight 1",
         "function angel:angel/stop_walking",
@@ -1160,6 +1521,9 @@ def gen(F, pack_function_dir, story_hand_exists):
     put("test/hit_core", ["# simulates a player's left click on the core box",
                           "data modify entity @e[type=minecraft:interaction,tag=angel.core,limit=1] attack set value {player:[I;1,2,3,4],timestamp:1L}"])
     put("test/hit_body", ["data modify entity @e[type=minecraft:interaction,tag=angel.body,limit=1] attack set value {player:[I;1,2,3,4],timestamp:1L}"])
+    if NB:
+        put("test/hit_near", ["# simulates a click on the larger 'near miss' box round the core",
+                              "data modify entity @e[type=minecraft:interaction,tag=angel.nearbox,limit=1] attack set value {player:[I;1,2,3,4],timestamp:1L}"])
     put("test/hurt", ["# macro: dmg", "$scoreboard players set #dmg angel.fight $(dmg)", "function angel:fight/hurt"])
     put("test/status", [
         'tellraw @a [{"text":"phase "},{"score":{"name":"#phase","objective":"angel.fight"}},{"text":" st "},{"score":{"name":"#st","objective":"angel.fight"}},{"text":" t "},{"score":{"name":"#t","objective":"angel.fight"}},{"text":" gh "},{"score":{"name":"#gh","objective":"angel.fight"}},{"text":" ch "},{"score":{"name":"#ch","objective":"angel.fight"}},{"text":" wt "},{"score":{"name":"#wt","objective":"angel.fight"}},{"text":" wgo "},{"score":{"name":"#wgo","objective":"angel.fight"}},{"text":" ck "},{"score":{"name":"#ck","objective":"angel.fight"}}]',

@@ -3,4 +3,3 @@ execute if score #ob.k angel.story matches 1 run function angel:story/ob/l1
 execute if score #ob.k angel.story matches 2 run function angel:story/ob/l2
 execute if score #ob.k angel.story matches 3 run function angel:story/ob/l3
 execute if score #ob.k angel.story matches 4 run function angel:story/ob/l4
-execute if score #ob.k angel.story matches 5 run function angel:story/ob/l5

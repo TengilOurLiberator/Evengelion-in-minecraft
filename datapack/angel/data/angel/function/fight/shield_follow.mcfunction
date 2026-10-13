@@ -1,0 +1,1 @@
+execute as @e[type=minecraft:interaction,tag=angel.core,limit=1] at @s positioned ~ ~3.00 ~ facing entity @e[tag=angel.giant,limit=1] eyes positioned ^ ^ ^6 run tp @e[type=minecraft:block_display,tag=angel.shield] ~ ~ ~ ~ ~

@@ -1,1 +1,1 @@
-function angel:story/launch/arms_we
+function angel:story/snd/music_launch/start

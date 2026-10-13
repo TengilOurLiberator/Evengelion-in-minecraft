@@ -1,5 +1,4 @@
 scoreboard players set #force angel.story 0
-function angel:cast/look {id:"misato",mode:"ahead"}
-scoreboard players set #f.turn_2 angel.story 16
+schedule function angel:story/s4/f_a3 52t
 scoreboard players set #step angel.story 61
 function angel:story/s4/e61
