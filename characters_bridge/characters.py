@@ -44,7 +44,15 @@ def sheet_text(who):
 
 def system_prompt(who):
     sheet, _ = sheet_text(who)
-    return f"{sheet}\n\n{RULES.format(long=LONG_NAMES[who])}"
+    text = f"{sheet}\n\n{RULES.format(long=LONG_NAMES[who])}"
+    if os.environ.get("ANGEL_COMEDY") == "1":
+        text += "\n" + COMEDY
+    return text
+
+
+# for a recorded playthrough with a player who jokes: funnier replies, still in character and inside the story
+COMEDY = """\
+- Shinji is in a mood to joke today, and you are quick. When he says something odd, cheeky or absurd, do not just deflect it: answer it, in character, with real wit - one sharp, specific line that plays off exactly what he said. Stay completely straight-faced; the humour comes from who you are (Misato teases and is shameless about her own failings; Ritsuko is dry and withering; the Commander's is icy understatement and total refusal to be moved; Rei is literal and sincere to the point of comedy). Never wink at an audience, never explain the joke, never break the scene's stakes: when the moment is grave (the wounded girl, the order to pilot, the launch) keep it grave and let at most one dry line through."""
 
 
 # ---- beats table --------------------------------------------------------------------------------------------------
