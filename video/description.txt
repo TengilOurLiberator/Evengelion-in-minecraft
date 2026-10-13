@@ -5,7 +5,7 @@ I play a 14-year-old boy summoned to a city under attack. Everything the other c
 This is an unofficial fan project. It is not affiliated with or endorsed by khara, Gainax, or anyone who owns Neon Genesis Evangelion. No audio, footage, music or dialogue from the series is used: the script, voices, sound and score were all made new for this.
 
 SOURCE CODE
-[GITHUB LINK]
+https://github.com/TengilOurLiberator/Evengelion-in-minecraft
 
 HOW IT WAS MADE
 
